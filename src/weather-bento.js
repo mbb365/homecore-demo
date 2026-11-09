@@ -408,12 +408,14 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   // The patch's strategy order; sizes from hui-weather-bento-card
   // the new cards (Matt, 1 Nov) end the Weather page and are on the dashboard once added
   const BASE_CARDS=['aq_tile','pollen_tile','radar_tile'];
-  // in rows by height (Matt, 9 Nov): the 5-row cards first, then the 4-row ones, so a row is never two heights
-  const CARDS=['current','hourly','sun','moon','uv_index','aq_tile','pollen_tile','wind','compared_to_average','humidity','pressure','precipitation','visibility','air_quality','radar_tile']
+  // three rows (Matt, 9 Nov): 1 the forecast, the days, Sun and Pollen; 2 Moon, UV, Air quality, Humidity, Pressure and
+  // Wind; 3 Visibility, Rain radar and Compared to average (then anything else that shows)
+  const CARDS=['current','hourly','sun','pollen_tile','moon','uv_index','aq_tile','humidity','pressure','wind','visibility','radar_tile','compared_to_average','precipitation','air_quality']
     .filter(name=>!cards||cards.includes(name));
   const SIZES={current:'wide',hourly:'wide',compared_to_average:'double'};
-  // the widgets with an action zone are XL on the Weather page, so their callouts show (Matt, 9 Nov)
-  const XL=['sun','moon','uv_index','aq_tile','pollen_tile'];
+  // XL (5 rows) on the Weather page: the widgets with an action zone, so their callouts show, and Humidity, Pressure and
+  // Wind, which share their row (Matt, 9 Nov: one height a row)
+  const XL=['sun','moon','uv_index','aq_tile','pollen_tile','humidity','pressure','wind'];
   const items={};
   CARDS.forEach(name=>{
     const el=document.createElement('div');

@@ -863,3 +863,9 @@ button.tfAreaIcon{cursor:pointer}
    starts a new row, so the 5-row cards share rows and the 4-row cards share rows */
 #app.tfWeatherOpen .tfBento.tfPegs .wbBento{grid-auto-flow:row}
 #app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-break]{grid-column-start:1}
+/* the Weather page's three rows need six columns (Matt, 9 Nov): as wide as the page allows, six across whenever they're
+   at least 180 wide; narrower, the pegs as before */
+#app.hcDemo.tfWeatherOpen #homeView{max-width:none}
+@container tfdash (width >= 1160px){
+  #app.tfWeatherOpen .tfBento.tfPegs .wbBento{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
