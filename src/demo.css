@@ -271,9 +271,10 @@
 
 /* phones: a card the full width of the screen is as tall as what it holds (Matt, 9 Nov: the weather card needn't stretch
    to fill its board height). The cards run down in the board's reading order (HomeCore puts them in that order), 16
-   apart; tiles keep their drawn heights, two to a row */
+   apart; tiles keep their drawn heights, two to a row. Not behind the demo's own pages (Devices, Map, Activity, Settings,
+   About, My account), where the board hides: shown there, it pushed each page 2,600 down */
 @media(max-width:620px){
-  #app.hcDemo.tfDash:not(.tfEditing) #homeView>.grid{display:flex!important;flex-wrap:wrap;align-items:flex-start;gap:var(--grid-gap);height:auto!important}
+  #app.hcDemo.tfDash:not(.tfEditing):not(.hcOnPage) #homeView>.grid{display:flex!important;flex-wrap:wrap;align-items:flex-start;gap:var(--grid-gap);height:auto!important}
   #app.hcDemo.tfDash:not(.tfEditing) #homeView>.grid .tfBoardItem{position:relative!important;left:auto!important;top:auto!important}
   /* Favourites keeps its own height, so turning suggestions on or off doesn't move the page (Matt, 9 Nov) */
   #app.hcDemo.tfDash:not(.tfEditing) #homeView>.grid>.tfBoardItem:not(.tfDash-favs){height:auto!important}
