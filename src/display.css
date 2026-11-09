@@ -349,7 +349,10 @@
    controls as tiles inside the padding. Folded: the icon with the name under it (6 apart), the main 32 light, the
    room's control icons two by two.
    ========================================================= */
-#homeView .workoutPanel.tfAreaPanel{padding:18px 18px 10px}
+/* its edges match every card that holds tiles (Matt, 9 Nov): the tiles reach out to 10 from the card's sides, as in
+   Favourites, so their icons sit 20 in, and the room's icon, name and reading sit 20 in on the same line */
+#homeView .workoutPanel.tfAreaPanel{padding:18px 20px 10px}
+.tfAreaPanel .tfATiles{margin-inline:-10px}
 .tfAreaPanel .workoutPanelTop{justify-content:flex-start;gap:14px;padding:0}
 .tfAreaPanel .panelExpanded{justify-content:flex-start;gap:16px}
 .tfAreaPanel .icon{width:22px;height:22px}

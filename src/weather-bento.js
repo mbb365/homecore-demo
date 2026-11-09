@@ -86,8 +86,8 @@ const I={
 // The patch's English text (ui.card.weather.*); placeholders in braces
 const T={
   // the XL widgets' callout rows (Matt, 9 Nov)
-  advice:{fine:'We\'re all good here 🙂',sunblock:'Cover up with sunblock',avoidUntil:'Avoid the sun until {time}',avoidToday:'Stay out of the sun today',window:'Open the window',closed:'Keep the windows closed'},
-  callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',riseTomorrow:'Sunrise tomorrow',setTomorrow:'Sunset tomorrow',dayTomorrow:'Daylight tomorrow',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today'},
+  advice:{fine:'We\'re all good here 🙂',sunblock:'Cover up with sunblock',avoidUntil:'Avoid the sun until {time}',avoidToday:'Stay out of the sun today',window:'Open the window',closed:'Keep the windows closed',rising:'Rising: fine weather ahead',falling:'Falling: unsettled ahead',steady:'Steady: little change'},
+  callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',riseTomorrow:'Sunrise tomorrow',setTomorrow:'Sunset tomorrow',dayTomorrow:'Daylight tomorrow',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today',hoursAgo:'3 hours ago',change:'Change',inHours:'In 3 hours'},
   now:'Now',today:'Today',tomorrow:'Tomorrow',back:'Back',nextHours:'Next hours',nextDays:'Next days',views:{strip:'Hours',bars:'Days'},showAs:'Show as',
   rangeRow:'{day}: low {low}, high {high}',humidity:'Humidity',high:'High',low:'Low',
   modes:{temperature:'Temperature',precipitation:'Rain',wind:'Wind'},
@@ -992,8 +992,15 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     let trend;
     if(hpa!==undefined&&previous!==undefined){const change=hpa-previous;trend=change>=PRESSURE_TREND_HPA?'rising':change<=-PRESSURE_TREND_HPA?'falling':'steady'}
     const parts=attrParts(h,pressure.stateObj,'pressure',Math.round(v));
-    return tile({icon:I.gauge,name:T.metrics.pressure,sub:trend?T.pressure[trend]:undefined,
-      visual:'<div class="wbTapeRow"><div class="wbTapeValue">'+valueHtml(parts.number)+'<span class="wbTapeUnit">'+esc(parts.unit)+'</span></div>'+(hpa!==undefined?tapeSvg(h,hpa):'')+'</div>'});
+    /* rows of extra data under the tape (Matt, 9 Nov: "pressure can fit rows of extra data"): a line on how it's trending,
+       the reading 3 hours ago, the change since, and the forecast's 3 hours on where the weather entity has one */
+    const so=pressure.stateObj,round=x=>unit==='inHg'?Math.round(x*100)/100:Math.round(x),say=x=>attrText(h,so,'pressure',round(x));
+    const before=previous!==undefined?data.pressureHistory.value:undefined,diff=before!==undefined?round(v-before):undefined;
+    const ahead=so.entity_id?.startsWith('weather.')?forecast('hourly').find(e=>num(e.pressure)&&new Date(e.datetime).getTime()>=Date.now()+3*HOUR-30*MINUTE):undefined;
+    const callouts=[...(trend?[T.advice[trend]]:[]),...(before!==undefined?[[T.callout.hoursAgo,say(before)],[T.callout.change,(diff>0?'+':diff<0?'−':'')+say(Math.abs(diff))]]:[]),
+      ...(ahead?[[T.callout.inHours,say(Number(ahead.pressure))]]:[])];
+    return tile({icon:I.gauge,name:T.metrics.pressure,sub:trend?T.pressure[trend]:undefined,cls:'wbPressure',callouts,
+      zone:'<div class="wbTapeRow"><div class="wbTapeValue">'+valueHtml(parts.number)+'<span class="wbTapeUnit">'+esc(parts.unit)+'</span></div>'+(hpa!==undefined?tapeSvg(h,hpa):'')+'</div>'});
   }
   // Pressure as a vertical tape (an altimeter): a tick per hPa, a label every 5, the red marker at the value; higher is up
   function tapeSvg(h,hpa){

@@ -434,6 +434,8 @@
 .wbZone>.wbSunSky{flex:1;align-self:stretch;border-radius:0}
 .wbZone>.wbMoonBox{flex:none;height:150px}
 .wbBase .wbZone{align-items:flex-end;justify-content:flex-start}
+/* Pressure's reading and tape fill its zone */
+.wbZone>.wbTapeRow{align-self:stretch;height:100%}
 /* where the callouts show: XL on the Weather page; on the dashboard XL, and M (the reading and its parts, as before) */
 .wbItem[data-xl] .wbCallouts{display:flex}
 
