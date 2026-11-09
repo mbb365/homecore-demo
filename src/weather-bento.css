@@ -464,3 +464,5 @@
 /* with Reduce motion they rest, spread across the gap */
 @media (prefers-reduced-motion:reduce){.wbFloat,.wbBob{animation:none}.wbFloat{left:var(--x)}}
 .wbPush{display:block;transition:transform .35s cubic-bezier(.2,.8,.3,1)}
+/* a line of advice: a sentence the width of the card, in the text colour (Matt, 9 Nov) */
+.wbCallout.wbAdvice>span:first-child{color:var(--text)}

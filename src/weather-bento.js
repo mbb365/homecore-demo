@@ -84,6 +84,7 @@ const I={
 // The patch's English text (ui.card.weather.*); placeholders in braces
 const T={
   // the XL widgets' callout rows (Matt, 9 Nov)
+  advice:{fine:'We\'re all good here 🙂',sunblock:'Cover up with sunblock',avoidUntil:'Avoid the sun until {time}',avoidToday:'Stay out of the sun today',window:'Open the window',closed:'Keep the windows closed'},
   callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',riseTomorrow:'Sunrise tomorrow',setTomorrow:'Sunset tomorrow',dayTomorrow:'Daylight tomorrow',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today'},
   now:'Now',today:'Today',tomorrow:'Tomorrow',back:'Back',nextHours:'Next hours',nextDays:'Next days',views:{strip:'Hours',bars:'Days'},showAs:'Show as',
   rangeRow:'{day}: low {low}, high {high}',humidity:'Humidity',high:'High',low:'Low',
@@ -335,7 +336,7 @@ const tile=({icon,name,sub,visual,double,backdrop,cls,zone,callouts})=>'<div cla
   (backdrop?'<div class="wbBackdrop" aria-hidden="true">'+backdrop+'</div>':'')+
   '<div class="wbHead"><div class="wbChip wbPlain">'+fittedIcon(icon)+'</div><div class="wbText"><span class="wbName">'+esc(name)+'</span>'+
   (sub?'<span class="wbSub">'+esc(sub)+'</span>':'')+'</div></div>'+
-  (zone!=null?'<div class="wbZone">'+zone+'</div>'+(callouts?.length?'<div class="wbCallouts">'+callouts.slice(0,3).map(([a,b])=>'<span class="wbCallout"><span>'+esc(a)+'</span><span>'+esc(b)+'</span></span>').join('')+'</div>':'')
+  (zone!=null?'<div class="wbZone">'+zone+'</div>'+(callouts?.length?'<div class="wbCallouts">'+callouts.slice(0,3).map(c=>Array.isArray(c)?'<span class="wbCallout"><span>'+esc(c[0])+'</span><span>'+esc(c[1])+'</span></span>':'<span class="wbCallout wbAdvice"><span>'+esc(c)+'</span></span>').join('')+'</div>':'')
     :'<div class="wbVisual">'+visual+'</div>')+'</div>';
 const valueHtml=(n,unit)=>'<div class="wbValue"><span class="wbNum">'+esc(n)+'</span>'+(unit?'<span class="wbUnitV">'+esc(unit)+'</span>':'')+'</div>';
 
@@ -915,6 +916,14 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   }
 
   /* ---- Data tiles (hui-weather-metric-card) ---- */
+  /* a line of advice in the data space (Matt, 9 Nov): low UV, all good; 3 to 7, sunblock; 8 and up, out of the sun until
+     the forecast has it back under 6 */
+  const uvAdvice=(v,h)=>{
+    if(v<3)return T.advice.fine;
+    if(v<8)return T.advice.sunblock;
+    const now=Date.now(),back=forecast('hourly').find(e=>e.uv_index!=null&&new Date(e.datetime).getTime()>now&&e.uv_index<6);
+    return back&&new Date(back.datetime).toDateString()===new Date().toDateString()?fill(T.advice.avoidUntil,{time:fmtTime(new Date(back.datetime),h)}):T.advice.avoidToday;
+  };
   function renderUv(h,src){
     const uv=value(h,src,'uv_index');if(!uv||!num(uv.value))return '';
     const v=Number(uv.value),levelName=T.uvLevel[uvLevel(v)];
@@ -934,7 +943,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>';
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
       sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:art,cls:'wbUv',
-      callouts:[[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
+      callouts:[uvAdvice(v,h),[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
   }
   function renderCompared(h){
     const today=forecast('daily')[0],history=data.temperatureHistory;
@@ -1074,6 +1083,11 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   const POLLEN_RANK=['none','very_low','low','moderate','high','very_high'];
   const pollenRank=s=>num(s.state)?Number(s.state):POLLEN_RANK.indexOf(String(s.state).toLowerCase().replace(/ /g,'_'));
   const sayLevel=t=>{const w=String(t).replace(/_/g,' ');return w[0].toUpperCase()+w.slice(1)};
+  // good air, open up; moderate, all good; poor or worse, keep it out (Matt, 9 Nov)
+  const aqAdvice=(dc,v,n)=>{
+    const level=!n?null:dc==='aqi'?(v<=50?'good':v<=100?'moderate':'poor'):dc==='pm25'?pm25Level(v):null;
+    return level==='good'||level==='fair'?T.advice.window:level==='moderate'||level===null?T.advice.fine:T.advice.closed;
+  };
   function renderAqTile(h){
     const air=anyAir(h),main=air[0];
     if(!main)return tile({icon:I.airFilter,name:T.airQuality,sub:T.noAir,visual:valueHtml('–',''),cls:'wbBase'});
@@ -1081,7 +1095,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const sub=dc==='aqi'&&n?aqiWord(v):dc==='pm25'&&n?AQ_WORDS[pm25Level(v)]:stateText(h,main);
     return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbBase',
       zone:valueHtml(n?fmtNum(Math.round(v),h.locale):String(main.state),dc==='aqi'?'AQI':main.attributes.unit_of_measurement||''),
-      callouts:air.slice(1,4).map(s=>[entityName(h,s),stateText(h,s)])});
+      callouts:[aqAdvice(dc,v,n),...air.slice(1,3).map(s=>[entityName(h,s),stateText(h,s)])]});
   }
   /* Pollen (Matt, 9 Nov): seeds, pollen grains and grass seed-heads floating across the gap between the head and the
      level, more of them the higher it is; placed by a fixed pattern, so a redraw doesn't make them jump */
