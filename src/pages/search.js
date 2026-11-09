@@ -1,55 +1,21 @@
-// Search: Matt's "Search or ask the home" box (Claude Design file) in HomeCore's popup. As Home Assistant's search
-// does today, typing lists what matches: rooms, devices, people and zones. A room opens its page, a device the Devices
-// page searched for it, a person or zone the map. The microphone and asking the home do nothing in the demo.
-import { deviceList } from './devices.js';
-import { PEOPLE, ZONES, WHERE } from './map-data.js';
+// Search: Matt's popup (Figma "Popup · Search", 9 Nov): a greeting, a line, an illustration and a closing line. Search
+// itself isn't designed yet, so there's no box or results; clicking outside it or Escape closes it.
+const ART = 'art/search-cave.png';
 
-const MOST = 6;
-
-export function openSearch({ root, getHass, homecore, esc, icon, go, glyph, named, device, photo, paint }) {
+export function openSearch({ root }) {
   const app = root.getElementById('app');
   app.querySelector('.hcSearchPop')?.remove();
   app.insertAdjacentHTML('beforeend',
-    '<div class="tfMoreBackdrop hcSearchPop"><div class="tfMore hcSearchBox" role="dialog" aria-label="Search">' +
-      '<label class="hcSearch hcAsk">' + icon('mdi:magnify') + '<input class="addInput" type="search" placeholder="Search or ask the home" aria-label="Search or ask the home" autocomplete="off">' +
-        '<button class="hcMic" type="button" title="Ask with your voice" aria-label="Ask with your voice" data-oops>' + icon('mdi:microphone') + '</button></label>' +
-      '<p class="hcAskHint">Search areas, devices, automations, people and zones, or just ask the home to do something.</p>' +
-      '<div class="tfMoreList hcResults"></div>' +
+    '<div class="tfMoreBackdrop hcSearchPop"><div class="tfMore hcSearchBox hcArtPop" role="dialog" aria-modal="true" aria-labelledby="hcSearchTitle" tabindex="-1">' +
+      '<div class="hcArtTitle" id="hcSearchTitle">Hey there, explorer</div>' +
+      '<p class="hcArtHint">Looks like you’re searching for something.</p>' +
+      '<div class="hcArt hcArtSearch"><img alt="" src="' + new URL(ART, document.baseURI).href + '"></div>' +
+      '<p class="hcArtHint">How about some nice illustration around the place?</p>' +
     '</div></div>');
-  const pop = app.querySelector('.hcSearchPop'), input = pop.querySelector('input'), box = pop.querySelector('.hcResults'), hint = pop.querySelector('.hcAskHint');
-  const hass = getHass(), model = homecore.model;
-  const items = [
-    ...model.rooms.map((r) => ({ group: 'Areas', name: r.name, sub: 'Area', chip: named(r.icon || 'mdi:home'), act: () => go('home', () => homecore.openArea('room:' + r.id)) })),
-    ...deviceList(hass, model).map((x) => ({ group: 'Devices', name: x.name, sub: [x.area, x.stateText].filter(Boolean).join(' · '), chip: device(x.id), act: () => go('devices', null, { q: x.name }) })),
-    ...PEOPLE.map((p) => ({ group: 'People', name: p.name, sub: WHERE, chip: photo(p.photo), act: () => go('map', null, { pick: 'person:' + p.id }) })),
-    ...ZONES.map((z) => ({ group: 'Zones', name: z.name, sub: z.sub, chip: glyph(z.icon, z.colour), act: () => go('map', null, { pick: 'zone:' + z.id }) })),
-  ];
-  let shown = [];
-
-  function draw() {
-    const words = input.value.trim().toLowerCase();
-    hint.hidden = Boolean(words);
-    if (!words) { box.innerHTML = ''; shown = []; return; }
-    shown = items.filter((x) => (x.name + ' ' + x.sub).toLowerCase().includes(words));
-    const groups = ['Areas', 'Devices', 'People', 'Zones'].map((g) => [g, shown.filter((x) => x.group === g).slice(0, MOST)]).filter(([, xs]) => xs.length);
-    shown = groups.flatMap(([, xs]) => xs);
-    box.innerHTML = !shown.length ? '<p class="hcAskHint">Nothing matches “' + esc(input.value.trim()) + '”.</p>'
-      : groups.map(([g, xs]) => '<div><div class="tfMoreGroupName">' + g + '</div>' + xs.map((x) => '<button class="hcRow" type="button" data-i="' + shown.indexOf(x) + '">' +
-        x.chip +
-        '<span class="hcRowText"><span class="hcRowName">' + esc(x.name) + '</span><span class="hcRowSub">' + esc(x.sub) + '</span></span></button>').join('') + '</div>').join('');
-    paint(box);
-  }
-  const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); };
-  const onKey = (ev) => {
-    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); }
-    if (ev.key === 'Enter' && shown.length && ev.target === input) { ev.preventDefault(); const x = shown[0]; close(); x.act(); }
-  };
-  input.addEventListener('input', draw);
+  const pop = app.querySelector('.hcSearchPop'), was = root.activeElement;
+  const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); was?.focus?.(); };
+  const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); } };
   root.addEventListener('keydown', onKey, true);
-  pop.addEventListener('click', (ev) => {
-    if (ev.target === pop) { close(); return; }
-    const row = ev.target.closest('.hcRow');
-    if (row) { const x = shown[Number(row.dataset.i)]; close(); x.act(); }
-  });
-  requestAnimationFrame(() => input.focus());
+  pop.addEventListener('click', (ev) => { if (ev.target === pop) close(); });
+  requestAnimationFrame(() => pop.querySelector('.hcSearchBox').focus());
 }

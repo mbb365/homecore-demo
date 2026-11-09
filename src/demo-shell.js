@@ -264,12 +264,13 @@ export function mountDemoShell(root, { getHass, homecore }) {
       show(view);
     }
   })();
-  /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov): HomeCore's popup, Close
+  /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov; its illustration from Figma "Popup · Oops"): HomeCore's popup, Close
      or Add to the list (which says thanks in HomeCore's toast) */
   function oops() {
     app.querySelector('.hcOops')?.remove();
     app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcOops"><div class="tfMore hcOopsCard" role="dialog" aria-modal="true" aria-labelledby="hcOopsTitle">' +
       '<div class="hcOopsTitle" id="hcOopsTitle">Oops!</div><p class="hcOopsLine">We haven\'t designed this yet. Let\'s add it to the list :)</p>' +
+      '<div class="hcArt hcArtOops"><img alt="" src="' + new URL('art/oops-trees.png', document.baseURI).href + '"></div>' +
       '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><button class="primary" type="button" data-oops-add>Add to the list</button></div></div></div>');
     const pop = app.querySelector('.hcOops'), was = root.activeElement;
     const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); was?.focus?.(); };
