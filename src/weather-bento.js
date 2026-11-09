@@ -364,8 +364,8 @@ function dayChartHtml(o){
   return s;
 }
 // A line over time, filling the graph space, with labels at both ends
-function lineChartHtml(points,format){
-  const W=300,H=120,top=18,bottom=18,values=points.map(p=>p.value),min=Math.min(...values),max=Math.max(...values),span=max-min||1;
+function lineChartHtml(points,format,H=120,W=300){
+  const top=18,bottom=18,values=points.map(p=>p.value),min=Math.min(...values),max=Math.max(...values),span=max-min||1;
   const x=i=>(i/(points.length-1))*W,y=v=>top+(1-(v-min)/span)*(H-top-bottom),line=points.map((p,i)=>x(i)+','+y(p.value)).join(' ');
   const maxI=values.indexOf(max),minI=values.indexOf(min),anchor=i=>i===0?'start':i===points.length-1?'end':'middle';
   return '<svg class="wbChart" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><polygon class="wbArea" points="0,'+(H-bottom)+' '+line+' '+W+','+(H-bottom)+'"></polygon>'+
@@ -426,7 +426,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
 
   let destroyed=false,lastKey=null,raf=0,lastStep=-1,queued=false,focusAfter=null;
   const VIEW_KEY='homecore-next-view',saved=(()=>{try{return localStorage.getItem(VIEW_KEY)}catch(_e){return null}})();
-  const ui={openDay:undefined,opener:undefined,dayMode:'temperature',hourlyMode:'temperature',hourlyView:saved==='bars'?'bars':'strip',aq:undefined};
+  const ui={graph:undefined,range:'day',openDay:undefined,opener:undefined,dayMode:'temperature',hourlyMode:'temperature',hourlyView:saved==='bars'?'bars':'strip',aq:undefined};
   const data={todayHistory:undefined,rain:undefined,temperatureHistory:undefined,pressureHistory:undefined,aqHistory:undefined,categories:undefined,lastFetch:0};
   let sunNow=new Date(),moonNow=new Date();
   const strips={};   // the painted skies, by name (Next hours' is hourly)
@@ -1132,6 +1132,73 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     compared_to_average:renderCompared,humidity:renderHumidity,pressure:renderPressure,precipitation:renderPrecipitation,visibility:renderVisibility,air_quality:renderAirQuality,
     aq_tile:renderAqTile,pollen_tile:renderPollenTile,radar_tile:renderRadarTile};
 
+  /* ---- Graphs behind the cards (Matt, 9 Nov): tap a card and it opens to its history in place, the last day to start,
+     or the last week or month. Readings come from the recorder (the weather entity's attributes, or the air
+     quality and pollen sensors); the sun's height, daylight and the moon's light are worked out, as the cards do. Next
+     hours / Days and Compared to average are graphs already, and the radar has no reading to graph ---- */
+  const RANGES=[['day','Day',1],['week','Week',7],['month','Month',30]]; // the last 24 hours, 7 days, 30 days
+  const shortDate=(h,d)=>d.toLocaleDateString(h.locale?.language,{day:'numeric',month:'short'});
+  const labelFor=(h,d,days)=>days===1?fmtTime(d,h):shortDate(h,d);
+  const thin=(pts,most=60)=>{const step=Math.max(1,Math.ceil(pts.length/most));return pts.filter((_p,i)=>i%step===0||i===pts.length-1)};
+  // a weather attribute's history (or the sensor that gives it)
+  const attrPoints=attr=>async(h,src,days)=>{
+    const v=value(h,src,attr);if(!v)return [];
+    const id=v.stateObj.entity_id,res=await attrHistory(h,id,new Date(Date.now()-days*DAY));
+    return thin((res?.[id]??[]).map(item=>{const x=item.a?.[attr]??(num(item.s)?Number(item.s):undefined);return typeof x==='number'?{t:new Date((item.lu??item.lc)*1000),value:x}:null}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,days),value:p.value}));
+  };
+  const sensorPoints=(pick,toNumber)=>async(h,_src,days)=>{
+    const s=pick(h);if(!s)return [];
+    const id=s.entity_id,res=await attrHistory(h,id,new Date(Date.now()-days*DAY),true);
+    return thin((res?.[id]??[]).map(item=>{const x=toNumber(item.s);return x==null||!Number.isFinite(x)?null:{t:new Date(item.lu*1000),value:x}}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,days),value:p.value}));
+  };
+  // worked out: every half hour over a day, or once a day
+  const worked=(perHour,perDay)=>async(h,_src,days)=>{
+    const at=home(h);if(!at)return [];
+    const now=Date.now(),out=[];
+    if(days===1)for(let t=now-DAY;t<=now;t+=HOUR/2)out.push({label:fmtTime(new Date(t),h),value:perHour(new Date(t),at)});
+    else for(let i=days-1;i>=0;i--){const d=new Date(now-i*DAY);const v=perDay(d,at,h);if(v!=null)out.push({label:shortDate(h,d),value:v})}
+    return out;
+  };
+  const topPollen=h=>anyPollen(h).sort((a,b)=>pollenRank(b)-pollenRank(a))[0];
+  const unitOf=(h,src,attr)=>{const v=value(h,src,attr);return v?weatherUnit(h,v.stateObj,attr):''};
+  const GRAPHS={
+    current:{name:()=>T.modes.temperature,icon:()=>I.sunny,load:attrPoints('temperature'),fmt:(h,_s,v)=>deg(h,v),now:(h,src)=>deg(h,value(h,src,'temperature')?.value)},
+    sun:{name:()=>T.sun,icon:()=>I.sunny,
+      load:worked((d,at)=>Math.round(sunAltitude(d,at.lat,at.lon)/RAD),(d,_at,h)=>{const t=sunTimes(h,d);return t.rise&&t.set?Math.round((t.set-t.rise)/HOUR*10)/10:null}),
+      fmt:(h,_s,v,days)=>days===1?fmtNum(v,h.locale)+'°':fmtNum(v,h.locale)+' h',sub:days=>days===1?'How high the sun was':'Hours of daylight a day'},
+    moon:{name:()=>T.moon,icon:()=>I.night,
+      load:worked(d=>Math.round(moonIllumination(d).fraction*100),d=>Math.round(moonIllumination(d).fraction*100)),fmt:(h,_s,v)=>fmtNum(v,h.locale)+'%',sub:()=>'How much of it was lit'},
+    uv_index:{name:()=>T.metrics.uv_index,icon:()=>I.sunnyAlert,load:attrPoints('uv_index'),fmt:(h,_s,v)=>fmtNum(Math.round(v*10)/10,h.locale),now:(h,src)=>{const v=value(h,src,'uv_index');return v?fmtNum(Number(v.value),h.locale):''}},
+    humidity:{name:()=>T.metrics.humidity,icon:()=>I.waterPercent,load:attrPoints('humidity'),fmt:(h,_s,v)=>fmtNum(Math.round(v),h.locale)+'%',now:(h,src)=>{const v=value(h,src,'humidity');return v?fmtNum(Math.round(Number(v.value)),h.locale)+'%':''}},
+    pressure:{name:()=>T.metrics.pressure,icon:()=>I.gauge,load:attrPoints('pressure'),fmt:(h,src,v)=>fmtNum(Math.round(v),h.locale)+' '+unitOf(h,src,'pressure'),now:(h,src)=>{const v=value(h,src,'pressure');return v?fmtNum(Math.round(Number(v.value)),h.locale)+' '+unitOf(h,src,'pressure'):''}},
+    wind:{name:()=>T.wind,icon:()=>I.windy,load:attrPoints('wind_speed'),fmt:(h,src,v)=>fmtNum(Math.round(v),h.locale)+' '+unitOf(h,src,'wind_speed'),now:(h,src)=>{const v=value(h,src,'wind_speed');return v?fmtNum(Math.round(Number(v.value)),h.locale)+' '+unitOf(h,src,'wind_speed'):''}},
+    visibility:{name:()=>T.metrics.visibility,icon:()=>I.eyeOutline,load:attrPoints('visibility'),fmt:(h,src,v)=>fmtNum(Math.round(v*10)/10,h.locale)+' '+unitOf(h,src,'visibility'),now:(h,src)=>{const v=value(h,src,'visibility');return v?fmtNum(Number(v.value),h.locale)+' '+unitOf(h,src,'visibility'):''}},
+    aq_tile:{name:h=>anyAir(h)[0]?entityName(h,anyAir(h)[0]):T.airQuality,icon:()=>I.airFilter,load:sensorPoints(h=>anyAir(h)[0],x=>num(x)?Number(x):null),
+      fmt:(h,_s,v)=>{const m=anyAir(h)[0],dc=m?.attributes?.device_class;return fmtNum(Math.round(v*10)/10,h.locale)+(dc==='aqi'?' AQI':m?.attributes?.unit_of_measurement?' '+m.attributes.unit_of_measurement:'')},now:h=>{const m=anyAir(h)[0];return m?stateText(h,m):''}},
+    pollen_tile:{name:h=>topPollen(h)?entityName(h,topPollen(h)):T.pollen,icon:()=>I.flower,load:sensorPoints(topPollen,x=>{const r=pollenRank({state:x});return r<0?null:r}),
+      fmt:(_h,_s,v)=>sayLevel(POLLEN_RANK[Math.round(v)]||''),now:h=>{const p=topPollen(h);return p?sayLevel(p.state):''}},
+  };
+  const graphData={};
+  async function loadGraph(name){
+    const h=getHass?.();if(!h||!GRAPHS[name])return;
+    const days=RANGES.find(([k])=>k===ui.range)[2],key=name+'|'+ui.range;
+    if(graphData[key]&&Date.now()-graphData[key].at<5*MINUTE)return;
+    graphData[key]={at:Date.now(),points:null};
+    try{graphData[key].points=await GRAPHS[name].load(h,sources(h),days)}catch(_e){graphData[key].points=[]}
+    render(true);
+  }
+  function renderGraph(h,src,name){
+    const g=GRAPHS[name],days=RANGES.find(([k])=>k===ui.range)[2],pts=graphData[name+'|'+ui.range]?.points;
+    // the graph drawn at the size it shows (what's left of the card under the head and the range), so its words stay 11
+    const el=items[name].el,gw=Math.max(120,el.clientWidth-2*10-32),gh=Math.max(80,el.clientHeight-14-10-44-10-46-10-20);
+    const chart=!pts?'<span class="wbGraphNote"><span>Loading…</span></span>':pts.length>1?lineChartHtml(pts,v=>g.fmt(h,src,v,days),gh,gw):'<span class="wbGraphNote"><span>No history for this yet</span></span>';
+    return '<div class="wbCard wbHc wbGraphCard"><div class="wbOpenHead"><span class="wbChip">'+svgIcon(g.icon(h))+'</span>'+
+      '<span class="wbText"><span class="wbName">'+esc(g.name(h))+'</span><span class="wbSub">'+esc(g.sub?g.sub(days):g.now?g.now(h,src):'')+'</span></span>'+
+      '<button class="wbBack" title="'+esc(T.back)+'" data-wb="graph-close" data-wb-focus="graph-close">'+svgIcon(I.back)+'</button></div>'+
+      '<div class="wbSegments wbRanges" role="group" aria-label="Time range">'+RANGES.map(([k,t])=>'<button aria-pressed="'+(k===ui.range)+'" data-wb="graph-range" data-range="'+k+'" data-wb-focus="graph-range-'+k+'">'+t+'</button>').join('')+'</div>'+
+      '<div class="wbGraph">'+chart+'</div></div>';
+  }
+
   /* ---- Drawing: each card is redrawn only when its markup changes; focus and the strip's scroll stay put ---- */
   function render(force){
     const h=getHass?.();
@@ -1149,7 +1216,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     for(const name of CARDS){
       const it=items[name];
       let html='';
-      try{html=RENDER[name](h,src)||''}catch(_e){html=''}   // a card that can't draw hides; the bento never throws
+      try{html=(ui.graph===name?renderGraph(h,src,name):RENDER[name](h,src))||''}catch(_e){html=''}   // a card that can't draw hides; the bento never throws
       if(html===it.html)continue;
       const focused=active&&it.el.contains(active)?active.dataset?.wbFocus:undefined;
       const scroller=it.el.querySelector('.wbStripScroll'),scroll=scroller?scroller.scrollLeft:null;
@@ -1245,7 +1312,14 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   /* ---- What you can do: open a day, switch a graph, scroll the hours, open an air quality tile ---- */
   function onClick(ev){
     const el=ev.target.closest?.('[data-wb]');
-    if(!el||!root.contains(el))return;
+    if(!el||!root.contains(el)){
+      // a card with a graph behind it opens to it: not while the dashboard is being edited, not in a card too small to
+      // hold it, and not the dashboard's weather card, which opens the Weather page
+      const item=ev.target.closest?.('.wbItem'),name=item?.dataset.card;
+      if(!item||!root.contains(item)||!GRAPHS[name]||ui.graph===name||root.closest('.tfEditing')||item.offsetHeight<200||(name==='current'&&onOpen))return;
+      ui.graph=name;focusAfter='graph-close';render(true);loadGraph(name);
+      return;
+    }
     switch(el.dataset.wb){
       case 'day':{
         ui.openDay=Number(el.dataset.index);ui.opener=el.dataset.wbFocus;focusAfter='back-day';
@@ -1261,12 +1335,15 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       case 'hours-day':{const sc=root.querySelector('.wbStripScroll');if(sc)sc.scrollTo({left:Number(el.dataset.hours)*sc.clientWidth/Number(sc.dataset.span),behavior:'smooth'});return}
       case 'aq-open':ui.aq=el.dataset.entity;fetchAqHistory(ui.aq);break;
       case 'aq-close':ui.aq=undefined;break;
+      case 'graph-close':ui.graph=undefined;break;
+      case 'graph-range':ui.range=el.dataset.range;render(true);loadGraph(ui.graph);return;
       default:return;
     }
     render(true);
   }
   function onKeyDown(ev){
     if(ev.key==='Escape'&&ui.openDay!==undefined&&ev.target.closest?.('[data-wb-open="day"]')){ui.openDay=undefined;focusAfter=ui.opener;ui.opener=undefined;render(true)}
+    else if(ev.key==='Escape'&&ui.graph&&ev.target.closest?.('.wbGraphCard')){ui.graph=undefined;render(true)}
   }
   // Drag the hours sideways with a mouse (touch scrolls by itself)
   let drag=null;

@@ -119,13 +119,22 @@ const devLog = () => {
 };
 // a device that's on or off: its changes from the log, and the other way round before them
 const FLIP = { on: "off", off: "on", locked: "unlocked", unlocked: "locked", playing: "paused", paused: "playing" };
-const fakeHistory = (id) => {
+const POLLEN_LEVELS = ["none", "very_low", "low", "moderate", "high", "very_high"];
+const fakeHistory = (id, from) => {
   const st = states[id]; const now = Date.now(); const v = Number(st.state); const growing = st.attributes.state_class === "total_increasing";
+  const span = Math.max(864e5, now - (from || now - 864e5)), n = span > 2 * 864e5 ? Math.round(span / (3 * 3600 * 1000)) : 48;
+  // pollen: a level that moves from day to day round today's, for the Pollen card's graph
+  if (id.includes("pollen")) {
+    const today = Math.max(0, POLLEN_LEVELS.indexOf(st.state));
+    return [...Array(n + 1)].map((_, i) => { const t = now - span + (i / n) * span, d = new Date(t);
+      const lvl = Math.min(5, Math.max(0, Math.round(today + 1.4 * Math.sin(d.getDate() * 1.3) + 0.6 * Math.sin(d.getHours() / 4) - 1.4 * Math.sin(new Date(now).getDate() * 1.3))));
+      return { s: i === n ? st.state : POLLEN_LEVELS[lvl], lu: t / 1000 }; });
+  }
   if (!Number.isFinite(v)) {
     const ev = devLog().filter((e) => e.entity_id === id).sort((a, b) => a.when - b.when);
     return [{ s: FLIP[(ev[0] || st).state] || st.state, lu: (now - 864e5) / 1000 }, ...ev.map((e) => ({ s: e.state, lu: e.when }))];
   }
-  return [...Array(48)].map((_, i) => { const t = now - (48 - i) * 30 * 60 * 1000; const k = i / 47;
+  return [...Array(n)].map((_, i) => { const t = now - span + ((i + 1) / n) * span; const k = i / (n - 1);
     const val = growing ? v * k : v * (0.7 + 0.3 * Math.sin(i / 5) + 0.12 * Math.sin(i * 1.7));
     return { s: String(Math.round(val * 100) / 100), lu: t / 1000 }; });
 };
@@ -144,16 +153,27 @@ const hass = {
     // Home Assistant's home view settings (favourites, summary order): none set, as on a new install
     if (msg.type === "frontend/get_system_data") return { value: null };
     if (msg.type === "fire_event") { console.log("event", msg.event_data); return null; }
-    // a week of the forecast's readings every 3 hours, for the bento's Compared to average and pressure
+    // the forecast's readings over the time asked for (hourly over two days or less, else every 3 hours), for the bento's
+    // Compared to average, pressure and the graphs behind its cards (Matt, 9 Nov): each moves through the day and from
+    // day to day, and ends at what the forecast says now
     if (msg.type === "history/history_during_period" && msg.entity_ids[0].startsWith("weather.")) {
-      const out = [];
-      for (let t = Date.parse(msg.start_time); t < Date.now(); t += 3 * 3600 * 1000) {
-        const d = new Date(t);
-        out.push({ s: "cloudy", lu: t / 1000, lc: t / 1000, a: { temperature: Math.round((17 + 5 * Math.sin(((d.getHours() - 9) / 24) * 2 * Math.PI) + (d.getDate() % 4)) * 10) / 10, humidity: 62, pressure: 1012 } });
+      const out = [], now = Date.now(), start = Date.parse(msg.start_time), step = (now - start <= 2 * 864e5 ? 1 : 3) * 3600 * 1000;
+      const a = states[msg.entity_ids[0]].attributes;
+      const wave = (t, days, phase = 0) => Math.sin((t / (days * 864e5)) * 2 * Math.PI + phase) - Math.sin((now / (days * 864e5)) * 2 * Math.PI + phase);
+      for (let t = start; t <= now; t += step) {
+        const d = new Date(t), hour = d.getHours() + d.getMinutes() / 60, sunUp = Math.max(0, Math.sin(((hour - 6) / 14) * Math.PI));
+        out.push({ s: "cloudy", lu: t / 1000, lc: t / 1000, a: {
+          temperature: Math.round((17 + 5 * Math.sin(((d.getHours() - 9) / 24) * 2 * Math.PI) + (d.getDate() % 4)) * 10) / 10,
+          humidity: Math.round(a.humidity + 12 * wave(t, 1, 2) + 6 * wave(t, 5)),
+          pressure: Math.round((a.pressure + 6 * wave(t, 4) + 1.5 * wave(t, 1)) * 10) / 10,
+          wind_speed: Math.max(0, Math.round((a.wind_speed + 7 * wave(t, 3, 1) + 3 * wave(t, 1, 4)) * 10) / 10),
+          uv_index: Math.round(sunUp * (5 + 2 * Math.sin(d.getDate())) * 10) / 10,
+          visibility: Math.max(1, Math.round((a.visibility + 5 * wave(t, 2.5, 3)) * 10) / 10),
+        } });
       }
       return { [msg.entity_ids[0]]: out };
     }
-    if (msg.type === "history/history_during_period") return { [msg.entity_ids[0]]: fakeHistory(msg.entity_ids[0]) };
+    if (msg.type === "history/history_during_period") return { [msg.entity_ids[0]]: fakeHistory(msg.entity_ids[0], Date.parse(msg.start_time)) };
     if (msg.type === "logbook/get_events") return devLog().filter((e) => !msg.entity_ids || msg.entity_ids.includes(e.entity_id));
     if (msg.type === "call_service" && (msg.domain === "switch" || msg.domain === "media_player" || msg.domain === "lock")) {
       const next = houseService(hass.states, msg);

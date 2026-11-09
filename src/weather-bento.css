@@ -466,3 +466,9 @@
 .wbPush{display:block;transition:transform .35s cubic-bezier(.2,.8,.3,1)}
 /* a line of advice: a sentence the width of the card, in the text colour (Matt, 9 Nov) */
 .wbCallout.wbAdvice>span:first-child{color:var(--text)}
+
+/* a card opened to its graph (Matt, 9 Nov): its head, the range (Day, Week, Month) and the graph filling the rest */
+.wbCard.wbHc.wbGraphCard{height:100%;min-height:0;box-sizing:border-box}
+.wbGraphCard .wbRanges{align-self:flex-start} /* hugging its words, as the other choices */
+.wbGraphCard .wbRanges button{padding:0 10px}
+.wbGraphCard .wbGraph{flex:1;height:auto;min-height:0}
