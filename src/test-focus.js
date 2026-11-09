@@ -3341,6 +3341,8 @@ export function mountTestFocus(root, { config, getHass }) {
     chip(id) { const c = kindRgb(id); return iconSlot(id, iconFor(id)) + (c ? ' data-light style="' + colourVars(c) + '"' : ''); },
     tint(hex) { return colourVars([1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))); },
     paint(scope) { fillIcons(scope); },
+    // Settings' choices measured again (they're measured on resize; a late font changes their words' widths too)
+    refit() { fitChoices(); },
     update(next) {
       if (!testFocus) return;
       const first = !Object.keys(states).length;

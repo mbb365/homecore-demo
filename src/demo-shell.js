@@ -150,6 +150,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     if (route === 'settings') {
       showPage(null);
       if (!inSettings) $('settingsNav').click();
+      requestAnimationFrame(() => homecore.refit());
     } else {
       if (inSettings) $('homeNav').click();
       if (HOMECORE_PAGES.has(route)) { showPage(null); if (homecore.page !== route) homecore.openArea(route); }
@@ -226,6 +227,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   });
   addEventListener('hashchange', () => { trail = []; go(location.hash.replace(/^#\/?/, '') || 'home'); });
 
+  document.fonts?.ready.then(() => homecore.refit());
   go(location.hash.replace(/^#\/?/, '') || 'home');
   return { go };
 }

@@ -247,7 +247,9 @@
    Settings' choices, its lists, the ⋯ menu's sizes, the Weather page's modes and the map's People / Devices / Zones */
 #app.hcDemo #housePane .toggleRow>:is(.themeChoice,.settingsSelect){align-self:flex-start;width:auto;max-width:100%}
 #app.hcDemo #housePane .themeChoice{display:inline-flex}
-#app.hcDemo #housePane .themeChoice>button{flex:0 0 auto;padding:0 16px}
+#app.hcDemo #housePane .themeChoice>button{flex:0 1 auto;min-width:0;padding:0 16px;overflow:hidden;text-overflow:ellipsis}
+/* …and never past its line: on a phone a long one shrinks (its words cut with …) rather than running off the card */
+#app.hcDemo #housePane .toggleRow{min-width:0}
 #app.hcDemo #housePane .toggleRow>.settingsSelect{min-width:200px}
 #app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments){display:inline-flex;width:auto;align-self:flex-start}
 #app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments) button{flex:0 0 auto;padding:0 16px}
