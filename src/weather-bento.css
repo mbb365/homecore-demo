@@ -416,10 +416,12 @@
 
 /* ---- Widgets with an action zone (Matt, 9 Nov; Figma "XL widget example" / "L widget example" 986:10196) ----
    The head 18 in, then 14 below it the zone: as wide as the tile allows, 198 tall (216 x 198 at the drawn 252), corner
-   16, the track fill and edge line. L is the head and the zone; XL the same zone, then 8 under it up to three callout
+   16, no fill of its own. L is the head and the zone; XL the same zone, then 8 under it up to three callout
    lines (name, value), 20 tall every 24, ending 18 from the bottom */
 .wbZoned{gap:14px}
-.wbZone{position:relative;flex:none;height:198px;display:flex;align-items:center;justify-content:center;border-radius:16px;overflow:hidden;background:var(--tile);box-shadow:var(--hc-hair-all,inset 0 0 0 .4px var(--line))}
+/* the zone itself has no fill or edge (Matt, 9 Nov): only a widget whose design fills it shows one (the Sun's sky);
+   its corner still clips what fills it */
+.wbZone{position:relative;flex:none;height:198px;display:flex;align-items:center;justify-content:center;border-radius:16px;overflow:hidden}
 .wbCallouts{display:none;flex-direction:column;gap:4px;margin-top:-6px}
 .wbCallout{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:400 14px/20px var(--font)}
 .wbCallout>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -428,7 +430,7 @@
 .wbZone>.wbSunSky{flex:1;align-self:stretch;border-radius:0}
 .wbZone>.wbSunSky svg{overflow:hidden}
 .wbZone>.wbMoonBox{flex:none;height:150px}
-.wbBase .wbZone{align-items:flex-end;justify-content:flex-start;padding:16px}
+.wbBase .wbZone{align-items:flex-end;justify-content:flex-start}
 /* where the callouts show: XL on the Weather page; on the dashboard XL, and M (the reading and its parts, as before) */
 .wbItem[data-xl] .wbCallouts{display:flex}
 
@@ -442,6 +444,6 @@
 @media (prefers-reduced-motion:reduce){.wbUv:hover .wbUvRay{animation:none}}
 /* on a light card the rays start in their own colour (warm white doesn't show there) */
 #app.light .wbUvRays{--wb-ray-hi:currentColor}
-.wbUvBig{position:absolute;right:16px;bottom:14px;display:flex;flex-direction:column;align-items:flex-end}
+.wbUvBig{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:flex-end}
 .wbUvNum{font:500 64px/.9 var(--font-tile);letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums}
 .wbUvWord{margin-top:6px;font:400 14px/20px var(--font);color:var(--muted)}
