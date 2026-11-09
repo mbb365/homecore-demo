@@ -148,7 +148,7 @@ export function mountTestFocus(root, { config, getHass }) {
   function houseSettings() {
     if (!testFocus || $('housePane')) return;
     const view = $('settingsView');
-    view.querySelector('.settingsTitle').textContent = 'HomeCore';
+    view.querySelector('.settingsTitle').textContent = 'HomeCore settings'; // (Matt, 9 Nov)
     // one tab each (Matt, 27 Oct); the tab names the section, so the sections have no heading of their own
     const tabs = [['look', 'Appearance'], ['lights', 'Lights'], ['sources', 'Sources'], ['sums', 'Summaries']];
     const tabPane = (k, html) => '<div class="houseTab' + (k === 'look' ? ' active' : '') + '" data-house-pane="' + k + '"><section class="card">' + html + '</section></div>';

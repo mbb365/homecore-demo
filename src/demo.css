@@ -17,14 +17,17 @@
 /* the rail's buttons: icons only (Matt, 9 Nov), muted, the open page's in the text colour; named in a tooltip */
 #app .hcRailBtn{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner)!important;background:transparent;color:var(--muted);cursor:pointer;transition:color .15s ease}
 .hcRailBtn .hcI{width:24px;height:24px}
-.hcRailBtn:hover,.hcRailBtn.active,.hcRailBtn[aria-expanded="true"]{color:var(--text)}
+#app .hcRailBtn:is(:hover,[aria-expanded="true"]){color:var(--text)}
+/* the open page's icon lights up Home Assistant blue, the logo's (Matt, 9 Nov) */
+#app{--ha-blue:#18BCF2}
+#app .hcRailBtn.active{color:var(--ha-blue)}
 .hcRailBtn:focus-visible{outline:2px solid var(--primary);outline-offset:0}
 .hcRailTip{white-space:nowrap}
 .hcAvatar{width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner);overflow:hidden;background:var(--tile);cursor:pointer;box-shadow:var(--hc-hair-all)}
 .hcAvatar img{display:block;width:100%;height:100%;object-fit:cover}
 .hcAvatar:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 /* on My account: lit like the rail's other buttons, a bright ring round the photo */
-.hcAvatar.active{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--bright)}
+.hcAvatar.active{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ha-blue)}
 #app.hcDemo .shell{position:relative;padding-left:var(--hc-rail)}
 #app.hcDemo .tfMiniPhone{margin-left:var(--hc-rail)}
 /* the rail does what HomeCore's bottom bar did on desktop; Settings moves behind ⋯, and TV mode goes */
@@ -223,7 +226,8 @@
 .hcNavRow{grid-template-columns:24px minmax(0,1fr);gap:16px;padding:var(--inset) 18px}
 .hcNavIcon{display:grid;place-items:center;width:24px;height:24px;color:var(--muted)}
 .hcNavIcon .hcI{width:24px;height:24px}
-.hcNavRow:hover .hcNavIcon,.hcNavRow.active .hcNavIcon{color:var(--text)}
+.hcNavRow:hover .hcNavIcon{color:var(--text)}
+.hcNavRow.active .hcNavIcon{color:var(--ha-blue)}
 .hcNavMe{border-radius:8px;overflow:hidden}
 .hcNavMe img{width:100%;height:100%;object-fit:cover}
 
@@ -333,3 +337,34 @@
 #app.hcDemo .tfTraySection{gap:12px}
 /* the map box and its controls in Geist too (MapLibre sets Helvetica Neue on them) */
 .hcMap :is(.maplibregl-map,.maplibregl-ctrl,.maplibregl-ctrl *){font-family:var(--font)!important}
+
+/* ---------- Home Assistant's Settings and About (Matt, 9 Nov): its cards of rows, in HomeCore's parts ---------- */
+.hcConfig{display:grid;gap:16px;max-width:720px}
+.hcConfigRow{grid-template-columns:var(--chip-size) minmax(0,1fr) auto;text-decoration:none;color:var(--text)}
+.hcRowMuted{color:var(--muted)}
+.hcRowEnd{display:grid;place-items:center;width:24px;height:24px;color:var(--muted)}
+.hcRowEnd .hcI{width:20px;height:20px}
+.hcAboutHead{display:flex;flex-direction:column;align-items:center;padding:32px 18px 18px!important}
+.hcAboutLogo{display:block;width:56px;height:56px}
+.hcAboutLogo .hcLogoMark{width:56px;height:56px}
+.hcAboutName{margin:24px;font:400 24px/1.2 var(--font);text-align:center}
+.hcVersions{align-self:stretch;display:flex;flex-direction:column;gap:4px;margin:0;padding:0 8px;list-style:none;color:var(--muted);font:400 14px/20px var(--font)}
+.hcVersions li{display:flex;justify-content:space-between;gap:12px}
+.hcVersion{color:var(--text)}
+.hcAboutOhf{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px!important;text-align:center;color:var(--muted)}
+.hcAboutOhf p{margin:0;font:400 14px/20px var(--font)}
+.hcAboutOhf svg{display:block;width:100%;max-width:250px;height:auto}
+.hcAboutOhf svg .secondary{fill:var(--text)}
+
+/* ---------- HomeCore settings → Cards and background (Matt, 9 Nov): swatches and sliders 32 tall, as the dropdowns ---------- */
+.hcSwatch{position:relative;display:block;flex:none;width:56px;height:32px;border-radius:12px;overflow:hidden;box-shadow:var(--hc-hair-all);cursor:pointer}
+.hcSwatch input{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);padding:0;border:0;background:none;cursor:pointer}
+.hcRangeWrap{display:flex;align-items:center;gap:10px;flex:none}
+.hcRangeValue{min-width:40px;text-align:right;font:400 14px/20px var(--font);color:var(--text);font-variant-numeric:tabular-nums}
+.hcRange{width:160px;height:32px;margin:0;accent-color:var(--ha-blue);background:transparent;cursor:pointer}
+.hcLookList .toggleRow[hidden]{display:none}
+@media(max-width:620px){.hcRange{width:110px}}
+#app .hcLookImg .hcBtn{height:32px;min-height:32px;padding:0 14px}
+/* a Settings row's line wraps rather than cutting off, as Home Assistant's do */
+#app .hcConfigRow{height:auto;min-height:60px}
+.hcConfigRow .hcRowSub{white-space:normal;line-height:1.25}

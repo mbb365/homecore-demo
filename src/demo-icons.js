@@ -10,6 +10,8 @@ import {
   mdiCurtainsClosed, mdiRollerShade, mdiRollerShadeClosed, mdiBlindsHorizontal, mdiBlindsHorizontalClosed,
   mdiWindowShutter, mdiWindowShutterOpen, mdiUpdate, mdiAccountCircleOutline, mdiMapMarker, mdiHeartPulse, mdiCalendar,
   mdiShieldAccount, mdiPalette, mdiHuman, mdiBell, mdiCart, mdiChartBoxOutline, mdiTooltipAccount, mdiAccountMultiple, mdiDoorOpen,
+  // Home Assistant's Settings and About (9 Nov)
+  mdiCloudLock, mdiRobot, mdiSofa, mdiPuzzle, mdiViewDashboard, mdiAccessPointNetwork, mdiAccount, mdiHammer, mdiInformationOutline, mdiNewspaperVariant, mdiHandsPray, mdiTshirtCrew, mdiBug, mdiHelp, mdiFileDocument, mdiKeyboard, mdiOpenInNew, mdiTuneVariant, mdiChevronRight, mdiImage,
 } from '@mdi/js';
 
 export const DEMO_ICONS = {
@@ -32,6 +34,7 @@ export const DEMO_ICONS = {
   'mdi:calendar': mdiCalendar, 'mdi:shield-account': mdiShieldAccount, 'mdi:palette': mdiPalette, 'mdi:human': mdiHuman, 'mdi:bell': mdiBell,
   'mdi:cart': mdiCart, 'mdi:chart-box-outline': mdiChartBoxOutline, 'mdi:tooltip-account': mdiTooltipAccount,
   'mdi:account-multiple': mdiAccountMultiple, 'mdi:door-open': mdiDoorOpen,
+  'mdi:cloud-lock': mdiCloudLock, 'mdi:robot': mdiRobot, 'mdi:sofa': mdiSofa, 'mdi:puzzle': mdiPuzzle, 'mdi:view-dashboard': mdiViewDashboard, 'mdi:access-point-network': mdiAccessPointNetwork, 'mdi:account': mdiAccount, 'mdi:hammer': mdiHammer, 'mdi:information-outline': mdiInformationOutline, 'mdi:newspaper-variant': mdiNewspaperVariant, 'mdi:hands-pray': mdiHandsPray, 'mdi:tshirt-crew': mdiTshirtCrew, 'mdi:bug': mdiBug, 'mdi:help': mdiHelp, 'mdi:file-document': mdiFileDocument, 'mdi:keyboard': mdiKeyboard, 'mdi:open-in-new': mdiOpenInNew, 'mdi:tune-variant': mdiTuneVariant, 'mdi:chevron-right': mdiChevronRight, 'mdi:image': mdiImage,
 };
 
 // an inline icon, filled like Home Assistant's

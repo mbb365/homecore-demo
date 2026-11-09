@@ -1,7 +1,7 @@
 // The demo site around HomeCore: the rail from Matt's Claude Design file (Home, Search, Weather, Devices, ⋯ and the
 // account at the bottom), a menu button on phones, and the pages the rail opens.
 // - HomeCore's own pages: Home, Weather, and (from ⋯) Activity, built in test-focus.js from Home's Activity card, so it
-//   stays live. Settings is HomeCore's Settings.
+//   stays live. HomeCore settings is HomeCore's own; Settings (the cog) is Home Assistant's, with About built out.
 // - The demo's pages (src/pages): Devices, Map and My account, built from HomeCore's parts; Search is a popup.
 // Each page has its own address (#/devices), so a link can open it.
 import { icon, HA_LOGO } from './demo-icons.js';
@@ -9,6 +9,8 @@ import { renderDevices } from './pages/devices.js';
 import { renderAccount } from './pages/account.js';
 import { renderActivity } from './pages/activity.js';
 import { openSearch } from './pages/search.js';
+import { renderConfig, renderAbout } from './pages/ha-settings.js';
+import { mountLook } from './look.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -17,7 +19,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const RAIL = [['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
-const MORE = [['activity', 'Activity', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
+// HomeCore's own settings are HomeCore settings (Matt, 9 Nov); Home Assistant's Settings has the cog, above you
+const MORE = [['activity', 'Activity', 'mdi:format-list-bulleted-type'], ['settings', 'HomeCore settings', 'mdi:tune-variant']];
+const CONFIG = ['config', 'Settings', 'mdi:cog'];
 // the map's code is big (MapLibre), so it loads only when Map opens
 function renderMap(page, ctx) {
   const now = { ...ctx }; // Search's pick, before go() clears it
@@ -25,7 +29,7 @@ function renderMap(page, ctx) {
   import('./pages/map.js').then((m) => { if (!gone) off = m.renderMap(page, now); });
   return () => { gone = true; off?.(); };
 }
-const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity };
+const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity, config: renderConfig, about: renderAbout };
 // Activity is the demo's own page now (Home Assistant's logbook with its filters: Matt, 9 Nov)
 const HOMECORE_PAGES = new Set(['weather']);
 const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
@@ -45,6 +49,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
       '<div class="hcRailMain">' + RAIL.map(railBtn).join('') +
         '<button class="hcRailBtn" type="button" data-hc-more data-tip="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
       '</div>' +
+      railBtn(CONFIG) +
       '<button class="hcAvatar" type="button" data-hc-go="account" data-tip="My account" aria-label="My account"><img src="' + avatar + '" alt=""></button>' +
     '</nav>' +
     '<div class="hcTopRight"></div>');
@@ -60,7 +65,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
       '<div class="hcDrawerHead"><div class="hcLogo">' + HA_LOGO + '</div><button class="hcRailBtn" type="button" data-hc-close aria-label="Close">' + icon('mdi:close') + '</button></div>' +
       drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + drawerRow(['home', 'Home', 'mdi:home']) + RAIL.map((r) => drawerRow(r)).join('') +
-      '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') +
+      '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') + drawerRow(CONFIG) +
       '<button class="hcRow hcNavRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcNavIcon hcNavMe"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
     '<div class="card hcMoreMenu" role="menu" hidden>' + MORE.map((r) => row(r, 'role="menuitem" data-hc-go="' + r[0] + '"')).join('') + '</div>');
@@ -171,13 +176,13 @@ export function mountDemoShell(root, { getHass, homecore }) {
     app.classList.toggle('hcNoBack', !trail.length);
     const open = settingsView.classList.contains('active') ? 'settings'
       : HOMECORE_PAGES.has(homecore.page) ? homecore.page : pageOn || 'home';
-    const lit = MORE.some(([k]) => k === open) ? 'more' : open;
+    const lit = MORE.some(([k]) => k === open) ? 'more' : open === 'about' ? 'config' : open;
     root.querySelectorAll('.hcRail [data-hc-go],.hcRail [data-hc-more]').forEach((b) => {
       const on = (b.dataset.hcGo || 'more') === lit;
       b.classList.toggle('active', on);
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
-    drawer.querySelectorAll('[data-hc-go]').forEach((b) => b.classList.toggle('active', b.dataset.hcGo === open));
+    drawer.querySelectorAll('[data-hc-go]').forEach((b) => b.classList.toggle('active', b.dataset.hcGo === (open === 'about' ? 'config' : open)));
     more.querySelectorAll('[data-hc-go]').forEach((b) => b.classList.toggle('active', b.dataset.hcGo === open));
     const hash = open === 'home' ? '' : '#/' + open;
     if ((location.hash || '') !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
@@ -264,6 +269,8 @@ export function mountDemoShell(root, { getHass, homecore }) {
       show(view);
     }
   })();
+  // Appearance: the cards, the background and the stroke (Matt, 9 Nov)
+  mountLook(root, { toast: (msg) => { const t = $('toast'); if (t) { t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } } });
   /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov; its illustration from Figma "Popup · Oops"): HomeCore's popup, Close
      or Add to the list (which says thanks in HomeCore's toast) */
   function oops() {
