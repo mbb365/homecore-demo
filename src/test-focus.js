@@ -1574,7 +1574,9 @@ export function mountTestFocus(root, { config, getHass }) {
     const favs = dashFavourites();
     if (favs.length) out.push({ key: 'favs', wrap: dashWrap('tfDash-favs', 'favs', 'Favourites', true), tiles: favs.map((id) => ({ key: 'fav:' + id, html: deviceRow(id, { area: true }) })) });
     const items = activityItems();
-    out.push({ key: 'dash:act', html: card('dash:act', 0, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act') });
+    // HomeCore demo: its title opens the Activity page (Matt, 9 Nov), as Favourites' title opens its own view
+    out.push({ key: 'dash:act', html: card('dash:act', 0, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act')
+      .replace('<div class="activityTitle">Activity</div>', '<button class="activityTitle tfTitleBtn" type="button" data-hc-open="activity" aria-label="Activity. Open the Activity page">Activity</button>') });
     out.push({ key: 'dash:energy', html: energyGlance() });
     const cols = dashCols();
     dashColsSeen = cols;

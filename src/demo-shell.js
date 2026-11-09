@@ -199,6 +199,13 @@ export function mountDemoShell(root, { getHass, homecore }) {
     if (b.matches('[data-hc-back]') || (trail.length && trail[trail.length - 1] !== 'home') || b.id === 'settingsBack') { ev.stopImmediatePropagation(); ev.preventDefault(); back(); }
   }, true);
 
+  // a card's title that opens a page of its own (Home's Activity): from another page, so with ‹ back; not while editing
+  root.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-hc-open]');
+    if (!t || app.classList.contains('tfEditing')) return;
+    ev.stopPropagation();
+    ctx.go(t.dataset.hcOpen);
+  }, true);
   root.addEventListener('click', (ev) => {
     const t = ev.target.closest('[data-hc-go],[data-hc-more],[data-hc-close],[data-hc-search],#hcMenuNav,.hcDrawer');
     if (!t) { if (!more.hidden && !ev.target.closest('.hcMoreMenu')) closeMenus(); return; }
