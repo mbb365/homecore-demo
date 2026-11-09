@@ -46,7 +46,7 @@ export function deviceList(hass, model) {
   });
 }
 
-export function renderDevices(page, { getHass, homecore, esc, icon, opts }) {
+export function renderDevices(page, { getHass, homecore, esc, icon, opts, device, paint }) {
   const prefs = { group: 'type', sort: 'name', view: 'list', ...local.get() };
   let q = opts?.q || ''; // Search opens this page searched for a device
   const hass = getHass();
@@ -73,7 +73,7 @@ export function renderDevices(page, { getHass, homecore, esc, icon, opts }) {
   page.querySelector('[data-sort]').value = prefs.sort;
   page.querySelector('.hcSearch input').value = q;
 
-  const iconCell = (x) => '<span class="tfIcon"><ha-state-icon data-eid="' + esc(x.id) + '"></ha-state-icon></span>';
+  const iconCell = (x) => device(x.id); // the dashboard's chip, in its colour while on
   const pills = (x) => '<div class="hcPills"><span class="hcPill">' + esc(x.type) + '</span><span class="hcPill' + (x.on ? ' on' : '') + '">' + esc(x.stateText) + '</span></div>';
   const table = (xs) => '<section class="card hcTableCard"><div class="metaTableWrap"><table class="metaTable hcDevTable">' +
       '<thead><tr><th>Name</th><th>Area</th><th>Integration</th><th>Manufacturer</th><th>Battery</th></tr></thead><tbody>' +
@@ -101,8 +101,7 @@ export function renderDevices(page, { getHass, homecore, esc, icon, opts }) {
     box.innerHTML = !xs.length ? '<p class="note hcEmpty">No devices match “' + esc(q.trim()) + '”.</p>'
       : order.map((g) => '<section class="hcGroup">' + (g ? '<div class="sectionLabel">' + esc(g) + ' <span class="hcCount">' + groups.get(g).length + '</span></div>' : '') +
         (prefs.view === 'cards' ? cards(groups.get(g)) : table(groups.get(g))) + '</section>').join('');
-    const h = getHass();
-    box.querySelectorAll('ha-state-icon[data-eid]').forEach((el) => { el.hass = h; el.stateObj = all.find((x) => x.id === el.dataset.eid)?.st; });
+    paint(box);
     page.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === prefs.view)));
   }
 

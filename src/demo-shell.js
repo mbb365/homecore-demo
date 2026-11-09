@@ -33,13 +33,13 @@ export function mountDemoShell(root, { getHass, homecore }) {
   const avatar = new URL('people/wembely.png', document.baseURI).href; // you are Wembely (Matt, 9 Nov)
   app.classList.add('hcDemo');
 
-  const railBtn = ([k, name, ic]) => '<button class="navBtn" type="button" data-hc-go="' + k + '" title="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
+  const railBtn = ([k, name, ic]) => '<button class="navBtn tfIcon" type="button" data-hc-go="' + k + '" title="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
   shell.insertAdjacentHTML('afterbegin',
     '<nav class="hcRail" aria-label="Main">' +
       '<div class="hcLogo" role="img" aria-label="Home Assistant">' + icon('mdi:home-assistant') + '</div>' +
-      '<button class="navBtn" type="button" data-hc-search title="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
+      '<button class="navBtn tfIcon" type="button" data-hc-search title="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
       '<div class="hcRailMain">' + RAIL.map(railBtn).join('') +
-        '<button class="navBtn" type="button" data-hc-more title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
+        '<button class="navBtn tfIcon" type="button" data-hc-more title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
       '</div>' +
       '<button class="hcAvatar" type="button" data-hc-go="account" title="My account" aria-label="My account"><img src="' + avatar + '" alt=""></button>' +
     '</nav>' +
@@ -48,23 +48,34 @@ export function mountDemoShell(root, { getHass, homecore }) {
   const pen = $('dashEditNav');
   if (pen) shell.querySelector('.hcTopRight').appendChild(pen);
   // phones: HomeCore's bottom bar holds the menu, which opens the rail as a list
-  root.querySelector('.bottomNav')?.insertAdjacentHTML('afterbegin', '<button class="navBtn" id="hcMenuNav" type="button" title="Menu" aria-label="Menu" aria-expanded="false">' + icon('mdi:menu') + '</button>');
-  const drawerRow = ([k, name, ic], attr = 'data-hc-go="' + k + '"') => '<button class="hcDrawerRow" type="button" ' + attr + '><span class="hcChip">' + icon(ic) + '</span><span>' + name + '</span></button>';
+  root.querySelector('.bottomNav')?.insertAdjacentHTML('afterbegin', '<button class="navBtn tfIcon" id="hcMenuNav" type="button" title="Menu" aria-label="Menu" aria-expanded="false">' + icon('mdi:menu') + '</button>');
+  const row = ([k, name, ic], attr = 'data-hc-go="' + k + '"') => '<button class="hcRow" type="button" ' + attr + '><span class="tfIcon hcChip">' + icon(ic) + '</span><span class="hcRowText"><span class="hcRowName">' + name + '</span></span></button>';
+  const drawerRow = (r, attr) => row(r, attr);
   app.insertAdjacentHTML('beforeend',
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
-      '<div class="hcDrawerHead"><div class="hcLogo">' + icon('mdi:home-assistant') + '</div><button class="navBtn" type="button" data-hc-close title="Close" aria-label="Close">' + icon('mdi:close') + '</button></div>' +
+      '<div class="hcDrawerHead"><div class="hcLogo">' + icon('mdi:home-assistant') + '</div><button class="navBtn tfIcon" type="button" data-hc-close title="Close" aria-label="Close">' + icon('mdi:close') + '</button></div>' +
       drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + RAIL.map((r) => drawerRow(r)).join('') +
       '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') +
-      '<button class="hcDrawerRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcChip"><img src="' + avatar + '" alt=""></span><span>My account</span></button>' +
+      '<button class="hcRow hcDrawerMe" type="button" data-hc-go="account"><span class="tfIcon hcChip"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
-    '<div class="tfBoardMenu hcMoreMenu" role="menu" hidden>' + MORE.map(([k, name, ic]) => '<button type="button" role="menuitem" data-hc-go="' + k + '">' + icon(ic) + name + '</button>').join('') + '</div>');
+    '<div class="card hcMoreMenu" role="menu" hidden>' + MORE.map((r) => row(r, 'role="menuitem" data-hc-go="' + r[0] + '"')).join('') + '</div>');
   const drawer = app.querySelector('.hcDrawer'), more = app.querySelector('.hcMoreMenu'), moreBtn = shell.querySelector('[data-hc-more]');
+  [shell.querySelector('.hcRail'), drawer, more, root.querySelector('.bottomNav')].forEach((x) => x && homecore.paint(x));
 
   // a page of the demo's own sits in Home's view, so HomeCore's card and tile styles apply to it; HomeCore's board hides
   homeView.insertAdjacentHTML('beforeend', '<div class="hcPage" hidden></div>');
   const page = homeView.querySelector('.hcPage');
   let pageOn = null, cleanup = null;
   const ctx = { getHass, homecore, root, esc, icon, opts: null, go: (route, after, opts) => { ctx.opts = opts || null; go(route, true); after?.(); ctx.opts = null; } };
+  // every icon is the dashboard's chip (Matt, 9 Nov: "make it all the same"): HomeCore fills, fits and colours them
+  Object.assign(ctx, {
+    chip: (inner, hex) => '<span class="tfIcon hcChip"' + (hex ? ' data-light style="' + homecore.tint(hex) + '"' : '') + '>' + inner + '</span>',
+    glyph: (name, hex) => ctx.chip(icon(name), hex),
+    named: (name) => '<span class="tfIcon hcChip" data-icon-for="" data-icon-name="' + esc(name) + '"></span>',
+    device: (id) => '<span class="tfIcon hcChip"' + homecore.chip(id) + '></span>',
+    photo: (src) => ctx.chip('<img src="' + new URL(src, document.baseURI).href + '" alt="">'),
+    paint: (scope) => homecore.paint(scope),
+  });
 
   function showPage(key, again = false) {
     if (key === pageOn && !again) return;

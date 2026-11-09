@@ -6,7 +6,7 @@ import { PEOPLE, ZONES, WHERE } from './map-data.js';
 
 const MOST = 6;
 
-export function openSearch({ root, getHass, homecore, esc, icon, go }) {
+export function openSearch({ root, getHass, homecore, esc, icon, go, glyph, named, device, photo, paint }) {
   const app = root.getElementById('app');
   app.querySelector('.hcSearchPop')?.remove();
   app.insertAdjacentHTML('beforeend',
@@ -18,12 +18,11 @@ export function openSearch({ root, getHass, homecore, esc, icon, go }) {
     '</div></div>');
   const pop = app.querySelector('.hcSearchPop'), input = pop.querySelector('input'), box = pop.querySelector('.hcResults'), hint = pop.querySelector('.hcAskHint');
   const hass = getHass(), model = homecore.model;
-  const avatar = (src) => '<img src="' + new URL(src, document.baseURI).href + '" alt="">';
   const items = [
-    ...model.rooms.map((r) => ({ group: 'Areas', name: r.name, sub: 'Area', chip: '<ha-icon data-icon="' + esc(r.icon || 'mdi:home') + '"></ha-icon>', act: () => go('home', () => homecore.openArea('room:' + r.id)) })),
-    ...deviceList(hass, model).map((x) => ({ group: 'Devices', name: x.name, sub: [x.area, x.stateText].filter(Boolean).join(' · '), chip: '<ha-state-icon data-eid="' + esc(x.id) + '"></ha-state-icon>', st: x.st, act: () => go('devices', null, { q: x.name }) })),
-    ...PEOPLE.map((p) => ({ group: 'People', name: p.name, sub: WHERE, chip: avatar(p.photo), act: () => go('map', null, { pick: 'person:' + p.id }) })),
-    ...ZONES.map((z) => ({ group: 'Zones', name: z.name, sub: z.sub, chip: icon(z.icon), colour: z.colour, act: () => go('map', null, { pick: 'zone:' + z.id }) })),
+    ...model.rooms.map((r) => ({ group: 'Areas', name: r.name, sub: 'Area', chip: named(r.icon || 'mdi:home'), act: () => go('home', () => homecore.openArea('room:' + r.id)) })),
+    ...deviceList(hass, model).map((x) => ({ group: 'Devices', name: x.name, sub: [x.area, x.stateText].filter(Boolean).join(' · '), chip: device(x.id), act: () => go('devices', null, { q: x.name }) })),
+    ...PEOPLE.map((p) => ({ group: 'People', name: p.name, sub: WHERE, chip: photo(p.photo), act: () => go('map', null, { pick: 'person:' + p.id }) })),
+    ...ZONES.map((z) => ({ group: 'Zones', name: z.name, sub: z.sub, chip: glyph(z.icon, z.colour), act: () => go('map', null, { pick: 'zone:' + z.id }) })),
   ];
   let shown = [];
 
@@ -36,10 +35,9 @@ export function openSearch({ root, getHass, homecore, esc, icon, go }) {
     shown = groups.flatMap(([, xs]) => xs);
     box.innerHTML = !shown.length ? '<p class="hcAskHint">Nothing matches “' + esc(input.value.trim()) + '”.</p>'
       : groups.map(([g, xs]) => '<div><div class="tfMoreGroupName">' + g + '</div>' + xs.map((x) => '<button class="hcRow" type="button" data-i="' + shown.indexOf(x) + '">' +
-        '<span class="hcChip' + (x.colour ? ' hcTint' : '') + '"' + (x.colour ? ' style="--tint:' + x.colour + '"' : '') + '>' + x.chip + '</span>' +
+        x.chip +
         '<span class="hcRowText"><span class="hcRowName">' + esc(x.name) + '</span><span class="hcRowSub">' + esc(x.sub) + '</span></span></button>').join('') + '</div>').join('');
-    box.querySelectorAll('ha-icon[data-icon]').forEach((el) => { el.icon = el.dataset.icon; });
-    box.querySelectorAll('ha-state-icon[data-eid]').forEach((el) => { el.hass = getHass(); el.stateObj = shown.find((x) => x.st?.entity_id === el.dataset.eid)?.st; });
+    paint(box);
   }
   const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); };
   const onKey = (ev) => {

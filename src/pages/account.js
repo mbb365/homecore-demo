@@ -15,12 +15,12 @@ const local = {
   set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (_e) { /* not remembered */ } },
 };
 
-export function renderAccount(page, { esc, icon, go, root }) {
+export function renderAccount(page, { esc, icon, go, root, glyph, paint }) {
   const me = { ...FIELDS, ...local.get() };
   const photo = new URL('people/wembely.png', document.baseURI).href;
   let showing = null; // narrow only: the profile instead of the list
   const row = ([k, name, ic, colour]) => '<button class="hcRow' + (k === 'profile' ? ' active' : '') + '" type="button" data-acc="' + k + '">' +
-    '<span class="hcChip' + (colour ? ' hcTint' : '') + '"' + (colour ? ' style="--tint:' + colour + '"' : '') + '>' + icon(ic) + '</span>' +
+    glyph(ic, colour) +
     '<span class="hcRowText"><span class="hcRowName">' + name + '</span></span></button>';
   const field = (k, label, ph, type = 'text', note = '') => '<label class="hcField"><span class="hcFieldName">' + label + '</span>' +
     (type === 'area' ? '<textarea class="hcInput" rows="4" data-f="' + k + '" placeholder="' + esc(ph) + '">' + esc(me[k]) + '</textarea>'
@@ -42,6 +42,7 @@ export function renderAccount(page, { esc, icon, go, root }) {
       '</div>' +
     '</div>';
   const wrap = page.querySelector('.hcAccount');
+  paint(page);
   const setShowing = (v) => { showing = v; wrap.classList.toggle('hcShowProfile', v === 'profile'); window.scrollTo(0, 0); };
 
   page.addEventListener('click', (ev) => {

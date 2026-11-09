@@ -20,7 +20,7 @@ function ring([lat, lng], metres) {
   return pts;
 }
 
-export function renderMap(page, { esc, icon, root, opts }) {
+export function renderMap(page, { esc, icon, root, opts, glyph, photo, paint }) {
   const app = root.getElementById('app');
   const url = (src) => new URL(src, document.baseURI).href;
   const zone = (id) => ZONES.find((z) => z.id === id);
@@ -56,20 +56,20 @@ export function renderMap(page, { esc, icon, root, opts }) {
     new maplibregl.Marker({ element: el }).setLngLat(ll(p.at)).addTo(map);
   });
 
-  const head = (chip, name, sub, tint) => '<span class="hcChip' + (tint ? ' hcTint" style="--tint:' + tint : '') + '">' + chip + '</span>' +
+  const head = (c, name, sub) => c +
     '<span class="hcRowText"><span class="hcRowName">' + esc(name) + '</span><span class="hcRowSub">' + esc(sub) + '</span></span>';
   const rows = () => {
-    if (tab === 'people') return PEOPLE.map((p) => '<button class="hcRow" type="button" data-person="' + p.id + '">' + head('<img src="' + url(p.photo) + '" alt="">', p.name, WHERE) + '</button>').join('');
-    if (tab === 'devices') return TRACKERS.map((t) => '<button class="hcRow" type="button" data-tracker="' + t.id + '">' + head(icon(t.icon), t.name, WHERE) + '</button>').join('');
-    return ZONES.map((z) => '<button class="hcRow" type="button" data-zone="' + z.id + '">' + head(icon(z.icon), z.name, z.sub, z.colour) + '</button>').join('');
+    if (tab === 'people') return PEOPLE.map((p) => '<button class="hcRow" type="button" data-person="' + p.id + '">' + head(photo(p.photo), p.name, WHERE) + '</button>').join('');
+    if (tab === 'devices') return TRACKERS.map((t) => '<button class="hcRow" type="button" data-tracker="' + t.id + '">' + head(glyph(t.icon), t.name, WHERE) + '</button>').join('');
+    return ZONES.map((z) => '<button class="hcRow" type="button" data-zone="' + z.id + '">' + head(glyph(z.icon, z.colour), z.name, z.sub) + '</button>').join('');
   };
   // a person's or device's own view: back, their name, the last hour, and More info
   const detail = (x) => '<div class="hcMapDetailHead"><button class="tfBack" type="button" data-map-back aria-label="Back">' + BACK + '</button>' +
       '<span class="hcRowText"><span class="hcRowName">' + esc(x.name) + '</span><span class="hcRowSub">' + WHERE + '</span></span></div>' +
-    '<div class="tfOpen hcTrail"><div class="tfOpenHead"><span class="hcChip hcTint" style="--tint:#03a9f4">' + icon('mdi:update') + '</span><span class="hcRowName hcTrailTitle">Activity</span></div>' +
+    '<div class="tfOpen hcTrail"><div class="tfOpenHead">' + glyph('mdi:update', '#03a9f4') + '<span class="hcRowName hcTrailTitle">Activity</span></div>' +
       TRAIL.map(([where, ago]) => {
         const z = zone(where);
-        return z ? '<div class="hcRow hcStatic">' + head(icon(z.icon), z.id === 'home' ? 'Home' : z.name, ago + ' min ago', z.colour) + '</div>'
+        return z ? '<div class="hcRow hcStatic">' + head(glyph(z.icon, z.colour), z.id === 'home' ? 'Home' : z.name, ago + ' min ago') + '</div>'
           : '<div class="hcRow hcStatic hcAway"><span class="hcChip hcLine" aria-hidden="true"></span><span class="hcRowText"><span class="hcRowName">Away</span><span class="hcRowSub">' + ago + ' min ago</span></span></div>';
       }).join('') + '</div>' +
     '<button class="primary hcMoreInfo" type="button">More info</button>';
@@ -78,6 +78,7 @@ export function renderMap(page, { esc, icon, root, opts }) {
     card.innerHTML = pick ? detail(pick)
       : '<div class="tfSeg" role="group" aria-label="Show">' + [['people', 'People'], ['devices', 'Devices'], ['zones', 'Zones']].map(([k, t]) => '<button type="button" data-tab="' + k + '" aria-pressed="' + (k === tab) + '">' + t + '</button>').join('') + '</div>' +
         '<div class="hcMapRows">' + rows() + '</div>';
+    paint(card);
   }
   card.addEventListener('click', (ev) => {
     const t = ev.target.closest('[data-tab],[data-person],[data-tracker],[data-zone],[data-map-back]');

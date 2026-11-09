@@ -3348,6 +3348,11 @@ export function mountTestFocus(root, { config, getHass }) {
     openArea, closeArea,
     get page() { return areaPage; },
     get model() { return model; },
+    // every icon on the demo's pages is the dashboard's chip (Matt, 9 Nov: "make it all the same"): a device's icon slot
+    // and its colour while on, any colour by the same rule, and the filling and fitting of the glyphs
+    chip(id) { const c = kindRgb(id); return iconSlot(id, iconFor(id)) + (c ? ' data-light style="' + colourVars(c) + '"' : ''); },
+    tint(hex) { return colourVars([1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))); },
+    paint(scope) { fillIcons(scope); },
     update(next) {
       if (!testFocus) return;
       const first = !Object.keys(states).length;
