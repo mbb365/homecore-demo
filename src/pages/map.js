@@ -72,7 +72,7 @@ export function renderMap(page, { esc, icon, root, opts, glyph, photo, paint, ba
         return z ? '<div class="hcRow hcStatic">' + head(glyph(z.icon, z.colour), z.id === 'home' ? 'Home' : z.name, ago + ' min ago') + '</div>'
           : '<div class="hcRow hcStatic hcAway"><span class="hcChip hcLine" aria-hidden="true"></span><span class="hcRowText"><span class="hcRowName">Away</span><span class="hcRowSub">' + ago + ' min ago</span></span></div>';
       }).join('') + '</div>' +
-    '<button class="primary hcMoreInfo" type="button">More info</button>';
+    '<button class="primary hcMoreInfo" type="button" data-oops>More info</button>';
 
   function draw() {
     card.innerHTML = pick ? detail(pick)

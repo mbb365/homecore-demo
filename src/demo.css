@@ -8,8 +8,12 @@
 /* ---------- the rail (desktop): logo, search, the pages in the middle, you at the bottom ---------- */
 .hcRail{position:fixed;z-index:90;inset:0 auto 0 0;width:var(--hc-rail);display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px 0;background:var(--bg);box-shadow:inset -.4px 0 0 var(--line)}
 .hcRailMain{flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px}
-.hcLogo{display:grid;place-items:center;width:48px;height:48px}
-.hcLogoMark{display:block;width:40px;height:40px}
+/* the logo, half its size (Matt, 9 Nov: 20), is the Home button: full colour on Home, dimmed elsewhere */
+.hcLogo{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size)}
+.hcLogoMark{display:block;width:20px;height:20px}
+.hcRail .hcLogo .hcLogoMark{opacity:.55;transition:opacity .15s ease}
+.hcRail .hcLogo:is(.active,:hover) .hcLogoMark{opacity:1}
+.hcDrawerHead .hcLogoMark{width:28px;height:28px}
 /* the rail's buttons: icons only (Matt, 9 Nov), muted, the open page's in the text colour; named in a tooltip */
 #app .hcRailBtn{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner)!important;background:transparent;color:var(--muted);cursor:pointer;transition:color .15s ease}
 .hcRailBtn .hcI{width:24px;height:24px}
@@ -61,7 +65,7 @@
 /* a button with words in the toolbar: a 46 track like HomeCore's controls */
 #app .hcBtn{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 16px;border:0;border-radius:16px!important;background:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:600 14px/20px var(--font-tile);white-space:nowrap;cursor:pointer}
 .hcBtn .hcI{width:22px;height:22px}
-@media(max-width:620px){.hcHead,.hcAccList>.hcTitle{padding:0 16px}}
+@media(max-width:620px){.hcHead,.hcAccount>.hcTitle{padding:0 16px}}
 
 /* the toolbar: Filters, search, group, sort, columns, table or cards. Every control 46 tall, as HomeCore's tracks */
 .hcToolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -138,17 +142,22 @@
 /* a page opened from the side menu has no back arrow; one opened from another page has ‹ back (Matt, 9 Nov) */
 #app.hcNoBack :is(.tfAreaHead .back,#settingsBack){display:none}
 
-/* ---------- My account: the list beside the profile; narrow, one then the other ---------- */
-.hcAccount{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,640px);gap:40px;align-items:start}
-.hcAccList{display:grid;gap:16px}
-.hcAccList .hcTitle{margin:0 0 8px}
+/* ---------- My account: the title, then the list beside the page it opens; narrow, one then the other ---------- */
+.hcAccount{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,640px);grid-template-areas:"title title" "list panel";column-gap:40px;row-gap:16px;align-items:start}
+.hcAccount>.hcTitle{grid-area:title}
+.hcAccList{grid-area:list;display:grid;gap:16px}
 .hcRowsCard{display:grid;gap:0}
-.hcProfile{display:grid;gap:24px}
-.hcProfileHead{display:none}
-.hcPhoto{display:grid;justify-items:center;gap:10px}
+.hcPanel{grid-area:panel;display:grid;gap:24px}
+.hcPanel[hidden]{display:none}
+.hcPanelHead{display:none}
+/* the photo from the top left, level with the list's first card */
+.hcPhoto{display:flex;align-items:flex-end;gap:16px}
 .hcPhoto img{width:88px;height:88px;border-radius:var(--r-card);object-fit:cover;box-shadow:var(--hc-hair-all)}
+.hcPhotoActions{display:flex;align-items:center;gap:12px}
 .hcPhoto .hcBtn{height:40px}
 .hcFields{display:grid;gap:16px;padding:18px!important}
+.hcFields>.hcCardTitle{font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em;color:var(--text);margin-top:-4px}
+.hcSoon p{margin:0;color:var(--muted);font:400 16px/1.4 var(--font)}
 .hcField{display:grid;gap:8px}
 .hcFieldName{font:600 14px/20px var(--font-tile);color:var(--text)}
 .hcFieldNote{color:var(--muted);font:400 14px/1.3 var(--font)}
@@ -157,12 +166,12 @@
 #app .hcInput:focus{outline:2px solid var(--primary);outline-offset:-1px}
 .hcSince{font:400 16px/1.2 var(--font);color:var(--text)}
 @container hcpage (width < 760px){
-  .hcAccount{grid-template-columns:minmax(0,1fr)}
-  .hcProfile{display:none}
+  .hcAccount{grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "list" "panel"}
+  .hcPanel{display:none!important}
   .hcAccList .hcRow.active{background:transparent;box-shadow:none}
-  .hcAccount.hcShowProfile .hcAccList{display:none}
-  .hcAccount.hcShowProfile .hcProfile{display:grid}
-  .hcAccount.hcShowProfile .hcProfileHead{display:flex}
+  .hcAccount.hcShowPanel :is(.hcAccList,.hcTitle){display:none}
+  .hcAccount.hcShowPanel .hcPanel:not([hidden]){display:grid!important}
+  .hcAccount.hcShowPanel .hcPanelHead{display:flex}
 }
 
 /* ---------- Map: the map fills the page, one card floats on it (Figma 981:9937, HomeCore's padding and corners) ---------- */
@@ -170,7 +179,7 @@
 .hcMap{position:fixed;z-index:1;inset:0 0 0 var(--hc-rail)}
 .hcMapCanvas,.hcMapCanvas.maplibregl-map{position:absolute;inset:0;background:var(--bg)}
 .hcMapCanvas .maplibregl-canvas{outline:none}
-#homeView .hcMapCard{position:absolute;z-index:500;top:22px;left:22px;width:420px;max-width:calc(100% - 44px);max-height:calc(100% - 44px);overflow:auto;display:flex;flex-direction:column;gap:10px;background:var(--card)}
+#homeView .hcMapCard{position:absolute;z-index:500;top:22px;left:22px;width:364px;max-width:calc(100% - 44px);max-height:calc(100% - 44px);overflow:auto;display:flex;flex-direction:column;gap:10px;background:var(--card)}
 .hcMapRows{display:grid}
 .hcMapDetailHead{display:flex;align-items:center;gap:6px;padding:4px 4px 0}
 .hcTrail{gap:0}
@@ -237,8 +246,8 @@
 #app .hcSearchBox .hcResults .hcAskHint{margin:4px 8px 10px}
 #app .hcSearchBox .tfMoreGroupName{margin:6px 0 2px 18px}
 
-/* every page from the left, as Home (Matt, 9 Nov): Settings was centred */
-#app.hcDemo #settingsView{margin-left:0}
+/* every page from the left, as Home (Matt, 9 Nov): Settings, the Weather page and the room pages were centred */
+#app.hcDemo .view{margin-left:0}
 /* a page's title with its back arrow: HomeCore's page header */
 .hcTitle{display:flex;align-items:center;gap:8px;margin:0}
 .hcTitle .settingsTitle{margin:0}
@@ -253,8 +262,9 @@
 #app.hcDemo #housePane .toggleRow>.settingsSelect{min-width:200px}
 #app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments){display:inline-flex;width:auto;align-self:flex-start}
 #app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments) button{flex:0 0 auto;padding:0 16px}
-#homeView .hcMapTop .tfSeg{flex:0 0 auto}
-#homeView .hcMapTop .tfSeg button{flex:0 0 auto;padding:0 16px}
+/* the map's tabs 30% wider than their words need (252 to 328, Matt, 9 Nov), the card as wide as they are (364) */
+#homeView .hcMapTop .tfSeg{flex:1 1 auto}
+#homeView .hcMapTop .tfSeg button{flex:1 1 0;padding:0 16px}
 
 /* phones: a card the full width of the screen is as tall as what it holds (Matt, 9 Nov: the weather card needn't stretch
    to fill its board height). The cards run down in the board's reading order (HomeCore puts them in that order), 16
@@ -267,3 +277,39 @@
   #app.hcDemo.tfDash:not(.tfEditing) .tfDash-wx .wbSummary{flex:none;margin-top:0;container-type:normal}
   #app.hcDemo.tfDash:not(.tfEditing) .tfDash-wx .wbSummaryText{position:static}
 }
+
+/* ---------- Settings (Matt, 9 Nov) ---------- */
+/* a group's title inside its card: HomeCore's card header, 18 in, 14 from the top */
+#app.hcDemo #settingsView .toggleList>.hcCardTitle{display:flex;align-items:center;min-height:28px;padding:14px 18px 2px;font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+#app.hcDemo #settingsView .toggleList>.hcCardTitle+.toggleRow::before{display:none}
+/* the segmented choices as tall as the lists beside them (32): pieces 3 in, 26 tall, corner 13 */
+#app.hcDemo #housePane .themeChoice{height:32px;padding:3px;gap:3px;box-sizing:border-box}
+#app.hcDemo #housePane .themeChoice>button{height:26px!important;padding:0 12px;border-radius:13px!important;font:600 12px/16px var(--font-tile)!important}
+/* Lights: cards by default (the cards a phone gets), a table on choice; the table's note only with the table */
+.hcLightView{display:flex;padding:4px 0 14px}
+#housePane.hcLightCards .houseTab .metaTableWrap,#housePane.hcLightCards .houseTab .tfTableNote{display:none}
+#housePane.hcLightCards .tfLightCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+#housePane:not(.hcLightCards) .tfLightCards{display:none}
+@container housepane (width < 720px){#housePane:not(.hcLightCards) .houseTab .metaTableWrap{display:none}#housePane:not(.hcLightCards) .tfLightCards{display:grid}}
+
+/* the Oops popup: HomeCore's popup, 400 wide, 20 in (Matt, 9 Nov; Figma "Oops popup · to edit") */
+.hcOops{z-index:300}
+.hcOopsCard{width:400px;gap:14px}
+.hcOopsTitle{font:500 28px/1.15 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+.hcOopsLine{margin:0;font:400 16px/1.4 var(--font);color:var(--text)}
+.hcOopsActions{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:4px}
+.hcOopsActions .primary{display:inline-flex;align-items:center}
+.hcDevTable tbody tr[data-oops],.hcDevRows .activityRow[data-oops],.hcDevTile[data-oops]{cursor:pointer}
+.hcDevTable tbody tr[data-oops]:hover td{background:var(--tile)}
+
+/* light mode: the summaries' icons as bright as in dark mode (Matt, 9 Nov: Lights, Energy and Climate went dull) */
+#app.hcDemo.house.light .tfSum{--sum-ink:var(--sum-d,var(--hc-icon-ink))}
+#app.hcDemo.house.light .tfSum[data-summary="climate"]{--g0:var(--g0-d);--g1:var(--g1-d);--g2:var(--g2-d)}
+/* editing: the tick in the tray's head instead of Done; the title's font list where the pencil was */
+#app.hcDemo .tfTrayHead>[data-tray-done]{display:none}
+#app.hcDemo .tfTrayHead{align-items:center}
+#app.hcDemo .tfTrayHead>#dashEditNav{margin-left:auto}
+.hcTitleFontPick{display:none}
+#app.tfEditing .hcTopRight{right:calc(360px + 22px)}
+#app.tfEditing .hcTitleFontPick{display:block;height:40px;min-width:200px}
+#app.hcTitleFont .tfDashTitle{font-family:var(--hc-title-font)!important;font-weight:var(--hc-title-weight)!important;letter-spacing:-.01em!important}

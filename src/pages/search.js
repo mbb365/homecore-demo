@@ -12,7 +12,7 @@ export function openSearch({ root, getHass, homecore, esc, icon, go, glyph, name
   app.insertAdjacentHTML('beforeend',
     '<div class="tfMoreBackdrop hcSearchPop"><div class="tfMore hcSearchBox" role="dialog" aria-label="Search">' +
       '<label class="hcSearch hcAsk">' + icon('mdi:magnify') + '<input class="addInput" type="search" placeholder="Search or ask the home" aria-label="Search or ask the home" autocomplete="off">' +
-        '<button class="hcMic" type="button" title="Ask with your voice" aria-label="Ask with your voice">' + icon('mdi:microphone') + '</button></label>' +
+        '<button class="hcMic" type="button" title="Ask with your voice" aria-label="Ask with your voice" data-oops>' + icon('mdi:microphone') + '</button></label>' +
       '<p class="hcAskHint">Search areas, devices, automations, people and zones, or just ask the home to do something.</p>' +
       '<div class="tfMoreList hcResults"></div>' +
     '</div></div>');

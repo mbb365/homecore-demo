@@ -408,7 +408,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   // The patch's strategy order; sizes from hui-weather-bento-card
   // the new cards (Matt, 1 Nov) end the Weather page and are on the dashboard once added
   const BASE_CARDS=['aq_tile','pollen_tile','radar_tile'];
-  const CARDS=['current','hourly','sun','moon','wind','uv_index','compared_to_average','humidity','pressure','precipitation','visibility','air_quality',...BASE_CARDS]
+  // in rows by height (Matt, 9 Nov): the 5-row cards first, then the 4-row ones, so a row is never two heights
+  const CARDS=['current','hourly','sun','moon','uv_index','aq_tile','pollen_tile','wind','compared_to_average','humidity','pressure','precipitation','visibility','air_quality','radar_tile']
     .filter(name=>!cards||cards.includes(name));
   const SIZES={current:'wide',hourly:'wide',compared_to_average:'double'};
   // the widgets with an action zone are XL on the Weather page, so their callouts show (Matt, 9 Nov)
@@ -1157,6 +1158,9 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       if(focused&&!focusAfter)it.el.querySelector('[data-wb-focus="'+focused+'"]')?.focus();
     }
     if(focusAfter){root.querySelector('[data-wb-focus="'+focusAfter+'"]')?.focus();focusAfter=null}
+    // the first shorter card that shows starts a row of its own
+    let broke=false;
+    for(const name of CARDS){const it=items[name],tall=SIZES[name]==='wide'||XL.includes(name),mark=!it.el.hidden&&!tall&&!broke;if(mark)broke=true;it.el.toggleAttribute('data-break',mark)}
     paint(performance.now());
   }
   function queue(){

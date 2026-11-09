@@ -12,10 +12,11 @@ import { openSearch } from './pages/search.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // the rail, top to bottom (Matt's file has Automation where Weather is: Matt, 9 Nov)
-const RAIL = [['home', 'Home', 'mdi:home'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
+// Home is the logo at the top (Matt, 9 Nov); Map has Home's old place
+const RAIL = [['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
-const MORE = [['map', 'Map', 'mdi:tooltip-account'], ['activity', 'Activity', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
+const MORE = [['activity', 'Activity', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
 // the map's code is big (MapLibre), so it loads only when Map opens
 function renderMap(page, ctx) {
   const now = { ...ctx }; // Search's pick, before go() clears it
@@ -37,7 +38,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   const railBtn = ([k, name, ic]) => '<button class="hcRailBtn" type="button" data-hc-go="' + k + '" data-tip="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
   shell.insertAdjacentHTML('afterbegin',
     '<nav class="hcRail" aria-label="Main">' +
-      '<div class="hcLogo" role="img" aria-label="Home Assistant">' + HA_LOGO + '</div>' +
+      '<button class="hcRailBtn hcLogo" type="button" data-hc-go="home" data-tip="Home" aria-label="Home">' + HA_LOGO + '</button>' +
       '<button class="hcRailBtn" type="button" data-hc-search data-tip="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
       '<div class="hcRailMain">' + RAIL.map(railBtn).join('') +
         '<button class="hcRailBtn" type="button" data-hc-more data-tip="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
@@ -56,7 +57,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   app.insertAdjacentHTML('beforeend',
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
       '<div class="hcDrawerHead"><div class="hcLogo">' + HA_LOGO + '</div><button class="hcRailBtn" type="button" data-hc-close aria-label="Close">' + icon('mdi:close') + '</button></div>' +
-      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + RAIL.map((r) => drawerRow(r)).join('') +
+      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + drawerRow(['home', 'Home', 'mdi:home']) + RAIL.map((r) => drawerRow(r)).join('') +
       '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') +
       '<button class="hcRow hcNavRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcNavIcon hcNavMe"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
@@ -234,6 +235,90 @@ export function mountDemoShell(root, { getHass, homecore }) {
   });
   addEventListener('hashchange', () => { trail = []; go(location.hash.replace(/^#\/?/, '') || 'home'); });
 
+  /* Settings, as Matt asked on 9 Nov: no Show density; each group's title inside its card (a card header, 18 in);
+     Lights shown as cards by default, with a Cards | Table choice */
+  (function tuneSettings() {
+    const pane = $('housePane');
+    if (!pane) return;
+    $('densityToggle')?.closest('.toggleRow')?.remove();
+    pane.querySelectorAll('.tfSetGroup').forEach((g) => {
+      const label = g.querySelector(':scope > .sectionLabel'), list = g.querySelector(':scope > .toggleList');
+      if (label && list) { label.className = 'hcCardTitle'; list.prepend(label); }
+    });
+    const lights = pane.querySelector('[data-house-pane="lights"] > .card');
+    if (lights) {
+      const KEY = 'homecore-demo-light-view';
+      let view = 'cards';
+      try { view = localStorage.getItem(KEY) || 'cards'; } catch (_e) { /* cards */ }
+      lights.insertAdjacentHTML('afterbegin', '<div class="hcLightView"><div class="themeChoice" role="group" aria-label="Show lights as">' +
+        '<button class="wxLayoutBtn" type="button" data-light-view="cards">Cards</button><button class="wxLayoutBtn" type="button" data-light-view="table">Table</button></div></div>');
+      const show = (v) => {
+        view = v;
+        pane.classList.toggle('hcLightCards', v === 'cards');
+        lights.querySelectorAll('[data-light-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lightView === v)));
+        try { localStorage.setItem(KEY, v); } catch (_e) { /* this visit only */ }
+      };
+      lights.querySelector('.hcLightView').addEventListener('click', (ev) => { const b = ev.target.closest('[data-light-view]'); if (b) show(b.dataset.lightView); });
+      show(view);
+    }
+  })();
+  /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov): HomeCore's popup, Close
+     or Add to the list (which says thanks in HomeCore's toast) */
+  function oops() {
+    app.querySelector('.hcOops')?.remove();
+    app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcOops"><div class="tfMore hcOopsCard" role="dialog" aria-modal="true" aria-labelledby="hcOopsTitle">' +
+      '<div class="hcOopsTitle" id="hcOopsTitle">Oops!</div><p class="hcOopsLine">We haven\'t designed this yet. Let\'s add it to the list :)</p>' +
+      '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><button class="primary" type="button" data-oops-add>Add to the list</button></div></div></div>');
+    const pop = app.querySelector('.hcOops'), was = root.activeElement;
+    const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); was?.focus?.(); };
+    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); } };
+    root.addEventListener('keydown', onKey, true);
+    pop.addEventListener('click', (ev) => {
+      if (ev.target === pop || ev.target.closest('[data-oops-close]')) close();
+      else if (ev.target.closest('[data-oops-add]')) {
+        close();
+        const toast = $('toast');
+        if (toast) { toast.textContent = 'Added to the list'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2600); }
+      }
+    });
+    pop.querySelector('[data-oops-add]').focus();
+  }
+  ctx.oops = oops;
+  root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
+  /* the home title's font (Matt, 9 Nov): a list beside the title while the dashboard is being edited; kept in this
+     browser, and the phone's copy follows it */
+  const FONTS = [['', 'Inter (HomeCore)'], ['Geist', 'Geist', 600], ['Space Grotesk', 'Space Grotesk', 700], ['Bricolage Grotesque', 'Bricolage Grotesque', 700],
+    ['Fraunces', 'Fraunces', 600], ['DM Serif Display', 'DM Serif Display', 400], ['Playfair Display', 'Playfair Display', 700], ['JetBrains Mono', 'JetBrains Mono', 700], ['Caveat', 'Caveat', 700]];
+  const FONT_KEY = 'homecore-demo-title-font';
+  const loadFonts = () => {
+    if (document.getElementById('hc-title-fonts')) return;
+    const link = Object.assign(document.createElement('link'), { id: 'hc-title-fonts', rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?' + FONTS.filter(([f]) => f && f !== 'Geist').map(([f, , w]) => 'family=' + f.replace(/ /g, '+') + ':wght@' + w).join('&') + '&display=swap' });
+    document.head.appendChild(link);
+  };
+  const setTitleFont = (f) => {
+    const [, , w] = FONTS.find(([k]) => k === f) || FONTS[0];
+    app.style.setProperty('--hc-title-font', f ? '"' + f + '", var(--font)' : '');
+    app.style.setProperty('--hc-title-weight', f ? String(w) : '');
+    app.classList.toggle('hcTitleFont', Boolean(f));
+    try { if (f) localStorage.setItem(FONT_KEY, f); else localStorage.removeItem(FONT_KEY); } catch (_e) { /* this visit only */ }
+  };
+  let titleFont = '';
+  try { titleFont = localStorage.getItem(FONT_KEY) || ''; } catch (_e) { /* the default */ }
+  if (titleFont) { loadFonts(); setTitleFont(titleFont); }
+  const topRight = shell.querySelector('.hcTopRight');
+  topRight.insertAdjacentHTML('afterbegin', '<select class="settingsSelect hcTitleFontPick" aria-label="Title font">' + FONTS.map(([k, name]) => '<option value="' + esc(k) + '">' + esc(name) + '</option>').join('') + '</select>');
+  const fontPick = topRight.querySelector('.hcTitleFontPick');
+  fontPick.value = titleFont;
+  fontPick.addEventListener('change', () => { loadFonts(); setTitleFont(fontPick.value); });
+  /* the edit tick lives in the edit tray's head while editing (Matt, 9 Nov: the tray covered it), in place of Done */
+  const trayHead = root.querySelector('.tfTrayHead');
+  new MutationObserver(() => {
+    const editing = app.classList.contains('tfEditing'), pen = $('dashEditNav');
+    if (!pen || !trayHead) return;
+    if (editing && pen.parentElement !== trayHead) { trayHead.appendChild(pen); loadFonts(); }
+    if (!editing && pen.parentElement === trayHead) topRight.appendChild(pen);
+  }).observe(app, { attributes: true, attributeFilter: ['class'] });
   document.fonts?.ready.then(() => homecore.refit());
   go(location.hash.replace(/^#\/?/, '') || 'home');
   return { go };

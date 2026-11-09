@@ -54,15 +54,15 @@ export function renderDevices(page, { getHass, homecore, esc, icon, opts, device
 
   page.innerHTML =
     '<div class="hcHead">' + head('Devices') +
-      '<div class="hcHeadActions"><button class="pill" type="button">Select</button><button class="primary hcAdd" type="button">' + icon('mdi:plus') + 'Add device</button></div></div>' +
+      '<div class="hcHeadActions"><button class="pill" type="button" data-oops>Select</button><button class="primary hcAdd" type="button" data-oops>' + icon('mdi:plus') + 'Add device</button></div></div>' +
     '<div class="hcToolbar">' +
-      '<button class="hcBtn" type="button">' + icon('mdi:filter-variant') + 'Filters</button>' +
+      '<button class="hcBtn" type="button" data-oops>' + icon('mdi:filter-variant') + 'Filters</button>' +
       '<label class="hcSearch">' + icon('mdi:magnify') + '<input class="addInput" type="search" placeholder="Search ' + all.length + ' devices" aria-label="Search devices"></label>' +
       '<select class="settingsSelect" data-group aria-label="Group by">' +
         [['type', 'Group by type'], ['area', 'Group by area'], ['integration', 'Group by integration'], ['none', 'No grouping']].map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select>' +
       '<select class="settingsSelect" data-sort aria-label="Sort by">' +
         [['name', 'Sort by name'], ['area', 'Sort by area']].map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select>' +
-      '<button class="navBtn" type="button" title="Columns" aria-label="Columns">' + icon('mdi:cog-outline') + '</button>' +
+      '<button class="navBtn" type="button" title="Columns" aria-label="Columns" data-oops>' + icon('mdi:cog-outline') + '</button>' +
       '<div class="tfSeg hcViewSeg" role="group" aria-label="Show as">' +
         '<button type="button" data-view="list" title="Table" aria-label="Table">' + icon('mdi:format-list-bulleted') + '</button>' +
         '<button type="button" data-view="cards" title="Cards" aria-label="Cards">' + icon('mdi:view-grid-outline') + '</button></div>' +
@@ -77,13 +77,13 @@ export function renderDevices(page, { getHass, homecore, esc, icon, opts, device
   const pills = (x) => '<div class="hcPills"><span class="hcPill">' + esc(x.type) + '</span><span class="hcPill' + (x.on ? ' on' : '') + '">' + esc(x.stateText) + '</span></div>';
   const table = (xs) => '<section class="card hcTableCard"><div class="metaTableWrap"><table class="metaTable hcDevTable">' +
       '<thead><tr><th>Name</th><th>Area</th><th>Integration</th><th>Manufacturer</th><th>Battery</th></tr></thead><tbody>' +
-      xs.map((x) => '<tr><td><span class="hcNameCell">' + iconCell(x) + '<strong>' + esc(x.name) + '</strong></span></td><td>' + esc(x.area || '—') + '</td><td>' + esc(x.integration) + '</td><td>' + esc(x.maker) + '</td><td>' + esc(x.battery || '—') + '</td></tr>').join('') +
+      xs.map((x) => '<tr data-oops><td><span class="hcNameCell">' + iconCell(x) + '<strong>' + esc(x.name) + '</strong></span></td><td>' + esc(x.area || '—') + '</td><td>' + esc(x.integration) + '</td><td>' + esc(x.maker) + '</td><td>' + esc(x.battery || '—') + '</td></tr>').join('') +
       '</tbody></table></div>' +
       // narrow: a tile for each device, in the same card
-      '<div class="activityRows hcDevRows">' + xs.map((x) => '<div class="activityRow">' + iconCell(x) +
+      '<div class="activityRows hcDevRows">' + xs.map((x) => '<div class="activityRow" data-oops>' + iconCell(x) +
         '<div class="tfName"><span class="activityRowName">' + esc(x.name) + '</span><span class="activityRowMeta">' + esc([x.area, x.stateText].filter(Boolean).join(' · ')) + '</span></div></div>').join('') + '</div>' +
     '</section>';
-  const cards = (xs) => '<div class="hcDevCards">' + xs.map((x) => '<div class="tfAction hcDevTile">' +
+  const cards = (xs) => '<div class="hcDevCards">' + xs.map((x) => '<div class="tfAction hcDevTile" data-oops>' +
       '<div class="tfActionHead">' + iconCell(x) + '<div class="tfName"><span class="activityRowName">' + esc(x.name) + '</span><span class="activityRowMeta">' + esc(x.area || '—') + '</span></div></div>' +
       pills(x) + '</div>').join('') + '</div>';
 
