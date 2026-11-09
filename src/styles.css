@@ -1,0 +1,2022 @@
+:host{
+  display:flex;
+  flex-direction:column;
+  min-height:calc(100dvh - var(--header-height,0px));
+  position:relative;
+  background:#050505;
+  color-scheme:dark;
+  /* Base palette — mirrors the Figma "Color" variables (Dark). A sync changes only these two blocks. */
+  --color-bg-ground:#090909;--color-bg-card:#222222;--color-bg-tile:#2b2b2b;
+  /* text a softer grey than the bright fills (Matt, 28 Oct: "in dark mode, make the whites more grey"; was #f1f1f1).
+     Figma's color/text/primary (Dark) is neutral/300 #d9d9d9 too (28 Oct) */
+  --color-fill-bright:#f1f1f1;--color-text-primary:#d9d9d9;--color-text-muted:#969696;--color-text-on-bright:#090909;
+  --color-line:rgba(255,255,255,.14);--color-border-focus:#03a9f4;
+  --color-accent-primary:#03a9f4;--color-accent-secondary:#d0ff00;--color-text-accent:#d0ff00;--color-text-on-accent:#090909;--color-bg-resting:#1f7a4d;
+  --color-bg-danger:#311313;--color-bg-danger-fill:#d53d3d;--color-border-danger:#8c2e2e;--color-text-danger:#ff7777;--color-text-on-danger:#ffffff;
+  --color-state-hover:rgba(255,255,255,.08);
+  --color-bg-chip:#090909;--color-fill-selected:#f1f1f1;--color-text-on-selected:#090909;--color-bg-segment-selected:#2b2b2b;
+  /* Weather · to design (same in light and dark) */
+  --wx-clear:#03a9f4;--wx-cloudy:#d8d6d6;--wx-night:#1d2b4f;--wx-cloud-bright:#f1f1f1;
+  --color-state-pressed:rgba(255,255,255,.14);--color-state-hover-on-bright:rgba(0,0,0,.06);--color-state-pressed-on-bright:rgba(0,0,0,.12);
+  --scrim:rgba(0,0,0,.66);--lift:rgba(0,0,0,.5)}
+*{box-sizing:border-box}
+#app{color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background .25s ease,color .25s ease;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button,input{font:inherit}
+#app{flex:1;display:flex;flex-direction:column;width:100%;margin:0;padding:0;background:var(--bg);text-align:left}
+/* The card's older colour names, each pointing at one base colour (three greys, two text greys, one bright fill, one line) */
+#app{
+  --bg:var(--color-bg-ground);--page:var(--color-bg-ground);--card:var(--color-bg-card);--card2:var(--color-bg-card);--modal:var(--color-bg-card);--timer:var(--color-bg-ground);
+  --tile:var(--color-bg-tile);--tile-2:var(--color-bg-tile);--row:var(--color-bg-tile);--row-rest:var(--color-bg-tile);--raised:var(--color-bg-tile);--chip:var(--color-bg-tile);
+  --segment:var(--color-bg-tile);--seg-on:var(--color-bg-segment-selected);--scroll-thumb:var(--color-bg-tile);
+  --control:var(--color-bg-ground);--control-2:var(--color-bg-ground);--sunken:var(--color-bg-ground);--input:var(--color-bg-ground);--track:var(--color-bg-ground);--icon-bg:var(--color-bg-chip);--seg-bg:var(--color-bg-ground);--switch-off:var(--color-bg-ground);--stage:var(--color-bg-ground);
+  --text:var(--color-text-primary);--soft:var(--color-text-primary);--muted:var(--color-text-muted);--accent-text:var(--color-text-accent);
+  --border-hover:var(--color-text-muted);--knob-off:var(--color-text-muted);--today-ring:var(--color-text-muted);
+  --line:var(--color-line);--lineb:var(--color-line);--field-line:var(--color-line);--divider:var(--color-line);
+  --bright:var(--color-fill-bright);--slider-fill:var(--color-fill-bright);--segment-fill:var(--color-fill-bright);--timer-fill:var(--color-fill-bright);--on-bright:var(--color-text-on-bright);
+  --hover:var(--color-state-hover);--wash-2:var(--color-state-hover);
+  --danger:var(--color-text-danger);--danger-bg:var(--color-bg-danger);--danger-line:var(--color-border-danger);--danger-fill:var(--color-bg-danger-fill);--on-danger-fill:var(--color-text-on-danger);
+  --primary:var(--color-accent-primary);--secondary:var(--color-accent-secondary)}
+.shell{flex:1;display:flex;flex-direction:column;position:relative;width:100%;background:var(--page);border-radius:0;overflow:visible;transition:background .28s ease}
+#app.resting .shell{background:var(--color-bg-resting)}
+#app.paused .shell{background:var(--primary)}
+#app.light.paused .shell{background:color-mix(in srgb,var(--primary) 55%,var(--color-bg-card))}
+#app.light{
+  /* Base palette — mirrors the Figma "Color" variables (Light): Warm paper, warm ink */
+  --color-bg-ground:#eeebe8;--color-bg-card:#fbf9f6;--color-bg-tile:#f3efea;
+  --color-fill-bright:#26221e;--color-text-primary:#26221e;--color-text-muted:#6a625a;--color-text-on-bright:#fbf9f6;--color-text-on-accent:#26221e;
+  --color-line:rgba(38,34,30,.12);--color-text-accent:#26221e;--color-accent-secondary:#03a9f4;--color-bg-resting:#7dbb98;
+  --color-bg-danger:#f5dede;--color-border-danger:#e3a0a0;--color-text-danger:#b42a2a;
+  --color-state-hover:rgba(38,34,30,.06);--color-state-pressed:rgba(38,34,30,.12);
+  --color-bg-chip:#fbf9f6;--color-fill-selected:#26221e;--color-text-on-selected:#fbf9f6;--color-bg-segment-selected:#fbf9f6;
+  /* accessibility (Matt, 29 Oct): a deeper blue, 3.2 to 3.7:1 on these backgrounds, for focus rings, outlines and
+     switches; the selected fill (the bottom bar's open page) the bright, as in dark mode */
+  --color-accent-primary:#0288d1;--color-border-focus:#0288d1;
+  --scrim:rgba(38,34,30,.32);--lift:rgba(38,34,30,.16)}
+
+:host(.lightBody){background:#EEEBE8;color-scheme:light}
+
+.view{display:none;width:100%;max-width:1184px;margin:0 auto;padding:22px 22px 76.8px}.view.active{display:block;flex:1 0 auto}
+.card,.panel,.tile{
+  position:relative;background:var(--card);border-radius:36px;padding:22px;
+  border-top:0.32px solid var(--line);border-left:0.32px solid var(--line);border-right:0.32px solid var(--line);border-bottom:0.16px solid var(--lineb)
+}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.eyebrow{text-transform:uppercase;color:var(--muted)}
+.sub{color:var(--muted);margin-top:6.4px}
+.pill,.primary,.navBtn,.tab,.back,.hideBtn,.addBtn{cursor:pointer}
+.pill{
+  min-height:0;
+  padding:3.2px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--text);
+  text-decoration-line:underline;
+  text-decoration-thickness:0.8px;
+  text-underline-offset:3.2px}
+.tab,.back{border-radius:799.2px;min-height:41.6px;padding:0 16px;background:var(--control);border:0.32px solid var(--line);color:var(--text)}
+.primary{border-radius:799.2px;min-height:41.6px;padding:0 16px;border:0;background:var(--bright);color:var(--on-bright)}
+
+/* HOME */
+.activityCard{grid-column:span 6}
+.weekly{grid-column:span 6}
+.activityCard,.weekly{min-height:288px}
+.sourceTag{display:inline-flex;margin-top:11.2px;padding:4px;border-radius:799.2px;background:var(--chip);color:var(--soft)}
+.workoutFooter{display:flex;justify-content:space-between;align-items:end;gap:22.4px;flex-wrap:wrap;margin-top:22.4px;width:100%;box-sizing:border-box}
+
+.workoutGallery{
+  grid-column:span 12;
+  display:flex;
+  gap:16px;
+  height:288px;
+  overflow:hidden}
+.workoutPanel{
+  position:relative;
+  height:288px;
+  flex:1 1 72px;
+  min-width:70.4px;
+  background:var(--card);
+  border-radius:28.8px;
+  padding:22.4px;
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb);
+  overflow:hidden;
+  box-sizing:border-box;
+  transition:flex .32s ease;
+  cursor:pointer}
+.workoutPanel.active{
+  flex:7 1 0;
+  min-width:0;
+  cursor:default}
+.workoutPanel.addPanel{
+  flex:0 0 73.6px;
+  min-width:73.6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:14.4px}
+
+.workoutPanel{
+  --edge-proximity:0;
+  --cursor-angle:45deg;
+  --edge-sensitivity:36;
+  --color-sensitivity:56;
+  --cone-spread:25;
+  --fill-opacity:.18;
+  --glow-color-60:hsl(199deg 97% 68% / 60%);
+  --glow-color-40:hsl(199deg 97% 68% / 40%);
+  --glow-color-30:hsl(199deg 97% 68% / 30%);
+  --glow-color-20:hsl(199deg 97% 68% / 20%);
+  --glow-color-10:hsl(199deg 97% 68% / 10%);
+  --gradient-one:radial-gradient(at 80% 55%,#c084fc 0px,transparent 50%);
+  --gradient-two:radial-gradient(at 69% 34%,#f472b6 0px,transparent 50%);
+  --gradient-three:radial-gradient(at 8% 6%,#38bdf8 0px,transparent 50%);
+  --gradient-four:radial-gradient(at 41% 38%,#c084fc 0px,transparent 50%);
+  --gradient-five:radial-gradient(at 86% 85%,#f472b6 0px,transparent 50%);
+  --gradient-six:radial-gradient(at 82% 18%,#38bdf8 0px,transparent 50%);
+  --gradient-seven:radial-gradient(at 51% 4%,#f472b6 0px,transparent 50%);
+  isolation:isolate}
+
+.workoutPanel::before,
+.workoutPanel::after,
+.workoutPanel>.edgeLight{
+  content:"";
+  pointer-events:none;
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  transition:opacity .18s ease-out}
+
+.workoutPanel::before{
+  z-index:2;
+  border:0.8px solid transparent;
+  background:
+    linear-gradient(var(--card) 0 100%) padding-box,
+    linear-gradient(rgb(255 255 255 / 0%) 0 100%) border-box,
+    var(--gradient-one) border-box,
+    var(--gradient-two) border-box,
+    var(--gradient-three) border-box,
+    var(--gradient-four) border-box,
+    var(--gradient-five) border-box,
+    var(--gradient-six) border-box,
+    var(--gradient-seven) border-box;
+  opacity:clamp(0,calc(.72 * (var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity))),.72);
+  -webkit-mask-image:
+    conic-gradient(
+      from var(--cursor-angle) at center,
+      black calc(var(--cone-spread) * 1%),
+      transparent calc((var(--cone-spread) + 15) * 1%),
+      transparent calc((100 - var(--cone-spread) - 15) * 1%),
+      black calc((100 - var(--cone-spread)) * 1%)
+    );
+  mask-image:
+    conic-gradient(
+      from var(--cursor-angle) at center,
+      black calc(var(--cone-spread) * 1%),
+      transparent calc((var(--cone-spread) + 15) * 1%),
+      transparent calc((100 - var(--cone-spread) - 15) * 1%),
+      black calc((100 - var(--cone-spread)) * 1%)
+    )}
+
+.workoutPanel::after{
+  z-index:1;
+  border:0.8px solid transparent;
+  background:
+    var(--gradient-one) padding-box,
+    var(--gradient-two) padding-box,
+    var(--gradient-three) padding-box,
+    var(--gradient-four) padding-box,
+    var(--gradient-five) padding-box,
+    var(--gradient-six) padding-box,
+    var(--gradient-seven) padding-box;
+  opacity:clamp(0,calc(var(--fill-opacity) * (var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity))),.18);
+  mix-blend-mode:soft-light;
+  -webkit-mask-image:
+    conic-gradient(from var(--cursor-angle) at center,transparent 5%,black 15%,black 85%,transparent 95%);
+  mask-image:
+    conic-gradient(from var(--cursor-angle) at center,transparent 5%,black 15%,black 85%,transparent 95%)}
+
+.workoutPanel>.edgeLight{
+  inset:-19.2px;
+  z-index:3;
+  opacity:clamp(0,calc(.62 * (var(--edge-proximity) - var(--edge-sensitivity)) / (100 - var(--edge-sensitivity))),.62);
+  mix-blend-mode:plus-lighter;
+  -webkit-mask-image:
+    conic-gradient(from var(--cursor-angle) at center,black 2.5%,transparent 10%,transparent 90%,black 97.5%);
+  mask-image:
+    conic-gradient(from var(--cursor-angle) at center,black 2.5%,transparent 10%,transparent 90%,black 97.5%)}
+
+.workoutPanel>.edgeLight::before{
+  content:"";
+  position:absolute;
+  inset:19.2px;
+  border-radius:inherit;
+  box-shadow:
+    inset 0 0 0 0.8px var(--glow-color-60),
+    inset 0 0 2.4px 0 var(--glow-color-40),
+    inset 0 0 6.4px 0 var(--glow-color-30),
+    inset 0 0 12.8px 0 var(--glow-color-20),
+    0 0 2.4px 0 var(--glow-color-40),
+    0 0 6.4px 0 var(--glow-color-30),
+    0 0 12.8px 0 var(--glow-color-20),
+    0 0 22.4px 1.6px var(--glow-color-10)}
+
+.workoutPanel:not(.borderGlowActive)::before,
+.workoutPanel:not(.borderGlowActive)::after,
+.workoutPanel:not(.borderGlowActive)>.edgeLight{
+  opacity:0;
+  transition:opacity .35s ease-out}
+
+#app.light .workoutPanel{
+  --glow-color-40:hsl(199deg 97% 48% / 40%);
+  --glow-color-30:hsl(199deg 97% 48% / 30%);
+  --glow-color-20:hsl(199deg 97% 48% / 20%);
+  --glow-color-10:hsl(199deg 97% 48% / 10%)}
+
+.workoutPanel:not(.active):not(.addPanel) .panelExpanded{opacity:0;filter:blur(8px);pointer-events:none}
+.workoutPanel:not(.active):not(.addPanel) .panelCollapsed{opacity:1;filter:blur(0)}
+.workoutPanel.active .panelExpanded{opacity:1;filter:blur(0);pointer-events:auto}
+.workoutPanel.active .panelCollapsed{opacity:0;filter:blur(6.4px);pointer-events:none}
+.panelExpanded{position:relative;z-index:4;width:100%;height:100%;min-width:0;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;transition:opacity .22s ease,filter .22s ease}
+.panelCollapsed{
+  position:absolute;inset:0;z-index:4;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;filter:blur(6.4px);transition:opacity .22s ease,filter .22s ease}
+.panelCollapsedText{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  white-space:nowrap}
+.workoutPanelTop{display:flex;justify-content:space-between;align-items:flex-start;gap:22.4px;width:100%;min-width:0;box-sizing:border-box}
+.workoutPanelActions{display:flex;gap:22.4px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-left:auto}
+
+.startWorkoutBtn{
+  background:var(--primary)!important;
+  color:var(--color-text-on-accent)!important}
+.startWorkoutBtn:hover{filter:brightness(1.04)}
+.addPanelPlus{position:relative;z-index:4;font-size:27.2px;line-height:1}
+.addPanelLabel{
+  position:absolute;z-index:4;
+  bottom:16px;
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  color:var(--muted)}
+
+@media(max-height:820px) and (min-width:621px){
+  .modalStatic{padding:17.6px 22.4px}
+  .timeTile{min-height:124.8px}
+}
+
+@media(max-width:900px){.weekCopy{white-space:normal}
+  .workoutGallery{overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:3.2px}
+  .workoutPanel,.workoutPanel.active{height:288px;flex:0 0 min(68.8vw,544px);min-width:min(68.8vw,544px);scroll-snap-align:start}
+  .workoutPanel.addPanel{flex-basis:80px;min-width:80px}
+  .panelCollapsed{display:none}
+}
+.moveActions{display:flex;gap:22.4px;flex-wrap:wrap}
+
+@keyframes feelingWarp{
+  0%{
+    transform:scale(1.03) skewX(-2deg) translateX(-1.5%);
+    filter:saturate(1.02) blur(.8px);
+  }
+  50%{
+    transform:scale(1.12) skewX(1deg) translateX(1%);
+    filter:saturate(1.22) blur(1.5px);
+  }
+  100%{
+    transform:scale(1.06) skewX(3deg) translateX(-.5%);
+    filter:saturate(1.1) blur(.6px);
+  }
+}
+@keyframes feelingScan{
+  0%{background-position:0 0, -80% 0}
+  100%{background-position:0 8px, 180% 0}
+}
+
+
+.tempoExperiment{
+  margin-top:14.4px;
+  padding-top:16px;
+  border-top:0.32px solid var(--line)
+}
+.tempoEstimate{white-space:nowrap}
+.tempoQuad{
+  position:relative;
+  width:min(288px,100%);
+  aspect-ratio:1/1;
+  border-radius:28.8px;
+  background:rgba(255,255,255,.025);
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb);
+  overflow:hidden;
+  touch-action:none;
+  cursor:crosshair
+}
+.tempoCross{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(to right,transparent calc(50% - 0.4px),rgba(255,255,255,.12) 50%,transparent calc(50% + 0.4px)),
+    linear-gradient(to bottom,transparent calc(50% - 0.4px),rgba(255,255,255,.12) 50%,transparent calc(50% + 0.4px))
+}
+.tempoDot{
+  position:absolute;left:50%;top:50%;
+  width:17.6px;height:17.6px;border-radius:50%;
+  background:var(--text);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  box-shadow:0 0 0 4.8px rgba(255,255,255,.07)
+}
+.tempoPole{
+  position:absolute;pointer-events:none;color:var(--muted)}
+.tempoFast{top:9.6px;left:50%;transform:translateX(-50%)}
+.tempoSlow{bottom:9.6px;left:50%;transform:translateX(-50%)}
+.tempoHard{right:9.6px;top:50%;transform:translateY(-50%)}
+.tempoLow{left:9.6px;top:50%;transform:translateY(-50%)}
+.tempoReadout{margin-top:9.6px;color:var(--muted)}
+
+.tempoRevealRow{margin-top:11.2px}
+.tempoRevealBtn{
+  color:var(--muted);
+  text-decoration-color:var(--muted)}
+.editTempoExperiment{
+  margin-top:11.2px}
+.editTempoExperiment[hidden]{display:none}
+
+.testingZone{
+  position:relative;
+  overflow:hidden;
+  border-radius:22.4px;
+  background:#202226;
+  border:0.8px solid #4a4f58;
+  box-shadow:none;
+  --text:#d6d9df;--soft:#c7ccd5;--muted:#9ea5b0;--line:#4a4f58;--lineb:#4a4f58;--field-line:#4a4f58;
+  color:var(--text)
+}
+.testingZoneInner{
+  position:relative;
+  padding:19.2px;
+  background:
+    linear-gradient(rgba(176,186,199,.045) 0.8px,transparent 0.8px),
+    linear-gradient(90deg,rgba(176,186,199,.045) 0.8px,transparent 0.8px),
+    #202226;
+  background-size:16px 16px
+}
+.testingZoneTitleBlock{
+  max-width:608px;
+  margin-bottom:19.2px
+}
+.testingZoneTitleRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px
+}
+.testingZoneTitleRow strong{
+  color:#d6d9df}
+.testingZone .tempoEstimate{
+  color:#aeb4bf}
+.testingZoneExplanation{
+  margin:8px 0 0;
+  color:#9ea5b0;
+  text-align:left
+}
+.testingZoneLayout{
+  display:grid;
+  grid-template-columns:minmax(224px,288px) minmax(0,1fr);
+  grid-template-areas:"controller feedback";
+  gap:25.6px;
+  align-items:start
+}
+.testingFeedbackForm{
+  grid-area:feedback;
+  display:grid;
+  gap:14.4px;
+  min-width:0;
+  padding:16px;
+  border:0.32px solid var(--line);
+  border-radius:16px;
+  background:#252525
+}
+.testingFeedbackHeading{
+  color:#d6d9df}
+.testingFeedbackField{
+  display:grid;
+  gap:6.4px;
+  color:#9ea5b0}
+.testingFeedbackField select,
+.testingFeedbackField textarea{
+  width:100%;
+  border:0.32px solid var(--line);
+  background:#171717;
+  color:#d6d9df;
+  border-radius:11.2px;
+  padding:8px 9.6px;
+  font:inherit
+}
+.testingFeedbackField textarea{resize:vertical;min-height:65.6px}
+.testingRating{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:4.8px
+}
+.testingRating button{
+  min-height:30.4px;
+  border-radius:9.6px;
+  border:0.32px solid var(--line);
+  background:#171717;
+  color:#c7ccd5;
+  cursor:pointer
+}
+.testingRating button.selected{
+  border-color:#c7ccd5;
+  background:#343434
+}
+.testingFeedbackSubmit{
+  justify-self:start;
+  min-height:33.6px;
+  padding:0 12.8px;
+  border-radius:11.2px;
+  border:0;
+  background:rgba(255,255,255,.88);
+  color:#111;
+  cursor:pointer
+}
+.testingZoneControllerWrap{
+  grid-area:controller;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start
+}
+.tempoQuadFrame{
+  width:min(256px,100%);
+  aspect-ratio:1/1;
+  padding:0;
+  background:
+    linear-gradient(rgba(176,186,199,.075) 0.8px,transparent 0.8px),
+    linear-gradient(90deg,rgba(176,186,199,.075) 0.8px,transparent 0.8px),
+    #202226;
+  background-size:16px 16px,16px 16px,auto;
+  border-radius:16px
+}
+.testingZone .tempoQuad{
+  width:100%;
+  height:100%;
+  border-radius:16px;
+  background:#202226;
+  border:0.8px solid #5a606a;
+  box-shadow:none
+}
+.testingZone .tempoCross{
+  background:
+    linear-gradient(to right,transparent calc(50% - 0.4px),rgba(176,186,199,.20) 50%,transparent calc(50% + 0.4px)),
+    linear-gradient(to bottom,transparent calc(50% - 0.4px),rgba(176,186,199,.20) 50%,transparent calc(50% + 0.4px))
+}
+.testingZone .tempoDot{
+  width:14.4px;
+  height:14.4px;
+  background:transparent;
+  border:0.8px solid #c4cad4;
+  box-shadow:0 0 0 3.2px rgba(196,202,212,.05)
+}
+.testingZone .tempoPole{color:#8e96a2}
+.testingZone .tempoReadout{
+  width:min(256px,100%);
+  color:#9ea5b0;
+  text-align:center;
+  margin-top:9.6px
+}
+.testingZone button,
+.testingZone input,
+.testingZone select,
+.testingZone textarea{
+  transition:opacity .14s ease,border-color .14s ease,color .14s ease,background .14s ease
+}
+.testingZone button:hover,
+.testingZone button:focus-visible{filter:none;opacity:.88}
+@media(max-width:900px){
+  .testingZoneLayout{
+    grid-template-columns:1fr;
+    grid-template-areas:"controller" "feedback"
+  }
+}
+
+.activityHeader{display:flex;align-items:center;gap:var(--inset);margin-bottom:var(--inset)}
+.activityIcon{display:grid;place-items:center}
+/* Icons (Figma Icon/*): 24 grid drawn at the slot's glyph size (34 in chips and nav buttons), 2px stroke at any size */
+.icon{width:var(--glyph-size);height:var(--glyph-size);flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon *{vector-effect:non-scaling-stroke}
+.addPanelPlus .icon,.addFab .icon{width:24px;height:24px}
+.checkinTabIcon .icon{width:18px;height:18px}
+.weekTick .icon{width:1em;height:1em}
+.activityRows{display:grid;gap:9.6px}
+.activityRow{display:grid;grid-template-columns:43.2px minmax(0,1fr);align-items:center;gap:11.2px;background:var(--tile-2);border-radius:24px;padding:12px 14px}
+.activityRowIcon{width:43.2px;height:43.2px;border-radius:16px;background:var(--icon-bg);display:grid;place-items:center;font-size:16px}
+.activityRowMeta{color:var(--soft);margin-top:2.4px}
+.toast{position:absolute;right:20.8px;top:20.8px;z-index:60;background:var(--bright);color:var(--on-bright);border-radius:799.2px;padding:8.8px 12.8px;opacity:0;transform:translateY(-6.4px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.toast.show{opacity:1;transform:none}
+.weekCopy{color:var(--muted);margin-top:9.6px;max-width:none;white-space:nowrap}
+.weekChip{
+  background:var(--tile-2);
+  border-radius:12.8px;
+  min-height:60.8px;
+  padding:9.6px 11.2px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:6.4px
+}
+.weekChipTop{display:flex;justify-content:space-between;align-items:center;gap:6.4px}
+.weekTick{font-size:11.2px;font-weight:800;line-height:1}
+.weekChip.total{background:var(--card2)}
+
+
+/* WORKOUT */
+
+.workoutSurface{position:relative;overflow:hidden;isolation:isolate}
+.workoutContent{position:relative;z-index:2}
+.pixelTrailCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+#app.light .pixelTrailCanvas{opacity:.46}
+
+.sessionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.sessionActions{display:flex;gap:22.4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.holdEnd{
+  position:relative;
+  overflow:hidden;
+  min-width:110.4px;
+  min-height:41.6px;
+  padding:0 16px;
+  border-radius:799.2px;
+  border:0.32px solid var(--line);
+  background:var(--control);
+  text-decoration:none;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none}
+.holdEndFill{position:absolute;inset:0 auto 0 0;width:0;background:var(--bright);pointer-events:none}
+.holdEndLabel{position:relative;z-index:1;mix-blend-mode:difference;color:#fff}
+.holdEnd.holding{border-color:var(--muted)}.exerciseTitle{margin-top:4.8px;color:var(--accent-text)}
+.meta{color:var(--muted);margin-top:4.8px}
+.progress{
+  height:46.4px;
+  padding:0;
+  background:transparent;
+  border-radius:17.6px;
+  display:flex;
+  gap:3.2px;
+  margin-top:19.2px;
+  overflow:hidden}
+.progressSegment{
+  appearance:none;
+  border:0;
+  padding:0;
+  display:block;
+  flex:1;
+  min-width:0;
+  background:var(--segment);
+  border-radius:17.6px;
+  position:relative;
+  overflow:hidden;
+  cursor:default}
+.progressSegment::after{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:0;
+  background:var(--segment-fill);
+  transition:width .2s linear}
+.progressSegment.done{
+  background:transparent;
+  opacity:0;
+  pointer-events:none}
+.progressSegment.done::after{display:none}
+.progressSegment.active::after{width:var(--segment-progress,0%)}
+
+#app.resting .progressSegment:not(.done):not(.active),
+#app.paused .progressSegment:not(.done):not(.active){
+  background:#fff}
+
+.progressSegment.rewindable{cursor:pointer}
+.progressSegment.rewindable:hover{filter:brightness(1.08)}
+.progressSegment:focus-visible{outline:1.6px solid var(--primary);outline-offset:-2.4px}
+
+.workGrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:16px;margin-top:16px}
+.timerCard,.movementCard,.nextCard{position:relative;border-radius:28.8px;border-top:0.32px solid var(--line);border-left:0.32px solid var(--line);border-right:0.32px solid var(--line);border-bottom:0.16px solid var(--lineb)}
+.timerCard{min-height:344px;background:var(--timer);overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;width:100%;background:var(--timer-fill);transition:width .2s linear}
+.digits{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(152px,22.4vw,312px);font-weight:850;letter-spacing:-.11em;color:white;mix-blend-mode:difference;font-variant-numeric:tabular-nums}
+.movementCard{background:var(--stage);min-height:344px;display:grid;place-items:center;padding:22.4px}
+
+.movementCard{overflow:hidden}
+.movementRippleCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+
+
+.sectionLabel{
+  margin:0 0 8px 22.4px}
+.moveSection{
+  grid-column:span 12}
+.moveSection .workoutGallery{width:100%}
+
+.nextWrap{margin-top:16px}.nextLabel{margin:0 0 8px 22.4px}
+.nextCard{background:var(--card);padding:22.4px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:116.8px}
+.nextMain{display:flex;align-items:center;gap:14.4px;min-width:0}
+.nextIcon{width:52.8px;height:52.8px;border-radius:19.2px;background:var(--icon-bg);display:grid;place-items:center;font-size:20.8px;flex:0 0 auto}
+
+
+.sectionLabel{
+  margin:0 0 8px 22.4px}
+.moveSection{
+  grid-column:span 12}
+.moveSection .workoutGallery{width:100%}
+
+.nextWrap{margin-top:16px}
+.nextLabel{margin:0 0 8px 22.4px}
+.nextCard{
+  background:var(--card);
+  padding:22.4px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:22.4px;
+  min-height:86.4px;
+  border-radius:28.8px;
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb)
+}
+.nextMain{display:flex;align-items:center;gap:14.4px;min-width:0}
+.nextIcon{width:43.2px;height:43.2px;border-radius:12.8px;background:var(--icon-bg);display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+.sessionControlRow{
+  display:flex;
+  justify-content:flex-end;
+  gap:22.4px;
+  align-items:center;
+  margin-top:16px
+}
+.skipBtn{min-width:120px;min-height:41.6px;padding:0 14.4px;border:0.8px solid var(--line);background:transparent;color:var(--text);text-decoration:none}
+.pause{min-width:120px;min-height:41.6px;padding:0 16px}
+
+
+.upcomingList{
+  display:grid;
+  gap:9.6px;
+  margin-top:9.6px}
+.upcomingCard{
+  --future-opacity:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:22.4px;
+  min-height:86.4px;
+  padding:22.4px;
+  border-radius:28.8px;
+  background:var(--card);
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb);
+  opacity:var(--future-opacity);
+  transition:opacity .22s ease}
+.upcomingCard:nth-child(-n+3){--future-opacity:1}
+.upcomingCard:nth-child(4){--future-opacity:.72}
+.upcomingCard:nth-child(5){--future-opacity:.48}
+.upcomingCard:nth-child(6){--future-opacity:.30}
+.upcomingCard:nth-child(n+7){--future-opacity:.16}
+.upcomingCard.sessionHidden{
+  --future-opacity:.24!important;
+  filter:saturate(.15)}
+.upcomingCard.sessionHidden .upcomingName{text-decoration:line-through}
+.upcomingCard.sessionHidden .upcomingIcon{opacity:.45}
+.upcomingCard.sessionHidden .upcomingMeta{opacity:.55}
+.upcomingInfo{display:flex;align-items:center;gap:14.4px;min-width:0}
+.upcomingIcon{
+  width:43.2px;height:43.2px;flex:0 0 auto;
+  border-radius:12.8px;background:var(--icon-bg);
+  display:grid;place-items:center;font-size:16px
+}
+.upcomingMeta{color:var(--muted);margin-top:4px}
+.skipSessionBtn{
+  flex:0 0 auto;
+  min-height:41.6px;
+  padding:0 14.4px;
+  border:0.8px solid var(--line);
+  background:transparent;
+  color:var(--text)}
+
+@media(max-width:900px){.weekCopy{white-space:normal}
+  .nextCard{align-items:flex-start;flex-direction:column}
+  .sessionControlRow{width:100%}
+  .skipBtn,.pause{flex:1;min-width:0}
+  .upcomingCard{align-items:flex-start;flex-direction:column}
+  .skipSessionBtn{width:100%}
+}
+
+.countdown{display:none;position:fixed;inset:0;width:100vw;height:100dvh;background:var(--page);z-index:300;align-items:center;justify-content:center;flex-direction:column;text-align:center;overflow:hidden}
+.countdown.active{display:flex}
+
+.pixelCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1}
+.countdown:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at center,color-mix(in srgb,var(--primary) 16%,transparent),transparent 58%);pointer-events:none}
+.countNum{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3}
+.countNum{font-size:clamp(144px,25.6vw,344px);font-weight:850;line-height:.75;letter-spacing:-.1em}
+
+/* SEE WORKOUT MODAL / CONTROL CENTER */
+.modalBackdrop{display:none;position:fixed;inset:0;width:100vw;height:100dvh;z-index:145;background:var(--scrim);padding:28px;box-sizing:border-box;align-items:center;justify-content:center}
+.modalBackdrop.open{display:flex}
+.modal{
+  width:min(1184px,100%);
+  height:100%;
+  max-width:1184px;
+  max-height:none;
+  overflow:hidden;background:var(--modal);border-radius:28.8px;padding:0;
+  display:flex;flex-direction:column;
+  box-sizing:border-box;
+  border-top:0.32px solid var(--line);border-left:0.32px solid var(--line);border-right:0.32px solid var(--line);border-bottom:0.16px solid var(--lineb)
+}
+.modalStatic{flex:0 0 auto;padding:22.4px;background:var(--modal);border-bottom:0.32px solid var(--divider)}
+.modalHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12.8px}
+.modalHeaderActions{display:flex;gap:22.4px;align-items:center;flex:0 0 auto}
+.modalHead h2{margin:2.4px 0 0}
+.editNameRow{display:grid;gap:6.4px;margin-bottom:11.2px}
+.editNameLabel{color:var(--muted)}
+.editNameInput{min-height:42px;border-radius:var(--r-inner);border:0.32px solid var(--field-line);background:var(--input);color:var(--text);padding:0 16px}
+.timeTiles{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:11.2px;margin-bottom:11.2px}
+.timeTile{
+  background:var(--tile);
+  min-height:148.8px;
+  padding:16px 16px 16px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between}
+.timeHeader{
+  display:flex;
+  align-items:center;
+  gap:14.4px}
+.timeIcon{
+  width:46.4px;
+  height:46.4px;
+  border-radius:16px;
+  background:var(--icon-bg);
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  font-size:17.6px;
+  font-weight:760}
+.timeCopy{min-width:0}
+.rangeTrack{
+  height:46.4px;
+  border-radius:17.6px;
+  background:var(--track);
+  overflow:hidden;
+  position:relative;
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb)}
+.rangeFill{
+  position:absolute;
+  inset:0 auto 0 0;
+  background:var(--slider-fill);
+  border-radius:17.6px 0 0 17.6px}
+.rangeInput{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  opacity:0;
+  cursor:pointer}
+.exerciseScroller{min-height:0;overflow-y:auto;padding:3.2px 16px 17.6px 22.4px;border-top:0.16px solid var(--divider);scrollbar-gutter:stable}
+.exerciseScroller::-webkit-scrollbar{width:6.4px}
+.exerciseScroller::-webkit-scrollbar-track{background:transparent}
+.exerciseScroller::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:799.2px}
+.sectionTitle{text-transform:uppercase;color:var(--muted);margin:14.4px 0 8px}
+.moveList{display:grid;gap:8px}.moveRow{display:flex;justify-content:space-between;align-items:center;gap:22.4px;background:var(--row);border-radius:20.8px;padding:22.4px}
+.moveRow.hidden{opacity:.46}.moveRow.hidden .moveItemName{text-decoration:line-through}.moveMeta{color:var(--muted);margin-top:4px}
+.hideBtn{border-radius:799.2px;min-height:32px;padding:0 11.2px;border:0.32px solid var(--field-line);background:var(--control-2);color:var(--text)}
+
+.removeBtn{position:relative;overflow:hidden;border-radius:799.2px;min-height:32px;padding:0 11.2px;border:0.32px solid var(--field-line);background:var(--control-2);color:var(--text);cursor:pointer}
+.removeFill{position:absolute;inset:0 auto 0 0;width:0;background:var(--danger-fill);pointer-events:none;transition:width 0s linear}
+.removeLabel{position:relative;z-index:1}
+.addInput{min-height:41.6px;border-radius:799.2px;border:0.32px solid var(--field-line);background:var(--input);color:var(--text);padding:0 14.4px}
+.addBtn{border-radius:799.2px;min-height:42px;padding:0 16px;border:0;background:var(--bright);color:var(--on-bright)}
+.routineSummary{margin-top:14.4px;background:var(--sunken);border-radius:20.8px;padding:12.8px 14.4px;color:var(--soft)}
+
+/* SETTINGS */
+.settingsHeader{display:flex;align-items:center;gap:12.8px;margin-bottom:24px}
+.back{width:46.4px;padding:0;font-size:24px}
+.tabs.rubberTabs{
+  position:relative;
+  display:inline-flex;
+  gap:0;
+  padding:3.2px;
+  margin-bottom:17.6px;
+  border-radius:12.8px;
+  background:var(--control);
+  border:0.32px solid var(--line);
+  overflow:hidden}
+.rubberIndicator{
+  position:absolute;
+  top:3.2px;
+  left:3.2px;
+  height:calc(100% - 6.4px);
+  width:0;
+  border-radius:12.8px;
+  background:var(--bright);
+  transition:left .34s cubic-bezier(.2,1.35,.4,1),width .34s cubic-bezier(.2,1.35,.4,1),transform .18s ease;
+  transform-origin:center;
+  z-index:0}
+.tabs.rubberTabs .tab{
+  position:relative;
+  z-index:1;
+  min-height:41.6px;
+  padding:0 16px;
+  border:0;
+  background:transparent;
+  color:var(--text)}
+.tabs.rubberTabs .tab.active{color:var(--on-bright)}
+.settingsPane{display:none}.settingsPane.active{display:block}
+.integrationList,.toggleList{display:grid;gap:9.6px}
+.integration,.toggleRow{display:flex;justify-content:space-between;align-items:center;gap:14.4px;background:var(--raised);border-radius:22.4px;padding:14.4px 16px}.status{color:var(--muted);margin-top:3.2px}.note{color:var(--muted);line-height:1.5;max-width:688px}
+/* Figma Switch: rounded-square track, a knob that is flat on the side facing the middle */
+.switch{position:relative;width:50px;height:28px;padding:0;border-radius:var(--r-inner);background:var(--line);border:0.4px solid var(--line);opacity:1;flex:0 0 auto;cursor:pointer;transition:background .18s ease,opacity .18s ease}
+.switch:after{content:"";position:absolute;width:24px;height:24px;top:50%;left:1.6px;border-radius:12px 4px 4px 12px;background:var(--text);transform:translateY(-50%);transition:left .18s ease,border-radius .18s ease,background .18s ease}
+/* Figma Switch: off = line track + text knob; on = accent track + on-accent knob */
+.switch.on{background:var(--color-accent-primary);opacity:1}.switch.on:after{left:calc(100% - 25.6px);border-radius:4px 12px 12px 4px;background:var(--color-text-on-accent)}
+
+.themeChoice{display:flex;gap:9.6px;flex-wrap:wrap;align-items:center;margin:0}
+.themeBtn{min-height:32px;padding:0 11.2px;border:0.32px solid var(--field-line);background:var(--control-2);color:var(--text);cursor:pointer}
+.themeBtn.active{background:var(--bright);color:var(--on-bright);border-color:var(--bright)}
+.wxLayoutBtn{min-height:32px;padding:0 11.2px;border:0.32px solid var(--field-line);background:var(--control-2);color:var(--text);cursor:pointer}
+.wxLayoutBtn[aria-pressed="true"]{background:var(--bright);color:var(--on-bright);border-color:var(--bright)}
+
+
+
+.settingsSelect{
+  min-width:96px;
+  min-height:32px;
+  padding:0 27.2px 0 12px;
+  border-radius:var(--r-inner);
+  border:0.32px solid var(--field-line);
+  background:var(--control-2);
+  color:var(--text);
+  font:inherit
+}
+
+.motionControlRow{align-items:center}
+.motionRangeWrap{display:flex;align-items:center;justify-content:flex-end;gap:9.6px;min-width:184px}
+.motionRangeWrap input{width:128px}
+.motionRangeWrap span{color:var(--muted);min-width:51.2px;text-align:right}
+
+
+.dangerText{color:var(--danger)}
+.confirmBackdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:80;
+  padding:22.4px;
+  background:var(--scrim);
+  align-items:center;
+  justify-content:center}
+.confirmBackdrop.open{display:flex}
+.confirmCard{
+  width:min(448px,100%);
+  background:var(--card);
+  border-radius:28.8px;
+  padding:22.4px;
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb)}
+.confirmActions{display:flex;justify-content:flex-end;align-items:center;gap:22.4px;margin-top:22.4px}
+.holdDelete{
+  position:relative;
+  overflow:hidden;
+  min-width:88px;
+  min-height:41.6px;
+  padding:0 17.6px;
+  border:0.8px solid var(--danger-line);
+  border-radius:12.8px;
+  background:var(--danger-bg);
+  color:var(--text);
+  cursor:pointer}
+.holdDeleteFill{position:absolute;inset:0 auto 0 0;width:0;background:var(--danger-fill);pointer-events:none}
+.holdDeleteLabel{position:relative;z-index:1;color:var(--text)}
+.holdDelete.holding .holdDeleteLabel,.removeBtn.holding .removeLabel{color:#fff}
+
+/* NAV */
+.bottomNav{position:sticky;bottom:22.4px;display:flex;gap:22.4px;z-index:100;width:max-content;margin:-65.6px 0 0 22.4px}
+.navBtn{width:43.2px;height:43.2px;padding:0;border-radius:16px;background:var(--control);border:0.32px solid var(--line);color:var(--text)}
+.navBtn.active{background:var(--color-fill-selected);color:var(--color-text-on-selected)}
+
+@media(max-width:900px){.weekCopy{white-space:normal}
+  .grid{grid-template-columns:1fr}.moveSection,.activityCard,.weekly{grid-column:auto}
+  .workGrid{grid-template-columns:1fr}.timerCard,.movementCard{min-height:256px}
+  .timeTiles{grid-auto-flow:row;grid-template-columns:1fr}
+}
+@media(max-width:620px){.modal{width:100%;height:100%;max-height:100%}
+  #app{padding:0}.shell{border-radius:0}.view{padding:14.4px 14.4px 75.2px}.timerCard{min-height:224px}.digits{font-size:144px}
+  .modalBackdrop{padding:9.6px}.modal{height:100%}.modalStatic{padding:14.4px}.exerciseScroller{padding:3.2px 9.6px 14.4px 14.4px}
+}
+
+/* buttons and fields share the control radius; segmented buttons and switches have their own shape */
+:is(button,.primary,.tab,.back,.navBtn,.themeBtn,.energyBtn,.hideBtn,.addBtn,.removeBtn,.skipBtn,.holdEnd,.editNameInput,.addInput,.rangeTrack,.progress,.progressSegment):not(.segBtn,.stepBtn,.checkinTab,.switch,.dragHandle,.navBtn,.createPresetBtn,.sheetChoice,.setupSummary,.wxStyleBtn,.tfSeg>button){border-radius:var(--r-inner)!important}
+.card,.panel,.tile,.timerCard,.movementCard,.nextCard,.modal{border-radius:var(--r-card)}
+
+
+.movementCreatorLaunch{
+  display:flex;
+  gap:9.6px;
+  align-items:center;
+  margin:3.2px 0 14.4px
+}
+.movementCreatorOpen,
+.restAddBtn{
+  min-height:35.2px;
+  padding:0 12.8px;
+  border-radius:12.8px;
+  cursor:pointer
+}
+.movementCreatorOpen{
+  border:0;
+  background:var(--bright);
+  color:var(--on-bright)
+}
+.restAddBtn{
+  border:0.32px solid var(--field-line);
+  background:var(--control-2);
+  color:var(--text)
+}
+.movementCreator{
+  position:relative;
+  margin:0 0 14.4px;
+  padding:19.2px 22.4px;
+  border-radius:22.4px;
+  background:var(--card);
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb)
+}
+.movementCreator[hidden]{display:none}
+.movementCreatorHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:17.6px
+}
+.movementCreatorHead h3{
+  margin:0}
+.movementCreatorClose{
+  position:static}
+.movementCreatorFields{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(0,.85fr);
+  gap:16px 19.2px}
+.movementCreatorFields[hidden]{display:none!important}
+.movementCreatorFields>label{
+  display:grid;
+  gap:6.4px;
+  min-width:0;
+  color:var(--text)}
+.movementTimingRow{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:minmax(240px,352px) minmax(208px,1fr) auto;
+  gap:17.6px;
+  align-items:end
+}
+.durationStack{
+  display:grid;
+  gap:6.4px;
+  color:var(--text)}
+.creatorDurationRow{
+  display:grid;
+  grid-template-columns:minmax(96px,1fr) minmax(104px,1fr);
+  gap:12.8px;
+  align-items:center
+}
+.creatorNumber{width:100%;min-width:0}
+.creatorUnitSelect{
+  min-height:41.6px;
+  width:100%;
+  padding:0 11.2px;
+  border-radius:12.8px;
+  border:0.32px solid var(--field-line);
+  background:var(--input);
+  color:var(--text);
+  font:inherit
+}
+.globalTimingToggle{
+  display:flex!important;
+  align-items:center;
+  gap:8px!important;
+  min-height:41.6px;
+  cursor:pointer;
+  color:var(--text)!important;
+  white-space:nowrap
+}
+.globalTimingToggle input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none
+}
+.toggleTrack{
+  position:relative;
+  width:38.4px;
+  height:22.4px;
+  border-radius:799.2px;
+  background:var(--switch-off);
+  border:0.32px solid var(--field-line);
+  flex:0 0 auto;
+  transition:background .16s ease
+}
+.toggleThumb{
+  position:absolute;
+  width:17.6px;
+  height:17.6px;
+  top:1.6px;
+  left:1.6px;
+  border-radius:50%;
+  background:var(--knob-off);
+  transition:left .16s ease,background .16s ease
+}
+.globalTimingToggle input:checked + .toggleTrack{background:var(--bright)}
+.globalTimingToggle input:checked + .toggleTrack .toggleThumb{
+  left:17.6px;
+  background:var(--on-bright)
+}
+.toggleLabel{color:var(--soft)}
+.creatorAddButton{
+  min-width:97.6px;
+  min-height:41.6px;
+  align-self:end
+}
+@media(max-width:900px){
+  .movementCreatorFields{grid-template-columns:1fr}
+  .movementTimingRow{
+    grid-column:auto;
+    grid-template-columns:1fr;
+    align-items:stretch
+  }
+  .globalTimingToggle{min-height:35.2px}
+  .creatorAddButton{width:100%}
+}
+
+.moveRow.restItem{
+  background:var(--row-rest)
+}
+.moveKindBadge{
+  display:inline-flex;
+  margin-left:6.4px;
+  padding:2.4px 5.6px;
+  border:0.8px solid var(--field-line);
+  border-radius:799.2px;
+  color:var(--muted);
+  vertical-align:middle
+}
+@media(max-width:900px){
+  .movementCreatorFields,
+  .movementCreatorFields.restFields{
+    grid-template-columns:1fr;
+    padding-right:0
+  }
+  .movementCreatorClose{position:static;margin-left:auto;display:block;margin-bottom:12.8px}
+}
+
+.createMoveOptions{
+  margin:0 0 14.4px;
+  padding:14.4px;
+  border-radius:19.2px;
+  background:var(--card2);
+  border:0.32px solid var(--line)
+}
+.createMoveOptions[hidden]{display:none}
+.createOptionLabel{
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:8px
+}
+.createPresetChoice{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px
+}
+.createPresetBtn{
+  min-height:60.8px;
+  padding:11.2px 12.8px;
+  border-radius:14.4px;
+  border:0.8px solid var(--field-line);
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  cursor:pointer
+}
+.createPresetBtn strong{display:block}
+.createPresetBtn span{display:block;color:var(--muted);margin-top:3.2px}
+.createPresetBtn.active{
+  background:var(--bright);
+  color:var(--on-bright);
+  border-color:var(--bright)
+}
+.createPresetBtn.active span{color:var(--on-bright);opacity:.68}
+.createExtras{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:9.6px
+}
+.createExtraToggle{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:9.6px 11.2px;
+  border:0.8px solid var(--field-line);
+  border-radius:14.4px;
+  cursor:pointer
+}
+.createExtraToggle input{margin-top:2.4px}
+.createExtraToggle span{display:grid;gap:2.4px}
+.createExtraToggle small{color:var(--muted)}
+.creatorUnitSelect{
+  min-height:41.6px;
+  padding:0 9.6px;
+  border-radius:12.8px;
+  border:0.32px solid var(--field-line);
+  background:var(--input);
+  color:var(--text);
+  font:inherit
+}
+@media(max-width:900px){
+  .createPresetChoice,.createExtras{grid-template-columns:1fr}
+}
+.globalTimingToggle{
+  display:inline-flex!important;
+  grid-template-columns:none!important;
+  align-items:center;
+  gap:5.6px!important;
+  color:var(--text)!important;
+  white-space:nowrap
+}
+.globalTimingToggle input{margin:0}
+.globalTimingValue{
+  min-height:41.6px;
+  display:flex;
+  align-items:center;
+  padding:0 11.2px;
+  border-radius:12.8px;
+  border:0.32px solid var(--field-line);
+  background:var(--control-2);
+  color:var(--muted)}
+
+
+.createFlow{display:grid;gap:9.6px;padding:3.2px 0 8px}
+.createFlow[hidden]{display:none}
+.createStep{
+  border-radius:22.4px;
+  background:var(--tile);
+  border-top:0.32px solid var(--line);
+  border-left:0.32px solid var(--line);
+  border-right:0.32px solid var(--line);
+  border-bottom:0.16px solid var(--lineb);
+  overflow:hidden
+}
+.createStepHeader{
+  width:100%;
+  min-height:57.6px;
+  padding:14.4px 17.6px;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:19.2px;
+  text-align:left;
+  cursor:pointer
+}
+.createStepHeader:disabled{cursor:not-allowed;opacity:.42}
+.createStepIdentity{display:flex;align-items:center;gap:9.6px}
+.createStepNumber{
+  width:22.4px;height:22.4px;border-radius:799.2px;
+  display:grid;place-items:center;
+  border:0.32px solid var(--line);
+  color:var(--muted)}
+.createStepSummary{
+  min-width:0;
+  color:var(--muted);
+  text-align:right
+}
+.createStepBody{
+  display:none;
+  padding:0 14.4px 14.4px
+}
+.createStep.active .createStepBody{display:block}
+.createStep.active .createStepHeader{border-bottom:0.32px solid var(--divider)}
+.createStepSlot{display:grid;gap:11.2px}
+.createStepFooter{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:14.4px
+}
+.createStepFooter .primary:disabled{opacity:.35;cursor:not-allowed}
+
+/* Creation begins with sequence structure, not timing. */
+.modal.createMode .movementTimingRow{display:none}
+.modal.createMode .movementCreator{
+  margin-bottom:8px}
+.modal.createMode .movementCreatorFields{
+  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)
+}
+.modal.createMode .movementCreatorFields.restFields{
+  grid-template-columns:1fr
+}
+.modal.createMode .movementCreatorLaunch{margin-top:0}
+.modal.createMode .sectionTitle{margin-top:9.6px}
+
+/* In create mode timing is its own step, so the static area stays compact. */
+.modal.createMode .modalStatic{padding-bottom:14.4px}
+
+/* The normal edit flow keeps its established layout. */
+.modal:not(.createMode) .createFlow{display:none!important}
+
+
+
+#app.resting .movementCard{
+  background:rgba(255,255,255,.055)}
+#app.resting .movementRippleCanvas{opacity:1}
+#app.light.resting .movementCard{background:rgba(251,249,246,.22)}
+
+.nextCard .skipSessionBtn{
+  margin-left:auto}
+
+
+.modal:not(.createMode) .movementCreatorLaunch{
+  margin-top:25.6px}
+
+
+.testingFeedbackThanks{
+  grid-area:feedback;
+  min-height:176px;
+  padding:19.2px;
+  border:0.32px solid var(--line);
+  border-radius:16px;
+  background:#252525;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  gap:6.4px
+}
+.testingFeedbackThanks[hidden]{display:none}
+.testingFeedbackThanks strong{
+  color:#f0f0f0
+}
+.testingFeedbackThanks p{
+  margin:0;
+  color:#9ea5b0}
+.testingFeedbackThanks a{
+  color:#d6d9df;
+  text-underline-offset:2.4px
+}
+
+
+
+/* ---- Home Assistant card additions ---- */
+:host(:fullscreen){overflow:auto;width:100vw;height:100vh}
+
+.entitySelect{max-width:min(256px,36.8vw);text-overflow:ellipsis;field-sizing:content}
+.integration .status code{padding:0.8px 4.8px;border-radius:4.8px;background:var(--wash-2)}
+.integration .pill[disabled]{cursor:default;opacity:.7}
+/* remote / controller focus */
+#app :focus{outline:none}
+#app :focus-visible{outline:2.4px solid var(--primary);outline-offset:2.4px}
+#app .workoutPanel:focus-visible{outline-offset:-2.4px}
+
+@media(max-width:620px){.bottomNav{margin-left:14.4px}}
+.shell:has(.countdown.active) .bottomNav{visibility:hidden}
+/* phone: every swipe card is full width, so show its details even when not selected */
+@media(max-width:900px){
+  .workoutPanel:not(.active):not(.addPanel) .panelExpanded{opacity:1;filter:none;pointer-events:auto}
+}
+.grid>*{min-width:0}
+
+/* ---- check-in: mood + energy ---- */
+
+/* ---- movement & you ---- */
+.insightCard{display:grid;gap:22.4px}
+.day{display:grid;gap:6.4px;justify-items:center}
+
+/* ---- check-in popup ---- */
+.checkinBackdrop{z-index:160}
+.checkinCard{width:min(576px,100%)}
+.checkinCard .sub{margin-top:8px}
+.checkinSliders{display:grid;gap:11.2px;margin-top:19.2px}
+.checkinTile{min-height:0;gap:var(--inset);border:0}
+.scaleEnds{display:flex;justify-content:space-between;margin-top:6.4px;color:var(--muted)}
+.rangeTrack:focus-within{outline:2.4px solid var(--primary);outline-offset:2.4px}
+
+
+/* ---- side tab ---- */
+.checkinTab{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:120;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:16px 4px;border:0.32px solid var(--line);border-right:0;
+  border-radius:var(--r-fine) 0 0 var(--r-fine)!important;background:var(--control);color:var(--text);cursor:pointer;
+  transition:padding .18s ease,background .18s ease}
+.checkinTab:hover{padding-right:12.8px}
+.checkinTabIcon{font-size:16px;line-height:1}
+.checkinTabLabel{writing-mode:vertical-rl;transform:rotate(180deg)}
+.checkinBadge{position:absolute;top:8px;left:8px;width:8px;height:8px;border-radius:50%;background:var(--secondary);box-shadow:0 0 0 2.4px var(--control),0 0 9.6px color-mix(in srgb,var(--secondary) 70%,transparent);animation:checkinPulse 1.8s ease-in-out infinite}
+@keyframes checkinPulse{50%{box-shadow:0 0 0 3px var(--control),0 0 2px color-mix(in srgb,var(--secondary) 20%,transparent)}}
+@media (prefers-reduced-motion: reduce){.checkinBadge{animation:none}}
+.shell:has(#workoutView.active) .checkinTab,.shell:has(.countdown.active) .checkinTab{display:none}
+#app.light .checkinBadge{box-shadow:0 0 0 2.4px var(--color-bg-ground),0 0 9.6px color-mix(in srgb,var(--primary) 50%,transparent)}
+
+/* ---- how you've felt this week ---- */
+.feelSection{grid-column:span 12;margin-top:16px}
+.feelCard{display:grid;gap:19.2px}
+.feelTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(208px,336px);gap:22.4px;align-items:end}
+.feelDays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.feelDay{min-height:0;gap:9.6px}
+.feelDay.future{opacity:.4}
+.feelDay.today{box-shadow:inset 0 0 0 0.8px var(--today-ring)}
+.feelDots{font-size:6.4px;letter-spacing:1.6px;color:var(--muted)}
+.feelMeter{display:grid;gap:4.8px}
+.feelMeterTop{display:flex;justify-content:space-between;gap:6.4px;color:var(--muted)}
+.feelMeterTop span:last-child{color:var(--text)}
+.feelTrack{height:6.4px;border-radius:799.2px;background:var(--wash-2);overflow:hidden}
+.feelTrack span{display:block;height:100%;border-radius:799.2px}
+@media(max-width:900px){
+  .feelSection{grid-column:auto}
+  .feelTop{grid-template-columns:1fr}
+  .feelDays{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:620px){.feelDays{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.checkinTile .timeHeader{align-items:center}
+.checkinTab:not(.due){opacity:.6}
+.checkinTab:not(.due):hover{opacity:1}
+
+/* ---- weekly card: wider, with faces, opens Movement & you ---- */
+.activityCard{grid-column:span 3}
+.weekly{grid-column:span 9;cursor:pointer;transition:border-color .18s ease,background .18s ease}
+.weekly:hover{border-color:var(--border-hover)}
+
+/* Movement & you popup */
+
+@media(max-width:1200px){
+  .activityCard{grid-column:span 4}.weekly{grid-column:span 8}
+}
+@media(max-width:900px){
+  .activityCard,.weekly{grid-column:auto}
+}
+
+/* ---- Movement & you as the main card ---- */
+.insightCard{grid-column:span 9;align-content:start}
+@media(max-width:1200px){.insightCard{grid-column:span 8}}
+@media(max-width:900px){.insightCard{grid-column:auto}}
+
+/* ---- Apple Health help ---- */
+.helpCard .helpSteps,.helpCard .helpNote{max-width:688px}
+.helpCard .note{margin:0}
+.helpSteps{margin:19.2px 0 0;padding:0;list-style:none;counter-reset:help;display:grid;gap:9.6px}
+.helpSteps li{counter-increment:help;display:grid;gap:4.8px;position:relative;padding:14.4px 16px 14.4px 52.8px;border-radius:20.8px;background:var(--tile);color:var(--muted)}
+.helpSteps li::before{content:counter(help);position:absolute;left:14.4px;top:12.8px;width:25.6px;height:25.6px;border-radius:9.6px;display:grid;place-items:center;background:var(--icon-bg);color:var(--text)}
+.helpSteps strong{color:var(--text)}
+.helpSteps b,.helpNote b{color:var(--text)}
+.helpCard code{padding:0.8px 4.8px;border-radius:4.8px;background:var(--wash-2)}
+.helpNote{display:grid;gap:3.2px;margin-top:9.6px;padding:12.8px 16px;border-radius:17.6px;border:0.32px solid var(--field-line);color:var(--muted)}
+.helpNote strong{color:var(--text)}
+.rowLabel{grid-column:1/-1;margin-top:16px;margin-bottom:-8px}
+
+/* ---- check-in tab: peek with countdown ---- */
+.checkinTab{flex-direction:row;align-items:center;gap:0}
+.checkinTabMain{display:flex;flex-direction:column;align-items:center;gap:4px}
+.checkinPeek{
+  display:grid;gap:3.2px;justify-items:start;white-space:nowrap;overflow:hidden;
+  max-width:0;opacity:0;margin-right:0;
+  transition:max-width .32s cubic-bezier(.2,1.2,.4,1),opacity .2s ease,margin-right .32s ease}
+.checkinTab.peek{padding-left:17.6px;opacity:1}
+.checkinTab.peek .checkinPeek{max-width:176px;opacity:1;margin-right:14.4px}
+.peekCountdown{font-size:24px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.peekAt{color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.checkinPeek{transition:none}}
+.activityRowMeta{color:var(--text);margin-top:1.6px;font-variant-numeric:tabular-nums}
+.feelTop{grid-template-columns:1fr}
+
+/* =========================================================
+   Type system — one font, three weights, seven styles.
+   Every piece of text uses one of these. Don't add sizes;
+   pick the closest style.
+   ========================================================= */
+:host{
+  --primary:#03A9F4;
+  --secondary:#D0FF00;
+  --font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-tile:Geist,var(--font);
+  /* Synced from Figma text styles Desktop/*, Phone/*, Tile/* and Weather/* (2026-10-19) */
+  --w-regular:400;--w-medium:500;--w-semibold:600;--w-bold:700;--w-heavy:800;
+  --t-display:52px;   /* move names, big numbers, page title */
+  --t-title:22px;     /* popup and sheet titles (Medium Italic) */
+  --t-card-title:18px; /* card header titles (Card/Title, Medium Italic, same on phone) */
+  --t-value:16px;     /* readings */
+  --t-section:18px;   /* labels above cards */
+  --t-strong:14px;    /* row/item names, buttons (Semi Bold) */
+  --t-body:12px;      /* sentences */
+  --t-caption:12px;   /* small extras */
+  --lh-display:1.05;--lh-title:1;
+  /* Tile/Title + Tile/Detail (Geist): the name and second line inside every tile and row */
+  /* Weather/Temperature (Geist Medium) + Weather/Range (Geist Light) */
+  --t-wx-temp:64px;--t-wx-range:24px;
+  --t-tile-title:14px;--lh-tile-title:20px;
+  --t-tile-detail:16px;--lh-tile-detail:20px;
+  /* Shapes: HomeCore final spacing (Figma Components → "HomeCore FINAL", 353:9153), the same on every screen size.
+     One inset of 10 around cards and inside tiles · card 34 = tile 24 + inset 10 · icon 16 · segments sit 4 inside a track: fine 12 = inner 16 − 4 */
+  --inset:10px;
+  --r-card:34px;--r-tile:24px;--r-inner:16px;--r-fine:12px;
+  --tile-min:60px;--chip-size:40px;--glyph-size:34px;
+  --gutter:22px;--grid-gap:16px;
+}
+@media(max-width:620px){:host{
+  --t-display:46px;--t-title:20px;--t-value:20px;--t-section:16px;
+  --t-strong:15px;--t-body:14px;--t-caption:11px;
+  --lh-display:.92;--lh-title:1.05;
+}}
+
+#app{font-family:var(--font);font-size:var(--t-body);font-weight:var(--w-regular);line-height:1.4}
+#app button,#app input,#app select,#app textarea{font-family:inherit}
+:where(#app) strong,:where(#app) b{font-weight:var(--w-bold)}
+
+/* Display */
+.title,.workoutName,.exerciseTitle,.feelHeadline,.settingsTitle{
+  font-size:var(--t-display);font-weight:var(--w-heavy);line-height:var(--lh-display);letter-spacing:-.055em}
+
+/* Title */
+.confirmTitle,.sheetTitle,.modalHead h2,.paneTitle,.movementCreatorHead h3,.testingFeedbackThanks strong{
+  font-size:var(--t-title);font-weight:var(--w-medium);font-style:italic;line-height:var(--lh-title);letter-spacing:-.03em}
+/* Card/Title: card header titles, trimmed to the letters so spacing is measured to what you see */
+.activityTitle{font-size:var(--t-card-title);font-weight:var(--w-medium);font-style:italic;line-height:1.1;letter-spacing:-.02em;text-box:trim-both cap alphabetic}
+.paneTitle{margin:0 0 10px}
+
+/* Value */
+.activityRowMeta,.nextName,.upcomingName,.editNameInput,.videoClock{
+  font-size:var(--t-value);font-weight:var(--w-regular);line-height:1.15;letter-spacing:-.02em}
+
+/* Section */
+.sectionLabel,.nextLabel{
+  font-size:var(--t-section);font-weight:var(--w-regular);line-height:1.2;letter-spacing:-.01em}
+
+/* Tile title: the name inside a tile or row (Geist) */
+.activityRowName,.timeLabel,.moveItemName,
+.setupSummaryText strong,.sheetChoice strong,.createPresetBtn strong,.createExtraToggle strong{
+  font-family:var(--font-tile);font-size:var(--t-tile-title);font-weight:var(--w-semibold);line-height:var(--lh-tile-title);letter-spacing:0}
+
+/* Tile detail: the second line inside a tile or row (Geist) */
+.moveMeta,.setupSummaryText small,.sheetChoice small,.createPresetBtn span,.createExtraToggle small{
+  font-family:var(--font-tile);font-size:var(--t-tile-detail);font-weight:var(--w-regular);line-height:var(--lh-tile-detail);letter-spacing:0}
+
+/* Strong */
+.integration strong,.toggleRow strong,.setupName,.weekChipTop strong,.panelCollapsedText,.activityCount,.metaType,.kindChip,.helpSteps strong,.addGhost strong,.helpNote strong,.createStepIdentity strong,.testingZoneTitleRow strong,.testingFeedbackHeading,.tempoEstimate,.primary,.tab,.skipBtn,.skipSessionBtn,.hideBtn,.removeBtn,.addBtn,.themeBtn,.wxLayoutBtn,.holdEnd,.holdDelete,.movementCreatorOpen,.restAddBtn,.creatorAddButton,.testingFeedbackSubmit,.testingRating button,.toast,.checkinTabLabel{
+  font-size:var(--t-strong);font-weight:var(--w-semibold);line-height:1.25;letter-spacing:-.01em}
+
+/* Body */
+.status,.setupValue,.sub,.meta,.note,.weekCopy,.addInput,.settingsSelect,.pill,.routineSummary,.helpSteps li,.helpNote,.createStepSummary{
+  font-size:var(--t-body);font-weight:var(--w-regular);line-height:1.4;letter-spacing:0}
+
+/* Caption */
+.setupCaption,.moveEditForm label>span,.addGhostText small,.setupSummaryAction,.metaTable th,.metaSub,.eyebrow,#stepLabel,.sourceTag,.addPanelLabel,.motionRangeWrap span,.sectionTitle,.editNameLabel,.scaleEnds,.peekAt,.upcomingMeta,.tempoPole,.tempoReadout,.tempoRevealBtn,.testingFeedbackField,.testingZoneExplanation,.testingFeedbackThanks p,.movementCreatorClose,.movementCreatorFields>label,.durationStack,.globalTimingToggle,.toggleLabel,.moveKindBadge,.createOptionLabel,.fieldError,.globalTimingValue,.createStepNumber,.feelMeterTop,#app code{
+  font-size:var(--t-caption);font-weight:var(--w-regular);line-height:1.35;letter-spacing:0}
+.eyebrow,#stepLabel,.sectionTitle,.setupCaption{letter-spacing:.1em}
+.globalTimingToggle{font-size:var(--t-caption)!important}
+
+/* move cards: room for a two-line Display name */
+.workoutGallery,.workoutPanel{height:340px}
+@media(max-width:900px){.workoutPanel,.workoutPanel.active{height:320px}}
+@media(max-width:900px){
+  .workoutGallery{height:auto}
+  .workoutPanel,.workoutPanel.active{height:auto;min-height:320px}
+}
+
+/* ---- phones: cards run edge to edge (rounded corners kept), tighter spacing ---- */
+@media(max-width:620px){
+  .view{padding-left:0;padding-right:0}
+  .settingsHeader,.sessionHead,.sessionControlRow{margin-left:16px;margin-right:16px}
+  .tabs.rubberTabs{margin-left:16px}
+  .sectionLabel,.rowLabel{margin-left:16px}
+
+  /* tighter stacking */
+  .grid{gap:8px}
+  .rowLabel,.feelSection{margin-top:16px}
+  .rowLabel{margin-bottom:-4px}
+  .sectionLabel{margin-bottom:8px}
+
+  /* each move card fills the screen; swipe between them */
+  .workoutGallery{gap:8px}
+  .workoutPanel,.workoutPanel.active{flex:0 0 100%;min-width:100%}
+  .workoutPanel.addPanel{flex:0 0 100%;min-width:100%;min-height:120px}
+
+  /* less padding inside cards */
+  .card,.workoutPanel,.timerCard,.movementCard,.nextCard,.upcomingCard,.confirmCard{padding:16px}
+  .activityRows,.insightCard,.feelCard{gap:8px}
+  .activityRow{padding:10px 12px}
+  .weekChip{padding:10px 12px}
+  .feelDays{gap:8px}
+  .workGrid{gap:8px;margin-top:8px}
+  .nextWrap,.sessionControlRow{margin-top:8px}
+  .upcomingList{gap:8px}
+}
+.tabs.rubberTabs .tab{white-space:nowrap}
+@media(max-width:620px){
+  .tabs.rubberTabs{display:flex;width:max-content;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
+  .tabs.rubberTabs::-webkit-scrollbar{display:none}
+  .tabs.rubberTabs .tab{flex:0 0 auto}
+}
+
+
+/* ---- Movement card: Activity-style header + one shared tile (see "Joint data" at the end) ---- */
+.insightCard{display:flex;flex-direction:column;gap:0}
+
+/* four timing tiles (time, work, rest, rounds): two per row on smaller screens */
+@media(max-width:1200px) and (min-width:901px){.timeTiles{grid-auto-flow:row;grid-template-columns:repeat(2,1fr)}}
+
+/* in-move header: step/round line sits under the activity name */
+#stepLabel{margin-top:9.6px}
+#exerciseMeta{margin-top:4px}
+
+/* ---- edit move: reorder handle, tap-to-remove, toast above popups ---- */
+.moveRow{justify-content:flex-start;gap:12.8px}
+.moveText{flex:1;min-width:0}
+.moveActions{display:flex;gap:6.4px;flex:0 0 auto}
+.dragHandle{flex:0 0 auto;display:grid;place-items:center;width:32px;height:40px;margin:-8px 0 -8px -9.6px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:grab;touch-action:none}
+.dragHandle:hover{background:var(--hover);color:var(--text)}
+.moveRow.dragging{box-shadow:0 10px 30px var(--lift),inset 0 0 0 1.5px var(--primary);position:relative;z-index:2}
+.moveRow.dragging .dragHandle{cursor:grabbing;color:var(--text)}
+.removeBtn:hover,.hideBtn:hover{border-color:var(--muted)}
+.toast{position:fixed;z-index:400;display:flex;align-items:center;gap:12.8px}
+.toast.withAction{pointer-events:auto}
+.toastAction{border:0;padding:0;background:none;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* ---- edit move: two columns on desktop/TV — movements left, setup right ---- */
+.modalTop{flex:0 0 auto;padding:22px 22px 0}
+.modalTop .modalHead{margin-bottom:0;padding-bottom:16px}
+@media(min-width:901px){
+  .modal:not(.createMode){display:grid;grid-template-columns:minmax(340px,420px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .modal:not(.createMode) .modalTop{grid-column:1/-1;border-bottom:0.32px solid var(--divider)}
+  .modal:not(.createMode) .modalStatic{grid-column:1;grid-row:2;overflow-y:auto;border-bottom:0;border-right:0.32px solid var(--divider)}
+  .modal:not(.createMode) .exerciseScroller{grid-column:2;grid-row:2;border-top:0;padding-top:12px}
+  .modal:not(.createMode) .timeTiles{grid-auto-flow:row;grid-template-columns:minmax(0,1fr)}
+}
+
+/* ---- edit move v0.14: grouped timing, warm-up switch, delete above editor ---- */
+.timeTiles{align-items:start}
+.removeLabel{position:relative;z-index:1}
+.removeBtn.holding{border-color:var(--danger-fill)}
+#deleteMoveConfirm{z-index:200}
+.moveRow{will-change:transform}
+.moveRow.dragging{box-shadow:0 18px 40px var(--lift),inset 0 0 0 1.5px var(--primary);z-index:3;transform-origin:center}
+
+/* ---- edit a movement in place ---- */
+.moveRow.editing{display:block;padding:16px;box-shadow:inset 0 0 0 1.5px var(--primary)}
+.moveEditForm{display:grid;gap:14.4px}
+.moveEditFields{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12.8px}
+.moveEditForm label:not(.globalTimingToggle){display:grid;gap:6.4px;min-width:0}
+.moveEditForm .addInput{width:100%;min-width:0}
+.moveEditTiming{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12.8px}
+.moveEditTiming .creatorDurationRow{display:grid;grid-template-columns:96px 128px;gap:9.6px}
+.creatorDurationRow.isDisabled{opacity:.38}
+.moveEditActions{display:flex;justify-content:flex-end;align-items:center;gap:22.4px}
+@media(max-width:620px){.moveEditFields{grid-template-columns:1fr}}
+
+/* ---- light theme: timer digits stay solid ink (the dark theme's inverted blend turns brown on blue) ---- */
+.integration .status code{color:var(--soft)}
+/* text that sits straight on the coloured rest (green) and pause (blue) screens */
+#app.resting :is(.sessionHead,.nextLabel,.sessionControlRow){--muted:#f4f4f4;color:var(--text)}
+#app.paused :is(.sessionHead,.nextLabel,.sessionControlRow){--text:#090909;--muted:rgba(9,9,9,.8);--accent-text:#090909;--line:rgba(9,9,9,.3);color:var(--text)}
+#app.light:is(.resting,.paused) :is(.sessionHead,.nextLabel,.sessionControlRow){--text:#26221e;--muted:rgba(38,34,30,.85);--accent-text:#26221e;--line:rgba(38,34,30,.25);color:var(--text)}
+
+/* ---- drag Add movement / Add rest into the list ---- */
+.moveList{display:flex;flex-direction:column}
+.movementCreatorOpen,.restAddBtn{display:inline-flex;align-items:center;gap:6px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  transition:transform .42s cubic-bezier(.34,1.46,.64,1),opacity .2s ease}
+.movementCreatorOpen svg,.restAddBtn svg{width:14px;height:14px;margin-left:-3px;opacity:.55;flex:0 0 auto}
+.movementCreatorOpen.lifting,.restAddBtn.lifting{transform:scale(.92);opacity:.4;cursor:grabbing;transition:transform .16s ease,opacity .16s ease}
+.addGhost{position:fixed;left:0;top:0;z-index:20;pointer-events:none;box-sizing:border-box;
+  display:flex;align-items:center;gap:8px;padding:0 12.8px;overflow:hidden;white-space:nowrap;
+  border-radius:12px;background:var(--bright);color:var(--on-bright);box-shadow:0 12px 30px var(--lift);will-change:transform;
+  transition:width .4s cubic-bezier(.34,1.46,.64,1),height .4s cubic-bezier(.34,1.46,.64,1),border-radius .3s ease,
+    padding .3s ease,background .2s ease,color .2s ease,box-shadow .25s ease,opacity .18s ease}
+.addGhost.rest{background:var(--control-2);color:var(--text);box-shadow:inset 0 0 0 .5px var(--field-line),0 12px 30px var(--lift)}
+.addGhostGrip{display:grid;place-items:center;flex:0 0 auto;opacity:.55}
+.addGhostGrip svg{width:14px;height:14px;transition:width .3s ease,height .3s ease}
+.addGhostText{display:grid;min-width:0}
+.addGhostText small{color:var(--muted);max-height:0;opacity:0;transition:max-height .3s ease,opacity .2s ease}
+.addGhost.overList{border-radius:20.8px;gap:12.8px;padding:0 22.4px 0 12.8px;background:var(--row);color:var(--text);
+  box-shadow:inset 0 0 0 1.5px var(--primary),0 16px 36px var(--lift)}
+.addGhost.overList .addGhostGrip svg{width:18px;height:18px}
+.addGhost.overList .addGhostText small{max-height:20px;opacity:1;margin-top:4px}
+.addGhost.leaving{opacity:0}
+.dropSlot{flex:0 0 auto;height:0;margin-top:-8px;border-radius:20.8px;
+  background:color-mix(in srgb,var(--primary) 9%,transparent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 40%,transparent);
+  transition:height .42s cubic-bezier(.34,1.46,.64,1),margin-top .42s cubic-bezier(.34,1.46,.64,1),opacity .2s ease}
+.dropSlot.leaving{opacity:0;transition:height .26s cubic-bezier(.4,0,.2,1),margin-top .26s cubic-bezier(.4,0,.2,1),opacity .16s ease}
+@media (prefers-reduced-motion: reduce){.addGhost,.dropSlot,.movementCreatorOpen,.restAddBtn{transition:none}}
+/* the browser's scroll anchoring shifts the list while the drop gap opens; keep the list still */
+.exerciseScroller,.modalStatic,.createFlow{overflow-anchor:none}
+
+/* ---- YouTube video steps: the video fills the right-hand third of the workout screen ---- */
+.videoStage{position:absolute;inset:0;z-index:3;display:grid;place-items:center;background:#000;opacity:0;pointer-events:none;transition:opacity .3s ease}
+#app.videoStep .videoStage{opacity:1;pointer-events:auto}
+/* the biggest 16:9 that fits the panel, black bars on the long sides */
+.videoStage{container-type:size}
+.videoFrame{width:min(100cqw,calc(100cqh * 16 / 9));aspect-ratio:16/9}
+.videoFrame>*{display:block;width:100%;height:100%;border:0}
+.videoSound{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:2}
+.videoProbe{position:fixed;left:-10000px;top:0;width:320px;height:180px;opacity:0;pointer-events:none}
+.digits.long{font-size:clamp(96px,12.8vw,200px)}
+.moveEditFields.videoFields{grid-template-columns:minmax(0,1fr)}
+.fieldError{margin:0;color:var(--danger)}
+.addInput.invalid{border-color:var(--danger)}
+@media (prefers-reduced-motion: reduce){.videoStage{transition:none}}
+
+/* ---- theater mode: a video step takes the whole row where the timer and pulse sit ---- */
+.workGrid{transition:grid-template-columns .55s cubic-bezier(.2,.8,.2,1),gap .55s cubic-bezier(.2,.8,.2,1)}
+.timerCard{transition:opacity .25s ease}
+#app.videoStep .timerCard{opacity:0;min-width:0;pointer-events:none}
+/* full width; as tall as 16:9 allows without pushing the controls off screen (--theater-h is measured in app.js) */
+.workGrid{container-type:inline-size}
+#app.videoStep .movementCard{height:min(56.25cqw,var(--theater-h,60vh));min-height:240px;padding:0}
+#app.videoStep .exerciseTitle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media(min-width:901px){#app.videoStep .workGrid{grid-template-columns:minmax(0,0fr) minmax(240px,1fr);gap:0}}
+@media(max-width:900px){#app.videoStep .timerCard{display:none}#app.videoStep .movementCard{min-height:0}}
+.videoClock{display:none;margin-right:auto;font-variant-numeric:tabular-nums}
+#app.videoStep .videoClock{display:block}
+@media (prefers-reduced-motion: reduce){.workGrid,.timerCard{transition:none}}
+
+/* ---- Settings: second line on phones, per type ---- */
+.metaCard{margin-top:16px}
+.metaFilters{display:flex;flex-wrap:wrap;gap:9.6px;align-items:center;margin:14.4px 0 11.2px}
+.metaSearch{flex:1 1 200px;min-width:0}
+.metaKinds{display:flex;flex-wrap:wrap;gap:6.4px}
+.kindChip{min-height:32px;padding:0 11.2px;border:0.32px solid var(--field-line);border-radius:12px;background:var(--control-2);color:var(--text);cursor:pointer}
+.kindChip.active{background:var(--bright);color:var(--on-bright);border-color:var(--bright)}
+/* tables sit on the page, not on a card; the outer columns line up with the heading */
+.metaTableWrap{overflow-x:auto}
+.metaTable{width:100%;border-collapse:collapse}
+.metaTable th{text-align:left;color:var(--muted);padding:12px 16px;border-bottom:0.32px solid var(--divider);text-transform:uppercase;letter-spacing:.1em}
+.metaTable td{padding:12px 16px;border-top:0.32px solid var(--divider);vertical-align:middle;color:var(--soft)}
+.metaTable tbody tr:first-child td{border-top:0}
+.metaTable :is(th,td):first-child{padding-left:4px}
+.metaTable :is(th,td):last-child{padding-right:4px}
+.metaTable .metaSwitchCol{width:1%;white-space:nowrap;text-align:right}
+.metaTable .metaSwitchCol .switch{display:inline-block;vertical-align:middle}
+.metaType{color:var(--text)}
+.metaTable tr.off .metaType{color:var(--muted)}
+.metaSub{display:none;margin-top:2px;color:var(--muted)}
+.metaEmpty td{text-align:center;color:var(--muted)}
+.metaBulk{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11.2px}
+.metaBulkActions{display:flex;gap:22.4px}
+@media(max-width:620px){.metaKindCol,.metaUsedCol{display:none}.metaSub{display:block}}
+/* phones: types switched off in Settings drop their second line to save space */
+@media(max-width:620px){.moveRow.noMeta .moveMeta,.upcomingCard.noMeta .upcomingMeta,.nextCard.noMeta #nextMeta{display:none}}
+
+/* ---- phones: clean rows, a + button, and a bottom sheet for editing ---- */
+.setupSummary,.addFab{display:none}
+.modal{position:relative}
+.setupSummary{align-items:center;justify-content:space-between;gap:12px;width:100%;margin:6.4px 0 4px;padding:12px 14px;border:0;border-radius:20.8px;background:var(--tile);color:var(--text);text-align:left;cursor:pointer}
+.setupSummaryText{display:grid;gap:2px;min-width:0}
+.setupSummaryText small{color:var(--muted)}
+.setupSummaryAction{flex:0 0 auto;color:var(--muted)}
+.rowChevron{flex:0 0 auto;color:var(--muted);font-size:22px;line-height:1}
+.addFab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;place-items:center;width:56px;height:56px;padding:0;border:0;background:var(--bright);color:var(--on-bright);font-size:30px;font-weight:300;line-height:1;box-shadow:0 10px 24px var(--lift);cursor:pointer}
+.sheetScrim{position:absolute;inset:0;z-index:30;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .25s ease}
+.sheetScrim.open{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:31;display:grid;gap:14px;max-height:88%;overflow-y:auto;overscroll-behavior:contain;
+  padding:10px 16px calc(22px + env(safe-area-inset-bottom,0px));border-radius:var(--r-card) var(--r-card) 0 0;background:var(--modal);
+  box-shadow:0 -0.5px 0 var(--divider),0 -18px 40px var(--lift);transform:translateY(105%);visibility:hidden;
+  transition:transform .42s cubic-bezier(.2,.9,.25,1.06),visibility 0s linear .42s}
+.sheet.open{transform:none;visibility:visible;transition:transform .42s cubic-bezier(.2,.9,.25,1.06)}
+.sheetGrab{justify-self:center;width:38px;height:5px;border-radius:99px;background:var(--field-line)}
+.sheetTitle{margin:0}
+.sheet .moveRow.editing{display:block;padding:0;background:none;box-shadow:none;border-radius:0}
+.sheetActions{justify-content:space-between;flex-wrap:wrap;gap:12.8px}
+.sheetSecondary,.sheetPrimary{display:flex;align-items:center;gap:6.4px}
+.sheetPrimary{gap:22.4px;margin-left:auto}
+.sheetChoices{display:grid;gap:8px}
+.sheetChoice{display:flex;align-items:center;gap:14px;width:100%;padding:12px;border:0;border-radius:20.8px;background:var(--row);color:var(--text);text-align:left;cursor:pointer}
+.sheetChoice small{display:block;margin-top:2px;color:var(--muted)}
+.sheetSetup .modalStatic{padding:0;background:none;border:0;overflow:visible}
+.sheetDone{width:100%;margin-top:14.4px}
+/* the new step waiting above the list */
+.addGhostActions{display:none;align-items:center;gap:6.4px;margin-left:auto;flex:0 0 auto}
+.addGhost.hovering{pointer-events:auto;cursor:grab;touch-action:none;animation:ghostWait 1.8s ease-in-out infinite}
+.addGhost.held{pointer-events:auto;cursor:grabbing;touch-action:none}
+.addGhost.hovering .addGhostActions{display:flex}
+.addGhost.rising{transition:transform .6s cubic-bezier(.34,1.46,.64,1),opacity .2s ease}
+.ghostDiscard{padding:0 10px}
+@keyframes ghostWait{50%{box-shadow:inset 0 0 0 1.5px var(--primary),0 22px 44px var(--lift),0 0 0 5px color-mix(in srgb,var(--primary) 22%,transparent)}}
+@media(max-width:620px){
+  .modal:not(.createMode)>.modalStatic{display:none}
+  .modal:not(.createMode) .setupSummary{display:flex}
+  .addFab{display:grid}
+  .movementCreatorLaunch{display:none}
+  .exerciseScroller{padding-bottom:104px}
+  .moveRow.phoneRow{gap:8px;min-height:60px;padding:12px 12px 12px 14px;cursor:pointer}
+}
+@media (prefers-reduced-motion: reduce){.sheet,.sheetScrim{transition:none}.addGhost.hovering{animation:none}}
+
+/* The Edit move panel must never scroll as a whole: a focused field (the phone keyboard) or
+   scrollIntoView could slide it up under its header, leaving a see-through gap at the bottom. */
+.modal{overflow:clip}
+/* reordering: the other rows slide out of the way to show where the dragged one will land */
+.moveList.reordering>.moveRow:not(.dragging){transition:transform .44s cubic-bezier(.34,1.46,.64,1)}
+/* pulled off to the side: it will go back where it started */
+.moveRow.dragging.willReturn{opacity:.62;box-shadow:0 10px 24px var(--lift),inset 0 0 0 1.5px var(--field-line)}
+@media (prefers-reduced-motion: reduce){.moveList.reordering>.moveRow{transition:none}}
+
+/* =========================================================
+   Figma design system sync (2026-10-16)
+   Cards are 50 round with 22/24 padding. Everything inside a
+   card is a 36-round tile: 16/20 padding, at least 78 tall,
+   a 46 icon chip, then a Geist name + second line.
+   ========================================================= */
+.card,.panel,.confirmCard,.nextCard,.workoutPanel.active{padding:var(--inset)}
+.confirmCard,.nextCard,.upcomingCard{border-radius:var(--r-card)}
+.upcomingCard{padding:var(--inset)}
+
+/* move cards: the chosen one is a card, the others are tiles */
+.workoutPanel{border-radius:var(--r-tile);padding:var(--inset)}
+.workoutPanel.active{border-radius:var(--r-tile)}
+.workoutPanel.addPanel{padding:var(--inset)}
+
+/* tiles */
+.activityRow,.moveRow,.timeTile,.createPresetBtn,.createExtraToggle,.sheetChoice,.setupSummary{border-radius:var(--r-tile)}
+.activityRow,.moveRow{min-height:var(--tile-min);padding:var(--inset);gap:var(--inset)}
+.activityRow{grid-template-columns:var(--chip-size) minmax(0,1fr)}
+.activityRows{gap:12px}
+.timeTile{padding:var(--inset);gap:var(--inset)}
+.timeHeader{gap:var(--inset)}
+.createPresetBtn,.createExtraToggle{padding:var(--inset)}
+
+/* the second line in a tile is full-strength text, like the name */
+.moveMeta,.activityRowMeta,.setupSummaryText small,.sheetChoice small,.createExtraToggle small{color:var(--text)}
+.createPresetBtn.active span{color:var(--on-bright)}
+.moveMeta{margin-top:0}
+.activityRowMeta{margin-top:0}
+
+/* icon chips: 46, rounded 16 */
+.activityRowIcon,.activityIcon,.timeIcon,.nextIcon,.upcomingIcon{width:var(--chip-size);height:var(--chip-size);border-radius:var(--r-inner);font-size:20px}
+.navBtn,.back{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);min-height:0;padding:0;border-radius:var(--r-inner)}
+
+
+/* move rows */
+.moveRow.editing{padding:var(--inset)}
+.moveRow.phoneRow{min-height:0;padding:var(--inset);gap:var(--inset)}
+.dragHandle{width:var(--chip-size);height:var(--chip-size);margin:0;border-radius:var(--r-inner);background:var(--icon-bg);color:var(--muted)}
+.dragHandle svg{width:var(--glyph-size);height:var(--glyph-size)}
+.moveRow.restItem .dragHandle{background:transparent}
+.dragHandle:hover{background:color-mix(in srgb,var(--icon-bg) 80%,var(--text))}
+.moveRow.restItem .dragHandle:hover{background:var(--hover)}
+.addGhost.overList,.dropSlot{border-radius:var(--r-tile)}
+
+/* segmented control (Figma "Segmented control"): Edit | Hide | Delete on rows, tabs in Settings */
+.seg{display:flex;align-items:center;gap:4px;padding:4px;border-radius:var(--r-inner);background:var(--seg-bg);flex:0 0 auto}
+.segBtn{min-height:38px;padding:0 20px;border:0;border-radius:var(--r-fine);background:transparent;color:var(--text);cursor:pointer}
+.segBtn:hover{background:var(--hover)}
+.moveActions.seg{gap:4px}
+.moveActions .segBtn{min-width:100px}
+.moveActions .editBtn{background:var(--seg-on)}
+.moveActions .editBtn:hover{background:color-mix(in srgb,var(--seg-on) 88%,var(--text))}
+.moveActions .removeBtn{display:grid;place-items:center;width:40px;min-width:40px;padding:0;border:0;background:var(--danger-fill);color:var(--on-danger-fill)}
+.moveActions .removeBtn:hover{background:color-mix(in srgb,var(--danger-fill) 88%,white);border:0}
+.moveActions .removeBtn svg{display:block;width:24px;height:24px}
+.moveActions .removeFill{background:color-mix(in srgb,var(--on-danger-fill) 45%,transparent)}
+.moveActions .removeBtn.holding{color:#fff}
+@media(max-width:1100px){.moveActions .segBtn:not(.removeBtn){min-width:0;padding:0 14px}}
+
+.tabs.rubberTabs{padding:4px;gap:4px;border:0;border-radius:var(--r-inner);background:var(--seg-bg)}
+.rubberIndicator{top:4px;left:4px;height:calc(100% - 8px);border-radius:var(--r-fine);background:var(--seg-on)}
+.tabs.rubberTabs .tab{min-height:38px;padding:0 20px}
+.tabs.rubberTabs .tab.active{color:var(--text)}
+#app.light .rubberIndicator{box-shadow:0 1px 3px var(--lift)}
+
+/* switch with a label (Use global timing): same shape as the Switch */
+.toggleTrack{width:50px;height:28px;border-radius:var(--r-inner);background:var(--line);border:0.4px solid var(--line);opacity:1;transition:background .16s ease,opacity .16s ease}
+.toggleThumb{width:24px;height:24px;top:50%;left:1.6px;border-radius:12px 4px 4px 12px;background:var(--text);transform:translateY(-50%);transition:left .16s ease,border-radius .16s ease,background .16s ease}
+.globalTimingToggle input:checked + .toggleTrack{background:var(--color-accent-primary);opacity:1}
+.globalTimingToggle input:checked + .toggleTrack .toggleThumb{left:calc(100% - 25.6px);border-radius:4px 12px 12px 4px;background:var(--color-text-on-accent)}
+
+/* tablets and phones: move cards are a swipeable row of full cards */
+@media(max-width:900px){
+  .workoutPanel:not(.addPanel){border-radius:var(--r-tile);padding:var(--inset)}
+}
+/* phones: cards go edge to edge with 8 between them; spacing and corners stay the same */
+@media(max-width:620px){:host{--gutter:0px;--grid-gap:8px}}
+
+/* Phones: the editor is a full-screen sheet, edge to edge like the cards. Its size comes from
+   fitEditorToScreen(); the notch and home bar are kept clear with the safe-area insets. */
+@media(max-width:620px){
+  .modalBackdrop{padding:0}
+  .modal,.modal:not(.createMode){width:100%;height:100%;max-height:none;border-radius:0;border:0}
+  .modalTop{padding-top:calc(16px + env(safe-area-inset-top,0px))}
+  .modal:not(.createMode) .exerciseScroller{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+}
+
+/* =========================================================
+   Two families (2026-10-17)
+   Display — home, workout, check-in, the move list: cards
+   holding tiles, icon chips, Geist tile text.
+   Setup — Settings, the move's setup, sheets: one rounded
+   group of rows split by hairlines. One level of rounding,
+   Inter text, no icon chips.
+   ========================================================= */
+#app{--group-bg:var(--card)}
+.modal,.sheet{--group-bg:var(--tile)}
+.view{padding-left:var(--gutter);padding-right:var(--gutter)}
+.grid{gap:var(--grid-gap)}
+
+.setupCaption{display:block;padding:0 4px 8px;color:var(--muted);text-transform:uppercase}
+.setupGroup,#settingsView .integrationList,#settingsView .toggleList{display:grid;gap:0;border-radius:var(--r-tile);background:var(--group-bg);overflow:hidden}
+.setupRow,#settingsView .integration,#settingsView .toggleRow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:56px;padding:12px 16px;border-radius:0;background:transparent}
+:is(.setupRow,#settingsView .integration,#settingsView .toggleRow):not([hidden])~:is(.setupRow,.integration,.toggleRow)::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--divider)}
+.setupRow.withSlider{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:stretch}
+.setupRowTop{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.setupText{display:grid;gap:2px;min-width:0}
+.setupValue,#settingsView .status{color:var(--muted);margin-top:0;font-variant-numeric:tabular-nums}
+.setupRow .rangeTrack[hidden]{display:none}
+
+/* a slider in a setup row is a thin track with a knob, no box */
+.rangeTrack.setupSlider{height:28px;margin:0 2px;border:0;border-radius:0!important;background:transparent;overflow:visible}
+.rangeTrack.setupSlider::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;border-radius:99px;background:var(--track);transform:translateY(-50%)}
+.setupSlider .rangeFill{top:50%;bottom:auto;height:6px;border-radius:99px;transform:translateY(-50%)}
+.setupSlider .rangeFill::after{content:"";position:absolute;right:-11px;top:50%;width:22px;height:22px;border-radius:50%;background:var(--slider-fill);box-shadow:0 1px 4px var(--lift);transform:translateY(-50%)}
+.setupSlider:focus-within{outline:0}
+.setupSlider:focus-within .rangeFill::after{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 45%,transparent)}
+
+.stepper{display:flex;align-items:center;gap:2px;padding:4px;border-radius:var(--r-inner);background:var(--seg-bg);flex:0 0 auto}
+.stepBtn{width:36px;height:32px;padding:0;border:0;border-radius:var(--r-fine)!important;background:transparent;color:var(--text);font:600 18px/1 var(--font);cursor:pointer}
+.stepBtn:hover:not(:disabled){background:var(--hover)}
+.stepBtn:disabled{opacity:.35;cursor:default}
+.stepCount{min-width:24px;text-align:center;font:600 var(--t-strong)/1 var(--font);font-variant-numeric:tabular-nums}
+
+/* the move's setup column */
+.timeTiles.setupBlock,.modal:not(.createMode) .timeTiles.setupBlock{display:block;margin-bottom:12px}
+.editNameLabel{padding:0 4px}
+.routineSummary{margin:0 0 4px;padding:0 4px;background:none;border-radius:0;color:var(--muted)}
+
+/* Settings: plain sections — a heading, a sentence, then one group */
+#settingsView .card{display:grid;gap:12px;padding:0;border:0;border-radius:0;background:none}
+#settingsView .card+.card{margin-top:36px}
+#settingsView .paneTitle{margin:0 4px}
+#settingsView .note{margin:0 4px 4px}
+#settingsView .integration>div:first-child,#settingsView .toggleRow>div:first-child{display:grid;gap:2px;min-width:0}
+#settingsView .helpSteps{gap:0;border-radius:var(--r-tile);background:var(--group-bg);overflow:hidden}
+#settingsView .helpSteps li{border-radius:0;background:transparent}
+#settingsView .helpSteps li+li::after{content:"";position:absolute;top:0;left:52.8px;right:0;border-top:.5px solid var(--divider)}
+
+/* =========================================================
+   Movement & you, layout B (2026-10-17): Activity and
+   Movement narrow, Weather wide with the forecast.
+   ========================================================= */
+.activityCard{grid-column:span 3}
+.insightCard{grid-column:span 3}
+.weatherCard{grid-column:span 6}
+.grid.noWeather .activityCard,.grid.noWeather .insightCard{grid-column:span 6}
+.grid.noActivity .insightCard{grid-column:span 6}
+.grid.noActivity.noWeather .insightCard{grid-column:span 12}
+@media(max-width:1199px) and (min-width:901px){
+  .activityCard,.insightCard{grid-column:span 6}
+  .weatherCard{grid-column:span 12}
+  .grid.noActivity .insightCard{grid-column:span 12}
+}
+@media(max-width:900px){.activityCard,.insightCard,.weatherCard,.grid .insightCard{grid-column:auto}}
+
+/* Joint data: readings that belong to one dataset share one tile (Figma "Movement summary 2") */
+.jointRows{gap:0;padding:4px 0;border-radius:var(--r-tile);background:var(--tile)}
+.jointRows>.activityRow{background:transparent}
+.insightCard .jointRows{flex:1;align-content:space-evenly}
+
+/* Weather card */
+.weatherCard{display:flex;flex-direction:column}
+.wxWide{flex:1;display:flex;flex-direction:column;gap:var(--inset)}
+.wxNow{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.wxCurrent{display:flex;align-items:flex-start;gap:16px;min-width:0}
+.wxTempBlock{display:grid;gap:4px;min-width:0}
+.wxTemp{display:flex;align-items:flex-start;gap:2px}
+.wxPlace{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxCondition{display:grid;gap:2px;padding:var(--inset);border-radius:var(--r-tile);background:var(--tile);flex:0 0 auto}
+.wxNoDays{flex:1;display:grid;place-items:center;padding:16px;border-radius:var(--r-tile);background:var(--tile);color:var(--muted)}
+.wxIcon{position:relative;display:block;flex:0 0 auto;width:54px;height:54px;border-radius:var(--r-inner);background:var(--icon-bg);overflow:hidden}
+/* Figma "Weather icon": Small 54 (forecast days, compact rows), Large 90; artwork fills the box, background per condition */
+.wxIcon>svg,.wxLayer>svg{display:block;width:100%;height:100%}
+:is(.wxIcon,.wxLayer).clear,:is(.wxIcon,.wxLayer).partly{background:var(--wx-clear)}
+:is(.wxIcon,.wxLayer).cloudy{background:var(--wx-cloudy)}
+:is(.wxIcon,.wxLayer).rain,:is(.wxIcon,.wxLayer).snow{background:var(--color-text-muted)}
+:is(.wxIcon,.wxLayer).night{background:var(--wx-night)}
+.wxIcon .wxBright{fill:var(--wx-cloud-bright)}
+.wxIcon .wxCloudLight{fill:var(--wx-cloudy)}
+.wxIcon .wxAccent{fill:var(--color-accent-primary)}
+.wxIcon.large{width:90px;height:90px;border-radius:var(--r-tile)}
+/* Bitmap and 1-bit styles: a canvas at 2 px per pixel, drawn by weather-art.js; the sky is in the pixels */
+.wxIcon>canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+
+/* Weather motion, Smooth style (Bitmap and 1-bit move in weather-art.js). #app gets .wxMotion when motion is on
+   and the device doesn't ask for reduced motion. Timings match docs/weather-styles.md. */
+.wxIcon :is(.wxSunDisc,.wxMoonPath,.wxBright,.wxCloudLight,.wxDrop,.wxFlake,.wxTwinkle){transform-box:fill-box;transform-origin:center}
+#app.wxMotion .wxIcon .wxSunDisc{animation:wxBreathe 3.6s ease-in-out infinite}
+#app.wxMotion .wxIcon .wxMoonPath{animation:wxBob 5.2s ease-in-out infinite}
+#app.wxMotion .wxIcon :is(.wxBright,.wxCloudLight){animation:wxDrift 6.4s ease-in-out infinite}
+#app.wxMotion .wxIcon .wxDrop{animation:wxFall .95s linear infinite}
+#app.wxMotion .wxIcon .wxFlake{animation:wxSnow 3.2s linear infinite}
+#app.wxMotion .wxIcon .wxTwinkle{animation:wxTwinkle 2.4s ease-in-out infinite}
+@keyframes wxBreathe{50%{transform:scale(1.03)}}
+@keyframes wxBob{50%{transform:translateY(-1px)}}
+@keyframes wxDrift{0%,100%{transform:translateX(-1.5px)}50%{transform:translateX(1.5px)}}
+@keyframes wxFall{0%{transform:translateY(-5px);opacity:0}18%,72%{opacity:1}100%{transform:translateY(9px);opacity:0}}
+@keyframes wxSnow{0%{transform:translate(0,-6px);opacity:0}20%,75%{opacity:1}100%{transform:translate(1.5px,8px);opacity:0}}
+@keyframes wxTwinkle{50%{opacity:.35}}
+/* a change of condition: the old picture fades out over the new one */
+.wxLayer{position:absolute;inset:0;display:block}
+.wxLayer.wxOut{animation:wxFadeOut .7s cubic-bezier(.3,0,1,1) forwards}
+@keyframes wxFadeOut{to{opacity:0}}
+
+/* Weather type: temperature + range (Geist), names and days use the tile styles */
+.wxDeg{font-family:var(--font-tile);font-size:var(--t-wx-temp);font-weight:var(--w-medium);line-height:1;letter-spacing:-.02em}
+.wxUnit,.wxRange{font-family:var(--font-tile);font-size:var(--t-wx-range);font-weight:300;line-height:1.25;letter-spacing:0}
+.wxPlace,.wxCondName{font-family:var(--font-tile);font-size:var(--t-tile-title);font-weight:var(--w-semibold);line-height:var(--lh-tile-title);letter-spacing:0}
+.wxNoDays{font-family:var(--font-tile);font-size:var(--t-tile-detail);font-weight:var(--w-regular);line-height:var(--lh-tile-detail);letter-spacing:0}
+
+/* Now and the day tiles open the bigger view */
+.wxNow[role="button"],.wxDayTile{cursor:pointer;border-radius:var(--r-tile)}
+:is(.wxNow,.wxDayTile,.wxStripDay):focus-visible{outline:2px solid var(--color-border-focus);outline-offset:2px}
+
+/* 12-hour sky strip on Home (Settings → Appearance → Weather layout → Sky strip): six day columns, the sky across them.
+   The sky sits in the gap between each day's name and its high and low. */
+.wxStrip{position:relative;flex:1;display:flex}
+.wxStripDays{flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.wxStripDay{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:var(--inset);min-width:0;padding:var(--inset) 0;border-radius:var(--r-tile);cursor:pointer}
+@media (hover:hover){.wxStripDay:hover{background:var(--color-state-hover)}}
+.wxStripGap{align-self:stretch;height:90px}
+.wxStripDay .wxTemps{display:grid;justify-items:center;gap:8px}
+.wxStripSky{position:absolute;left:0;top:calc(var(--inset) * 2 + var(--lh-tile-detail));width:100%;height:90px;border-radius:var(--r-inner);pointer-events:none;image-rendering:pixelated}
+.wxStripDay .wxDayName,.wxStripDay .wxHigh,.wxGraphDays{font-family:var(--font-tile);font-size:var(--t-tile-detail);font-weight:var(--w-regular);line-height:var(--lh-tile-detail);letter-spacing:0}
+.wxStripDay .wxLow{font-family:var(--font-tile);font-size:var(--t-tile-title);font-weight:var(--w-semibold);line-height:var(--lh-tile-title);color:var(--muted)}
+
+/* The bigger view: Now on top, then the sky with the temperature over it; drag along it to move through the days */
+.wxBackdrop{z-index:170}
+.wxDialogCard{width:min(860px,100%);display:grid;gap:var(--inset)}
+.wxDialogHead{display:flex;align-items:center;justify-content:space-between;gap:var(--inset);padding-left:var(--inset)}
+.wxDialogHead .activityTitle{margin:0}
+.wxDialogClose{background:transparent}
+.wxGraph{display:grid;gap:8px;touch-action:pan-y;cursor:ew-resize;border-radius:var(--r-tile);user-select:none;-webkit-user-select:none}
+.wxGraph:focus{outline:none}
+.wxGraph:focus-visible{outline:2px solid var(--color-border-focus);outline-offset:4px}
+.wxGraphDays{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));text-align:center;color:var(--muted)}
+.wxGraphSky{position:relative;height:200px;border-radius:var(--r-tile);overflow:hidden;background:var(--tile)}
+.wxGraphSky>canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.wxGraphLine{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.wxLineLabel{font-family:var(--font-tile);font-size:14px;font-weight:var(--w-semibold);text-anchor:middle;paint-order:stroke;stroke-width:3px;stroke-linejoin:round}
+@media(max-width:620px){.wxGraphSky{height:160px}.wxDialogNow{flex-wrap:wrap}}
+
+/* =========================================================
+   Segment states (Figma "Segment", 2026-10-19): plain at rest,
+   hover tint, pressed tint + a small squash, chosen = tile,
+   blue focus ring. Hover only with a real pointer, so taps on
+   phones never leave a button looking hovered.
+   ========================================================= */
+.segBtn{transition:background .15s ease,transform .18s cubic-bezier(.34,1.46,.64,1),box-shadow .15s ease,color .15s ease}
+.segBtn:hover{background:transparent}
+@media (hover:hover){.segBtn:hover{background:var(--color-state-hover)}}
+.tabs.rubberTabs .tab.active:hover{background:transparent}
+.segBtn:active{background:var(--color-state-pressed);transform:scale(.97)}
+.segBtn:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--color-border-focus)}
+.segBtn:disabled{opacity:.4;cursor:default}
+
+/* Move row actions: no track until you interact; Edit, Hide and the bin look the same; the bin turns red on hover */
+.moveActions.seg{background:transparent;transition:background .18s ease}
+.moveActions.seg:focus-within{background:var(--seg-bg)}
+@media (hover:hover){.moveActions.seg:hover{background:var(--seg-bg)}}
+.moveActions .editBtn,.moveActions .editBtn:hover{background:transparent}
+.moveActions .removeBtn,.moveActions .removeBtn:hover{background:transparent;color:var(--text)}
+@media (hover:hover){
+  .moveActions .editBtn:hover{background:var(--color-state-hover)}
+  .moveActions .removeBtn:hover{background:var(--danger-fill);color:var(--color-text-on-danger)}
+}
+.moveActions .removeBtn:active{background:linear-gradient(var(--color-state-pressed-on-bright),var(--color-state-pressed-on-bright)),var(--danger-fill);color:var(--color-text-on-danger)}
+.moveActions .removeBtn.holding{background:var(--danger-bg);color:var(--color-text-on-danger)}
+.moveActions .removeFill{background:var(--danger-fill)}
+
+/* Icons are generic greys for now (Figma: every icon uses color/text/muted) */
+.activityIcon{color:var(--muted)}
+.activityRowIcon,.timeIcon,.nextIcon,.upcomingIcon{color:var(--text)}
+
+/* the big weather icon sits exactly one inset from the card corner, so its corners are concentric (card − inset = tile) */
+.wxTempBlock{padding-top:6px}
+/* Figma Setup row slider: bright fill and knob on the native range inputs */
+.motionRangeWrap input[type=range]{accent-color:var(--bright);background:transparent}

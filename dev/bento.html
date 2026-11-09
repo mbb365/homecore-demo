@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather bento dev</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap">
+<style>
+  body{margin:0;background:#050505;font:13px/1.4 system-ui,sans-serif;color:#f1f1f1}
+  body.light{background:#eeebe8;color:#26221e}
+  .bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px)}
+  body.light .bar{background:rgba(255,255,255,.7)}
+  .bar button{padding:4px 10px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.6}
+  .bar button[aria-pressed="true"]{opacity:1;font-weight:600}
+  .bar span{margin-left:8px;opacity:.6}
+  #frame{margin:0 auto}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<div id="frame"><div id="host"></div></div>
+<script type="module">
+// Weather bento test page: the bento in a shadow root with the card's own styles, fed by a made-up Home Assistant.
+// ?style=bitmap|onebit|smooth  ?light=1  ?w=375 (frame width)  ?lang=en-GB  ?empty=1 (no forecasts or history)
+import css from "../src/styles.css?inline";
+import displayCss from "../src/display.css?inline";
+import bentoCss from "../src/weather-bento.css?inline";
+import { mountWeatherBento } from "../src/weather-bento.js";
+
+const params = new URLSearchParams(location.search);
+const style = params.get("style") || "bitmap";
+const light = params.get("light") === "1";
+const width = params.get("w");
+const empty = params.get("empty") === "1";
+const language = params.get("lang") || "en-GB";
+
+const host = document.getElementById("host");
+if (width) document.getElementById("frame").style.width = width + "px";
+document.body.classList.toggle("light", light);
+const root = host.attachShadow({ mode: "open" });
+root.innerHTML = `<style>${css}${displayCss}${bentoCss}</style><div id="app"${light ? ' class="light"' : ""}><div id="bento"></div></div>`;
+
+// ---- A made-up Home Assistant in Amsterdam ----
+const now = new Date();
+const at = (dayOffset, h, m = 0) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, h, m);
+const rise = (d) => at(d, 7, 22), set = (d) => at(d, 17, 4);
+const up = now >= rise(0) && now < set(0);
+const states = {
+  "weather.forecast_home": { entity_id: "weather.forecast_home", state: "partlycloudy", attributes: {
+    friendly_name: "Forecast Home", temperature: 13.6, temperature_unit: "°C", humidity: 72, dew_point: 8.7,
+    pressure: 1016.4, pressure_unit: "hPa", wind_speed: 18.7, wind_gust_speed: 34.2, wind_bearing: 236, wind_speed_unit: "km/h",
+    uv_index: 2, visibility: 14, visibility_unit: "km", precipitation_unit: "mm", supported_features: 3 } },
+  "sun.sun": { entity_id: "sun.sun", state: up ? "above_horizon" : "below_horizon", attributes: {
+    next_rising: (now < rise(0) ? rise(0) : rise(1)).toISOString(), next_setting: (now < set(0) ? set(0) : set(1)).toISOString() } },
+  "sensor.rain_gauge_total": { entity_id: "sensor.rain_gauge_total", state: "2.4", attributes: { friendly_name: "Rain gauge", unit_of_measurement: "mm", device_class: "precipitation", state_class: "total_increasing" } },
+  "sensor.home_pm2_5": { entity_id: "sensor.home_pm2_5", state: "9.4", attributes: { friendly_name: "Home PM2.5", unit_of_measurement: "µg/m³", device_class: "pm25", state_class: "measurement" } },
+  "sensor.home_nitrogen_dioxide": { entity_id: "sensor.home_nitrogen_dioxide", state: "18.2", attributes: { friendly_name: "Home Nitrogen dioxide", unit_of_measurement: "µg/m³", device_class: "nitrogen_dioxide", state_class: "measurement" } },
+  "sensor.home_grass_pollen": { entity_id: "sensor.home_grass_pollen", state: "Low", attributes: { friendly_name: "Home Grass pollen" } },
+};
+const entities = {
+  "sensor.home_pm2_5": { entity_id: "sensor.home_pm2_5", platform: "google_air_quality", name: "PM2.5" },
+  "sensor.home_nitrogen_dioxide": { entity_id: "sensor.home_nitrogen_dioxide", platform: "google_air_quality", name: "Nitrogen dioxide" },
+  "sensor.home_grass_pollen": { entity_id: "sensor.home_grass_pollen", platform: "google_air_quality", translation_key: "grass_pollen", name: "Grass pollen" },
+};
+// Six days, then the hours: a curve between each day's low (05:00) and high (15:00), an afternoon shower tomorrow
+const DAILY = [["partlycloudy", 15, 8, 20], ["rainy", 12, 7, 80], ["cloudy", 11, 6, 30], ["sunny", 13, 4, 0], ["partlycloudy", 14, 7, 10], ["rainy", 12, 8, 70], ["cloudy", 10, 5, 20]];
+const daily = () => DAILY.map(([condition, temperature, templow, chance], i) => ({
+  datetime: at(i, 12).toISOString(), condition, temperature, templow, precipitation_probability: chance, precipitation: chance > 40 ? chance / 20 : 0 }));
+const hourly = () => {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+  return [...Array(96)].map((_, i) => {
+    const t = new Date(+start + i * 36e5), h = t.getHours();
+    const di = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+    const [cond, hi, lo, chance] = DAILY[Math.min(di, DAILY.length - 1)];
+    const k = 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, (h - 5) / 10)));
+    const temperature = Math.round((lo + (hi - lo) * (h > 15 ? k * Math.max(0, 1 - (h - 15) / 14) : k)) * 10) / 10;
+    const night = h < 7 || h >= 17;
+    let condition = night ? (cond === "sunny" || cond === "partlycloudy" ? "clear-night" : cond) : cond;
+    let p = chance;
+    if (di === 1 && h >= 13 && h <= 16) { condition = "pouring"; p = 90; }
+    return { datetime: t.toISOString(), condition, temperature, humidity: Math.round(88 - 25 * k),
+      precipitation_probability: Math.max(0, Math.min(100, p + ((i * 37) % 21) - 10)), precipitation: p > 50 ? Math.round(((i * 13) % 9) / 3) / 2 : 0,
+      wind_speed: Math.round(12 + 9 * Math.sin(i / 5)), uv_index: h >= 9 && h <= 16 ? Math.round(3 * Math.sin(Math.PI * (h - 8) / 9)) : 0 };
+  });
+};
+// A week of recorded weather: hourly states with their attributes
+const history = (msg) => {
+  const id = msg.entity_ids[0], from = +new Date(msg.start_time), to = +new Date(msg.end_time), out = [];
+  const highs = [16, 14, 12, 15, 13, 11, 14];
+  for (let t = from; t <= to; t += 36e5) {
+    const d = new Date(t), h = d.getHours(), di = Math.floor((to - t) / 864e5) % highs.length;
+    const k = 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, (h - 5) / 10)));
+    const temperature = Math.round((highs[di] - 7 + 7 * k) * 10) / 10;
+    if (msg.minimal_response) out.push({ s: String(Math.round((9 + 4 * Math.sin(t / 7e6)) * 10) / 10), lu: t / 1000 });
+    else out.push({ s: "cloudy", a: { temperature, humidity: Math.round(85 - 20 * k), pressure: 1013.1 + (t - from) / 36e5 * 0.6 }, lu: t / 1000 });
+  }
+  return { [id]: out };
+};
+const hass = {
+  states, entities, devices: {}, areas: {},
+  language,
+  locale: { language, number_format: "language", time_format: "language", time_zone: "local" },
+  config: { latitude: 52.3676, longitude: 4.9041, location_name: "Amsterdam", time_zone: "Europe/Amsterdam", unit_system: { temperature: "°C", length: "km" } },
+  callWS: async (msg) => {
+    if (empty) throw new Error("no recorder");
+    if (msg.type === "history/history_during_period") return history(msg);
+    if (msg.type === "recorder/statistic_during_period") return { change: 2.4 };
+    if (msg.type === "integration/descriptions") return { core: { integration: { google_air_quality: { integration_type: "service", categories: ["weather_alerts.air_quality_pollen"] } } } };
+    throw new Error("unknown " + msg.type);
+  },
+  connection: {
+    subscribeMessage: async (cb, msg) => {
+      if (msg.type !== "weather/subscribe_forecast") throw new Error("unknown " + msg.type);
+      if (!empty) setTimeout(() => cb({ type: msg.forecast_type, forecast: msg.forecast_type === "daily" ? daily() : hourly() }), 120);
+      return () => {};
+    },
+  },
+};
+
+const bento = mountWeatherBento(root.getElementById("bento"), { getHass: () => hass, entityId: "weather.forecast_home", style });
+window.bento = bento;
+window.hass = hass;
+
+// ---- The bar: style, theme, width, and a change of weather to try update() ----
+const bar = document.getElementById("bar");
+const link = (label, change, on) => {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.setAttribute("aria-pressed", String(on));
+  b.onclick = () => { const p = new URLSearchParams(location.search); Object.entries(change).forEach(([k, v]) => (v == null ? p.delete(k) : p.set(k, v))); location.search = p; };
+  bar.appendChild(b);
+};
+["bitmap", "onebit", "smooth"].forEach((s) => link(s, { style: s }, s === style));
+link(light ? "Dark" : "Light", { light: light ? null : "1" }, false);
+[["Full", null], ["1100", "1100"], ["375", "375"]].forEach(([l, w]) => link(l, { w }, (width || null) === w));
+const change = document.createElement("button");
+change.textContent = "Change weather";
+change.onclick = () => {
+  const old = hass.states["weather.forecast_home"];
+  const next = old.state === "partlycloudy" ? "rainy" : "partlycloudy";
+  hass.states = { ...hass.states, "weather.forecast_home": { ...old, state: next, attributes: { ...old.attributes, temperature: next === "rainy" ? 11.2 : 13.6, humidity: next === "rainy" ? 91 : 72 } } };
+  bento.update();
+};
+bar.appendChild(change);
+</script>
+</body>
+</html>

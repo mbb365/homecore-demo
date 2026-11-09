@@ -1,0 +1,415 @@
+/* =========================================================
+   Weather bento (weather-bento.js): the HomeCore weather page from the Home Assistant frontend patch
+   (hui-weather-bento-card and its cards, homecore.ts). Every value is the patch's; tokens only where they are the same value.
+   Everything starts with wb. Buttons win over the card's global button corner (styles.css) with !important.
+   ========================================================= */
+.wb{container:wb-bento/inline-size;display:block;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+
+/* Bento: cards at their Figma widths (weather card and hours 520, data tiles 252), 16 apart, wrapping, 10 round it */
+.wbBento{box-sizing:content-box;display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:16px;max-width:1056px;margin:0 auto;padding:10px}
+.wbItem{container:wb-card/inline-size;min-width:0}
+.wbItem[hidden]{display:none!important}
+/* the weather card and the hours share a row and its height; the hours fill it, the weather card keeps its own */
+.wbItem[data-size="wide"]{width:520px;align-self:stretch;display:flex;flex-direction:column}
+.wbItem[data-size="wide"]>*{flex:1}
+.wbItem[data-size="wide"]>.wbWeather{flex:none}
+.wbItem[data-size="tile"]{width:252px}
+.wbItem[data-size="double"]{width:520px}
+/* phones: wide cards full width, two squares side by side, 10 apart */
+@container wb-bento (width < 652px){
+  .wbBento{gap:10px;padding:10px}
+  .wbItem:is([data-size="wide"],[data-size="double"]){width:100%}
+  .wbItem[data-size="tile"]{width:calc(50% - 5px)}
+}
+
+/* Card: corner 34, hairline 0.2 all round with 0.4 along the bottom */
+.wbCard{position:relative;display:block;box-sizing:border-box;border:0;border-radius:var(--r-card);background:var(--card);color:var(--text);font-family:var(--font);
+  box-shadow:inset 0 0 0 .2px var(--line),inset 0 -.4px 0 var(--line);transition:all .3s ease-out}
+/* card with a header: 14 above, 10 elsewhere, hairline 0.4 all round */
+.wbCard.wbHc{display:flex;flex-direction:column;gap:10px;padding:14px var(--inset) var(--inset);box-shadow:var(--hc-hair-all)}
+.wbHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:28px;padding:0 18px}
+.wbTitle{margin:0;font:500 18px/1.2 var(--font-tile);letter-spacing:-.18px;color:var(--text);white-space:nowrap}
+
+.wbIcon{display:block;flex:none;width:var(--wb-icon,24px);height:var(--wb-icon,24px);fill:currentColor;pointer-events:none}
+
+/* Tile: 60 tall, padding 10, gap 12, corner 24, no fill until hovered */
+.wbTile{display:flex;align-items:center;gap:12px;min-width:0;min-height:var(--tile-min);box-sizing:border-box;padding:var(--inset);border:0;border-radius:var(--r-tile);background:transparent;color:inherit;font:inherit;text-align:start}
+.wb button.wbTile{border-radius:var(--r-tile)!important;cursor:pointer;transition:background-color .15s ease,box-shadow .15s ease}
+.wb button.wbTile:hover{background:var(--tile);box-shadow:inset 0 0 0 .2px var(--line),inset 0 -.4px 0 var(--line)}
+.wb button.wbTile:focus-visible{outline:2px solid var(--primary)!important;outline-offset:2px!important}
+.wbChip{flex:none;display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);border-radius:var(--r-inner);background:var(--primary);color:var(--hc-on-accent);--wb-icon:24px}
+.wbChip.wbPlain{background:var(--icon-bg);color:var(--text)}
+.wbText{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;align-self:stretch;overflow:hidden;white-space:nowrap}
+.wbName{font:600 14px/20px var(--font-tile);overflow:hidden;text-overflow:ellipsis}
+.wbSub{font:400 16px/1.15 var(--font);letter-spacing:-.32px;overflow:hidden;text-overflow:ellipsis}
+
+/* Square data tile: the title row, then one drawing. A tile like every other (Matt, 1 Nov): corner 28, 18 in, a 40 chip
+   with its icon fitted to 26, name 14 and the line under it 16, at every width; the drawing takes the room left */
+.wbCard.wbSquare{display:flex;flex-direction:column;gap:14px;aspect-ratio:1;--wb-k:1;box-sizing:border-box;padding:18px;border-radius:28px;overflow:hidden}
+.wbHead{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.wbSquare .wbChip{width:40px;height:40px;border-radius:16px}
+.wbSquare .wbName{font-size:14px;line-height:1.4}
+.wbSquare .wbSub{font-size:16px}
+.wbVisual{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px}
+/* two columns wide (Compared to average): the same head and 18 in as every element (Matt, 1 Nov: a unified system),
+   a card's corner */
+.wbCard.wbSquare.wbDouble{aspect-ratio:520/252;--wb-k:.4846;border-radius:34px}
+.wbVisual>svg{display:block;width:100%;height:100%;min-height:0}
+.wbVisual svg text{font-family:var(--font-tile)}
+.wbValue{display:flex;align-items:flex-start;gap:2px;white-space:nowrap}
+.wbValue .wbNum{font:500 clamp(30px,calc(17.5cqw * var(--wb-k,1)),44px)/1 var(--font-tile);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.wbValue .wbUnitV{font:300 clamp(13px,calc(7.1cqw * var(--wb-k,1)),18px)/1.25 var(--font-tile);color:var(--muted)}
+.wbScaleNote{display:flex;justify-content:space-between;color:var(--muted);font:400 clamp(10px,calc(4.4cqw * var(--wb-k,1)),12px)/1.3 var(--font)}
+/* a tile whose whole card is the picture: the backdrop fills it, the title row and value sit on top */
+.wbCard.wbSquare.wbHasBackdrop{position:relative;isolation:isolate}
+.wbBackdrop{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.wbBackdrop~*{position:relative;z-index:1}
+
+/* The graph space: 120 tall, corners 10 at the top and 18 below */
+.wbGraph{position:relative;display:flex;flex-direction:column;justify-content:center;height:120px;box-sizing:border-box;padding:12px 16px;border-radius:10px 10px 18px 18px;background:var(--tile);overflow:hidden;--wb-scale-edge:var(--tile)}
+.wbChart{display:block;width:100%;height:100%;overflow:visible}
+.wbChart .wbLine{fill:none;stroke:var(--primary);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.wbChart .wbArea{fill:var(--primary);opacity:.14}
+.wbChart .wbBar{fill:var(--muted);opacity:.45}
+.wbChart .wbBar.wbNowBar{fill:var(--primary);opacity:1}
+.wbChart .wbGuide{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 4}
+.wbChart text{fill:var(--muted);font:400 11px var(--font)}
+.wbGraphNote{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font:400 12px/1.4 var(--font)}
+
+/* A day graph: sun marks on top, the scale on the left, the hours below */
+.wbDayChart{flex:1;min-height:0;display:grid;grid-template-columns:38px minmax(0,1fr);grid-template-rows:20px minmax(0,1fr) 18px;
+  grid-template-areas:". sun" "y plot" ". x";column-gap:6px;color:var(--muted);font:400 11px/14px var(--font);font-variant-numeric:tabular-nums}
+.wbDcSun,.wbDcX,.wbDcY,.wbDcPlot{position:relative;min-width:0}
+.wbDcSun{grid-area:sun}
+.wbDcY{grid-area:y}
+.wbDcPlot{grid-area:plot}
+.wbDcX{grid-area:x}
+.wbDcSunMark,.wbDcX span{position:absolute;bottom:0;transform:translateX(-50%);white-space:nowrap}
+.wbDcSunMark{display:flex;align-items:center;gap:2px;bottom:4px;--wb-icon:14px}
+.wbDcSunMark .wbIcon{fill:#fea916}
+.wbDcX span{top:4px;bottom:auto}
+.wbDcY span{position:absolute;right:0;transform:translateY(-50%);white-space:nowrap}
+.wbDcPlot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.wbDcNight{fill:var(--page);opacity:.6}
+.wbDcGrid{stroke:var(--line);stroke-width:1}
+.wbDcSunLine{stroke:#fea916;stroke-width:1;stroke-dasharray:2 4;opacity:.7}
+.wbDcNow{stroke:var(--text);stroke-width:1;opacity:.4}
+.wbDcLine,.wbDcPast{fill:none;stroke:var(--primary);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.wbDcPast{stroke:var(--muted);stroke-width:2}
+.wbDcArea{fill:var(--primary);opacity:.14}
+.wbDcBar{position:absolute;bottom:0;min-height:3px;border-radius:4px 4px 1px 1px;background:var(--primary)}
+.wbDcDot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 2px var(--card)}
+.wbDcPeak{position:absolute;transform:translate(-50%,calc(-100% - 6px));color:var(--text);font-weight:500;white-space:nowrap}
+.wbDcNote{position:absolute;inset:0;display:grid;place-items:center;padding:0 8px;text-align:center;color:var(--muted);font:400 13px/1.4 var(--font)}
+
+/* Opened tile: fills its card, padding 10, corner 28, tile fill */
+.wbOpen{flex:1;display:flex;flex-direction:column;gap:10px;padding:var(--inset);border-radius:28px;background:var(--tile);box-shadow:inset 0 0 0 .4px var(--hc-open-edge)}
+.wbOpenHead{display:flex;align-items:center;gap:12px}
+.wbBack{flex:none;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:var(--r-fine);background:transparent;color:var(--text);cursor:pointer;--wb-icon:24px}
+.wb button.wbBack{border-radius:var(--r-fine)!important}
+.wbBack:hover{background:var(--hover)}
+.wbOpen .wbGraph{flex:1;height:auto;min-height:152.2px;background:var(--card);--wb-scale-edge:var(--tile)}
+
+/* Segments sit 4 inside a track: fine 12 = inner 16 − 4 */
+.wbSegments{display:inline-flex;gap:0;padding:4px;border-radius:var(--r-inner);background:var(--page)}
+.wbSegments button{padding:4px 12px;border:0;border-radius:var(--r-fine);background:transparent;color:var(--muted);font:600 14px/20px var(--font-tile);cursor:pointer}
+.wb .wbSegments button{border-radius:var(--r-fine)!important;font-family:var(--font-tile)!important}
+.wbSegments button[aria-pressed="true"]{background:var(--tile);color:var(--text)}
+
+/* Weather icons: the condition on a coloured square, 40, 60 or 90 */
+.wbWx{position:relative;display:block;flex:none;width:40px;height:40px;border-radius:var(--r-inner);background:var(--icon-bg);overflow:hidden}
+.wbWx>svg,.wbWx>canvas{display:block;width:100%;height:100%}
+.wbWx>canvas{image-rendering:pixelated}
+.wbWx.wbS60{width:60px;height:60px;border-radius:20px}
+.wbWx.wbS90{width:90px;height:90px;border-radius:28px}
+/* Smooth's finish (Matt, 1 Nov, after film grain and painted skies): a fine grain over its pictures and the sky, grey
+   noise centred on mid-grey and overlaid, so it speckles without lightening or darkening; and a faint shadow under the sun, moon and clouds (weather-bento-art.js) */
+.wb[data-style="smooth"] :is(.wbWx,.wbSky)::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.3 0 0 0 -.15 1.3 0 0 0 -.15 1.3 0 0 0 -.15 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:140px 140px;mix-blend-mode:overlay;opacity:.3}
+/* new cards (Matt, 1 Nov): Air quality, Pollen and Rain radar in the data tiles' shape, base elements whose looks come
+   later: the reading big, two more under it; the radar's map area with home in the middle */
+.wbBaseRows{display:flex;flex-direction:column;gap:4px;width:100%}
+.wbBaseRow{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:400 14px/20px var(--font)}
+.wbBaseRow>span:last-child{color:var(--text);white-space:nowrap}
+.wbBaseRow>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wbRadar{position:relative;flex:1;align-self:stretch;min-height:80px;border-radius:var(--r-inner);overflow:hidden;background-color:var(--tile);
+  background-image:linear-gradient(color-mix(in srgb,var(--text) 7%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--text) 7%,transparent) 1px,transparent 1px);background-size:24px 24px;background-position:center}
+.wbRadarRing{position:absolute;left:50%;top:50%;width:64%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 20%,transparent)}
+.wbRadarRing::after{content:"";position:absolute;inset:25%;border-radius:50%;box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 14%,transparent)}
+.wbRadarHome{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--tile)}
+/* Line (Matt, 1 Nov: a style to try): an outline drawing on the tile colour, in the text colour */
+.wbWx.wbLineIcon{display:grid;place-items:center;background:var(--tile);color:var(--text)}
+.wbWx.wbLineIcon>svg{width:64%;height:64%}
+/* Smooth style: the sky is the square's colour */
+.wbWx.wbClear,.wbWx.wbPartly{background:var(--wx-clear)}
+.wbWx.wbCloudy{background:var(--wx-cloudy)}
+.wbWx.wbRain,.wbWx.wbSnow{background:#969696}
+.wbWx.wbNight{background:var(--wx-night)}
+.wbWx .wbBright{fill:var(--wx-cloud-bright)}
+.wbWx .wbCloudLight{fill:var(--wx-cloudy)}
+.wbWx .wbAccent{fill:var(--primary)}
+.wbWx :is(.wbSunDisc,.wbMoonPath,.wbBright,.wbCloudLight,.wbDrop,.wbFlake,.wbTwinkle){transform-box:fill-box;transform-origin:center}
+.wbMotion .wbWx .wbSunDisc{animation:wxBreathe 3.6s ease-in-out infinite}
+.wbMotion .wbWx .wbMoonPath{animation:wxBob 5.2s ease-in-out infinite}
+.wbMotion .wbWx :is(.wbBright,.wbCloudLight){animation:wxDrift 6.4s ease-in-out infinite}
+.wbMotion .wbWx .wbDrop{animation:wxFall .95s linear infinite}
+.wbMotion .wbWx .wbFlake{animation:wxSnow 3.2s linear infinite}
+.wbMotion .wbWx .wbTwinkle{animation:wxTwinkle 2.4s ease-in-out infinite}
+
+/* ---- Weather card (Figma "HC FINAL - Weather card"): Now, then six days as columns ---- */
+/* the area card's spacing (Matt, 1 Nov: one rule for every card): the sky 18 in from the top and left */
+.wbCard.wbWeather{position:relative;display:flex;flex-direction:column;gap:12px;padding:18px}
+.wbClosed{display:contents}
+.wbWeather.wbIsOpen .wbClosed{visibility:hidden}
+/* the opened day covers the card, 10 in, whatever the card's size */
+.wbWeather .wbOpen{position:absolute;inset:10px;min-height:0}
+.wbWeather .wbOpen .wbGraph{min-height:0;padding:8px 14px 6px 8px}
+.wbDayTabs{display:flex}
+.wbNow{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.wbCurrent{display:flex;align-items:flex-start;gap:16px;min-width:0}
+/* the dashboard's weather card: Now is a button that opens the Weather page */
+.wb button.wbOpenPage{padding:0;border:0;border-radius:var(--r-tile)!important;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
+.wb button.wbOpenPage:focus-visible{outline:2px solid var(--primary)!important;outline-offset:4px!important}
+.wbTempBlock{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wbTemp{display:flex;align-items:flex-start;gap:2px;white-space:nowrap}
+.wbDeg{font:500 64px/1 var(--font-tile);letter-spacing:-1.28px}
+.wbUnit,.wbRange{font:300 24px/1.25 var(--font-tile);white-space:nowrap}
+.wbPlace{color:var(--muted);font:600 14px/20px var(--font-tile);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wbCondition{flex:none;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;padding:10px 16px;border-radius:var(--r-tile);background:var(--tile)}
+.wbCondName{font:400 18px/1.2 var(--font);letter-spacing:-.18px;white-space:nowrap}
+/* six day columns, touching, each a tile */
+.wbColumns{display:flex;height:185px;border-radius:28px;overflow:hidden}
+.wbColumn{flex:1 0 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 0;border:0;border-radius:var(--r-tile);background:var(--tile);color:var(--text);font:inherit;cursor:pointer}
+.wb button.wbColumn{border-radius:var(--r-tile)!important}
+.wbColumn:hover{background:var(--hover);box-shadow:inset 0 0 0 .4px var(--line)}
+.wb button.wbColumn:focus-visible{outline:2px solid var(--primary)!important;outline-offset:-2px!important}
+.wbDay{font:400 14px/1.4 var(--font);white-space:nowrap}
+.wbTemps{display:flex;flex-direction:column;align-items:center;gap:8px}
+.wbHi{font:400 18px/20px var(--font-tile)}
+.wbLo{color:var(--muted);font:400 18px/1.2 var(--font);letter-spacing:-.18px}
+/* today's column as Now: only where a board card asks for it (the medium weather card) */
+.wbAsNow{display:none}
+.wbHalves{display:none;grid-template-columns:repeat(2,minmax(0,1fr))}
+/* the next hours, shown only where a board card asks for them (S, and the narrow M): time, sky 40, temperature */
+.wbNextHours{display:none;justify-content:space-between;align-items:center;gap:8px;min-width:0}
+.wbHour{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.wbHourTime{color:var(--muted);font:400 14px/20px var(--font);white-space:nowrap}
+.wbHourTemp{font:400 18px/20px var(--font-tile);white-space:nowrap}
+.wbHour .wbWx.wbS40{width:40px;height:40px;border-radius:16px}
+/* the forecast in a sentence (Matt, 1 Nov): only in the room a large card leaves between Now and the days, never making
+   the card taller (it takes no height of its own, and gives back the gap before it); two lines when they fit, one, or none */
+.wbSummary{position:relative;flex:1 1 0;min-height:0;margin-top:-12px;container:wbsum/size}
+.wbSummaryText{position:absolute;top:12px;left:0;right:0;margin:0;color:var(--text);font:400 16px/22px var(--font);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+@container wbsum (height < 56px){.wbSummaryText{-webkit-line-clamp:1}}
+@container wbsum (height < 34px){.wbSummaryText{display:none}}
+/* a board card narrower than its drawn 520 (two columns down to 200 each): day columns kept, their pictures 48 */
+@container wb-card (width < 480px){
+  .wbColumn .wbWx.wbS60{width:48px;height:48px;border-radius:16px}
+}
+/* phone: Figma "Weather card · halves", no sentence (Matt, 1 Nov: on the board the days stay columns, as the Weather page's) */
+@container wb-card (width < 400px){
+  .wbSummary{display:none}
+  /* as the area card: 18 round the top, its unfilled day tiles 10 from the bottom */
+  .wbCard.wbWeather{gap:16px;padding:18px 18px 10px}
+  .wbWeather .wbWx.wbS90{width:60px;height:60px;border-radius:20px}
+  .wbDeg{font-size:46px;letter-spacing:-.92px}
+  .wbRange{font-size:20px}
+  .wbCondition{align-self:flex-start;gap:0;border-radius:28px}
+  .wbColumns{display:none}
+  .wbHalves{display:grid}
+  /* a time every 6 hours */
+  .wbWeather .wbDcX .wbMinor{display:none}
+}
+@container wb-card (width < 280px){
+  .wbHalves{grid-template-columns:1fr}
+}
+
+/* ---- Next hours: the sky strip, times along the top, values along the bottom ---- */
+.wbCard.wbHourly{flex:1}
+.wbTabs{padding:0 18px}
+.wbStripScroll{flex:1;min-height:160px;display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border-radius:var(--r-tile);user-select:none}
+.wbStripScroll::-webkit-scrollbar{display:none}
+.wbStripScroll.wbDragging{cursor:grabbing}
+.wbStrip{flex:none;display:flex;flex-direction:column;gap:8px;min-width:100%;box-sizing:border-box;padding:0 10px}
+.wbRow{position:relative;flex:none}
+.wbTimes{height:20px}
+.wbValues{height:44px}
+.wbMark{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);white-space:nowrap}
+.wbMark.wbFirst{align-items:flex-start;transform:none}
+.wbTimes .wbMark{font:400 14px/20px var(--font);font-variant-numeric:tabular-nums}
+.wbTimes .wbMark.wbFirst{font:600 14px/20px var(--font-tile)}
+/* the sky: one picture over three days, shifted so now is on the left */
+.wbSky{position:relative;flex:1;min-height:72px;border-radius:var(--r-inner);overflow:hidden}
+/* Next hours (Matt, 1 Nov): the chosen hours of a day across the strip's width, a swipe or a drag settling every two
+   hours; each day named at its left, the name staying put while its day is in view, a line where one day meets the next */
+.wbStripScroll.wbPaged{container-type:inline-size;scroll-snap-type:x mandatory;overscroll-behavior-x:contain}
+.wbStripScroll.wbPaged.wbHeld{scroll-snap-type:none}
+.wbPaged .wbStrip{position:relative;min-width:0;padding:0}
+.wbSnap{position:absolute;top:0;width:1px;height:1px;scroll-snap-align:start;pointer-events:none}
+.wbMark.wbLast{align-items:flex-end;transform:translateX(-100%)}
+.wbPaged .wbTimes .wbMark.wbFirst{font:400 14px/20px var(--font)}
+.wbPaged .wbTimes .wbMark.wbNowMark{font:600 14px/20px var(--font-tile)}
+.wbSky .wbPast{position:absolute;top:0;bottom:0;left:0;background:var(--card);opacity:.45;pointer-events:none}
+.wbSky .wbNowLine{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--text);opacity:.55;pointer-events:none}
+/* Line's sky: on the tile colour; each day's sun an arc over a horizon from its real sunrise to sunset, the nights shaded
+   with their edges drawn, the sun where it is now, and the weather drawn at each named time */
+.wbSky.wbLineSky{background:var(--tile);color:var(--text)}
+.wbLineArt{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.wbLineArt .wbLineArc{fill:none;stroke:var(--text);stroke-width:1.5;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.7}
+.wbLineArt .wbLineHorizon{stroke:var(--text);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.35}
+.wbLineArt .wbLineNight{fill:var(--text);opacity:.07}
+.wbLineArt .wbLineEdge{stroke:var(--text);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.3}
+.wbLineTime{position:absolute;top:calc(80% + 4px);transform:translateX(-50%);color:var(--muted);font:400 11px/14px var(--font);font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.wbLineNow{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);border-radius:50%;background:var(--tile);pointer-events:none}
+.wbLineNow>svg,.wbLineGlyph>svg{display:block;width:100%;height:100%}
+.wbLineGlyph{position:absolute;top:calc(50% - 14px);width:28px;height:28px;transform:translateX(-50%);pointer-events:none}
+.wbLineGlyph.wbFirst{transform:none}
+.wbLineGlyph.wbLast{transform:translateX(-100%)}
+.wbSky .wbMidnight{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--text);opacity:.5;pointer-events:none}
+.wbDays{position:absolute;top:36px;left:0;z-index:1;display:flex;pointer-events:none}
+.wbDaySpan{flex:none;min-width:0}
+.wbDayName{position:sticky;left:8px;margin-left:8px;height:26px;min-height:0;padding:0 10px;border:0;background:color-mix(in srgb,var(--card) 82%,transparent);color:var(--text);font:600 13px/26px var(--font-tile);white-space:nowrap;cursor:pointer;pointer-events:auto}
+.wb .wbDayName{border-radius:13px!important;font-family:var(--font-tile)!important}
+.wbViews button{padding:2px 10px;font-size:13px}
+
+/* Next days (Matt, 1 Nov, as Apple Weather's): a row a day, its low to high on one scale for the week, coloured by
+   temperature; now is a dot on today's. The card stays as tall as Hours: rows share the room, and scroll when they
+   can't fit at 48 */
+.wbBars .wbDayBars{flex:1 1 0;min-height:160px;display:flex;flex-direction:column;padding:0 18px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.wbBars.wbTabbed .wbDayBars{min-height:206px}
+.wbDayBar{flex:1 0 auto;display:grid;grid-template-columns:minmax(56px,auto) 40px 36px minmax(0,1fr) 36px;align-items:center;column-gap:12px;min-height:48px;box-shadow:inset 0 -.4px 0 var(--line)}
+.wbDayBar:last-child{box-shadow:none}
+.wbRangeDay{color:var(--text);font:600 14px/20px var(--font-tile);white-space:nowrap}
+.wbRangeLo{color:var(--muted);text-align:right;font:400 16px/20px var(--font);font-variant-numeric:tabular-nums}
+.wbRangeHi{color:var(--text);text-align:right;font:400 16px/20px var(--font-tile);font-variant-numeric:tabular-nums}
+.wbRangeTrack{position:relative;height:6px;border-radius:3px;background:var(--tile)}
+.wbRangeFill{position:absolute;inset:0;border-radius:3px}
+.wbRangeNow{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ffffff;box-shadow:0 0 0 2px var(--card)}
+.wbSkyArt{position:absolute;top:0;height:100%}
+.wbSkyArt>canvas{display:block;width:100%;height:100%}
+.wbSkyArt>canvas.wbPixels{image-rendering:pixelated}
+.wbPrimaryV{font:400 18px/20px var(--font-tile);font-variant-numeric:tabular-nums}
+.wbSecondary{min-height:20px;color:var(--muted);font:400 15px/20px var(--font)}
+@container wb-card (width < 480px){
+  .wbHourly :is(.wbHeader,.wbTabs){padding:0 8px}
+  .wbBars .wbDayBars{padding:0 8px;min-height:380px}
+  .wbBars.wbTabbed .wbDayBars{min-height:426px}
+  .wbDayBar{column-gap:8px}
+  /* phones: the strip 2.5 times as tall as it was (Matt, 30 Oct), the sky taking the room */
+  .wbStripScroll{min-height:380px}
+}
+
+/* ---- Sun: a glowing sun on a deep maroon sky ---- */
+.wbSunSky{flex:1;min-height:0;display:flex;border-radius:16px;overflow:hidden;transition:background 1s ease}
+.wbSunSky svg{display:block;width:100%;height:100%;overflow:visible}
+/* Figma "Data tile · Sun" (Matt, 27 Oct): the path as a wide band, 30 at 252 */
+.wbSunPath{fill:none;stroke:var(--wb-sun-line);stroke-opacity:.4;stroke-width:28.3}
+.wbHorizon{stroke:var(--wb-sun-line);stroke-opacity:.3;stroke-width:1}
+.wbSunTime{fill:var(--wb-sun-line);font-size:13px;font-weight:600;text-anchor:middle}
+.wbSunTime.wbNoon{dominant-baseline:central}
+
+/* ---- Moon ---- */
+.wbMoonBox{flex:1;min-height:0;display:flex;justify-content:center}
+.wbMoonArt{display:block;flex:none;width:auto;height:100%;max-width:100%}
+/* too small for a caption on a phone */
+/* the moonrise and how much is lit show at every width (Matt, 1 Nov: no information lost); a time that can't fit ends in … */
+.wbMoonCaption{gap:8px}
+.wbMoonCaption span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wbMoonCaption span:last-child{flex:none}
+.wbMaria{fill:#7d7d78}
+.wbCrater{fill:rgb(0 0 0/9%)}
+.wbRays{stroke:#ffffff;stroke-width:1.2;stroke-linecap:round;opacity:.16}
+.wbBrightSpots{fill:#ffffff;opacity:.25}
+.wbBrightCenter{fill:#f6f6f2;opacity:.75}
+.wbMottle{opacity:.3;mix-blend-mode:multiply}
+.wbGrain{opacity:.12;mix-blend-mode:multiply}
+.wbMoonNight{fill:rgb(10 10 14/75%)}
+
+/* ---- Wind: a round compass ---- */
+.wbWind .wbVisual>svg{overflow:visible}
+.wbTick{stroke:var(--muted);stroke-width:2.5;stroke-linecap:round}
+.wbTick.wbMajor{stroke:var(--text);stroke-width:3}
+.wbLetter{fill:var(--muted);font-size:15px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.wbLetter.wbNorth{fill:var(--text)}
+.wbMarker{fill:var(--primary)}
+.wbDisc{fill:var(--text)}
+.wbSpeed{fill:var(--card);font-size:34px;font-weight:500;letter-spacing:-.5px;text-anchor:middle;dominant-baseline:central}
+.wbSpeedUnit{fill:var(--card);font-size:12px;font-weight:600;text-anchor:middle;dominant-baseline:central;opacity:.7}
+
+/* ---- Humidity: misty water, very soft and airy ---- */
+.wbWater{position:absolute;left:0;right:0;bottom:0;transition:height 1.2s ease}
+.wbWater .wbBody{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(178,229,252,.18) 0%,rgba(129,212,250,.32) 35%,rgba(79,195,247,.42) 70%,rgba(3,169,244,.55) 100%);
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 26px);mask-image:linear-gradient(180deg,transparent,#000 26px)}
+.wbWater .wbMist{position:absolute;left:-10%;right:-10%;bottom:calc(100% - 26px);height:60px;
+  background:radial-gradient(ellipse at 50% 100%,rgba(178,229,252,.3),rgba(178,229,252,0) 70%);filter:blur(8px)}
+.wbWater .wbHaze{position:absolute;width:80%;height:45%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.22),rgba(255,255,255,0));
+  filter:blur(10px);animation:wbDrift 16s ease-in-out infinite alternate}
+.wbWater .wbHaze.wbOne{left:-15%;top:8%}
+.wbWater .wbHaze.wbTwo{right:-20%;top:40%;animation-duration:21s;animation-direction:alternate-reverse}
+@keyframes wbDrift{from{transform:translateX(-12%)}to{transform:translateX(18%)}}
+.wbWaterValue{flex:1;display:flex;align-items:flex-end}
+
+/* ---- Visibility: a ship on the horizon in the fog ---- */
+/* Figma "Visibility tile · proposal" 564:4340 (Matt, 28 Oct): the picture with corner 16 at 252 like the Sun's sky; the
+   fact top left in the sky, the value bottom left on the near water, 12 in. One pixel a CSS pixel */
+.wbSea{position:relative;flex:1;min-height:0;border-radius:16px;overflow:hidden;--wb-sea-inset:clamp(8.88px,calc(4.76cqw * var(--wb-k,1)),12px)}
+.wbSeaArt{position:absolute;inset:0;display:block;width:100%;height:100%;image-rendering:pixelated}
+.wbSeaFact{position:absolute;top:clamp(7px,calc(3.97cqw * var(--wb-k,1)),10px);inset-inline:var(--wb-sea-inset);color:#26221e;font:600 clamp(9.44px,calc(5.47cqw * var(--wb-k,1)),13.78px)/1.23 var(--font-tile)}
+.wbSeaValue{position:absolute;bottom:var(--wb-sea-inset);inset-inline-start:var(--wb-sea-inset);color:#ffffff;text-shadow:0 0 2px rgba(0,0,0,.6),0 1px 3px rgba(0,0,0,.5)}
+.wbSeaValue .wbUnitV{color:inherit}
+
+/* ---- UV index: a VU meter ---- */
+/* Figma "Data tile · UV index" (Matt, 27 Oct): no glow and no numbers, even ticks, a thick band. Sizes are in viewBox
+   units: Matt's px at 252 divided by 1.06 */
+.wbVu{display:block;width:100%;height:100%;min-height:0;overflow:visible}
+.wbVuZone{fill:none;stroke-width:12.3;stroke-linecap:butt}
+.wbVuTick{stroke:var(--muted);stroke-width:.95;stroke-linecap:round}
+.wbVuTick.wbMajor{stroke:var(--text);stroke-width:1.9}
+/* Alfarn in Figma; not loaded here, so Geist stands in */
+.wbVisual svg text.wbVuLabel{fill:var(--muted);font-family:"Alfarn",var(--font-tile);font-size:18.9px;font-weight:600;letter-spacing:.08em;text-anchor:middle;dominant-baseline:central}
+.wbVuNeedle{transform-box:view-box;transform-origin:100px 130px;transform:rotate(var(--wb-angle));animation:wbSwing 1.4s cubic-bezier(.3,1.6,.5,1);transition:transform 1s cubic-bezier(.3,1.6,.5,1)}
+.wbVuNeedle line{stroke:#e0574d;stroke-width:2;stroke-linecap:round}
+@keyframes wbSwing{from{transform:rotate(-48deg)}}
+.wbVuHousing{fill:var(--tile)}
+.wbVuValue{fill:var(--text);font-size:30.2px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+@media (prefers-reduced-motion:reduce){
+  .wbWater .wbHaze,.wbVuNeedle{animation:none}
+}
+
+/* ---- Pressure: a vertical tape, higher is up ---- */
+.wbTapeRow{flex:1;min-height:0;display:flex;align-items:stretch;gap:8px}
+.wbTapeValue{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.wbTapeUnit{color:var(--muted);font:300 clamp(13px,7.1cqw,18px)/1.25 var(--font-tile)}
+.wbTape{flex:none;width:40%;height:100%}
+.wbTapeTick{stroke:var(--text);stroke-width:2;stroke-linecap:round}
+.wbTapeLabel{fill:var(--text);font-size:15px;dominant-baseline:central}
+.wbTapeEnd{fill:var(--muted);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.wbTapeMarker{stroke:#e0574d;stroke-width:4;stroke-linecap:round}
+
+/* ---- Compared to average: the number and words, the highs as bars ---- */
+.wbCompare{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) calc(50% - 28px * var(--wb-k));grid-template-rows:minmax(0,1fr);gap:16px;align-items:stretch}
+.wbCompareText{display:flex;flex-direction:column;justify-content:flex-end;gap:4px;min-width:0}
+.wbCompareNumber{font:500 calc(26.4cqw * var(--wb-k)) / 1 var(--font-tile);letter-spacing:-.02em;white-space:nowrap}
+.wbCompareWords{color:var(--muted);font:300 clamp(14px,calc(7.1cqw * var(--wb-k)),18px) / 1.25 var(--font-tile)}
+.wbCompareTemps{margin-top:6px;font:400 clamp(12px,calc(5.6cqw * var(--wb-k)),14px) / 1.4 var(--font)}
+.wbCompareBars{display:block;width:100%;height:100%;min-height:0}
+.wbAvgValue{fill:var(--muted);font-size:10px;text-anchor:middle}
+.wbAvgValue.wbToday{fill:var(--text);font-size:12px;font-weight:600}
+.wbAvgBar{fill:var(--muted);opacity:.45}
+.wbAvgBar.wbToday{fill:var(--primary);opacity:1}
+.wbAvgDay{fill:var(--muted);font-size:11px;text-anchor:middle}
+.wbAvgDay.wbToday{fill:var(--text);font-weight:600}
+.wbAvgLine{stroke:var(--text);stroke-width:1;stroke-dasharray:3 4;opacity:.6}
+
+/* ---- Air quality: tiles in halves; a tapped tile opens inside the card ---- */
+.wbCard.wbHc.wbAqOpen{padding:var(--inset);min-height:243px}
+.wbAqTiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+@container wb-card (width < 280px){
+  .wbAqTiles{grid-template-columns:1fr}
+}
+.wbAq .wbGraph{gap:10px}
+/* a level as a track with a marker */
+.wbScale{position:relative;height:4px;border-radius:9999px}
+.wbScale i{position:absolute;top:50%;box-sizing:content-box;width:10px;height:10px;border-radius:50%;background-color:var(--text);border:2px solid var(--wb-scale-edge);transform:translate(-50%,-50%)}

@@ -1,0 +1,14 @@
+{
+  "name": "move-assistant-card",
+  "private": true,
+  "version": "0.69.0",
+  "type": "module",
+  "description": "Move Assistant for Home Assistant — guided movement timer card",
+  "scripts": {
+    "dev": "vite --port 5190 --open /dev/",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}

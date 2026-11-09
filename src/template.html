@@ -1,0 +1,681 @@
+<main id="app"><div class="shell">
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<!-- HOME -->
+<section class="view active" id="homeView">
+  <div class="grid">
+    <div class="moveSection">
+      <div class="sectionLabel">Today’s movement</div>
+      <section class="workoutGallery" id="workoutGallery" aria-label="Move choices">
+      <article class="workoutPanel addPanel" id="addWorkoutPanel" tabindex="0" role="button" aria-label="Add move">
+        <span class="edgeLight" aria-hidden="true"></span>
+        <div class="addPanelPlus" data-icon="add"></div>
+        <div class="addPanelLabel">Add move</div>
+      </article>
+    </section>
+    </div>
+    <div class="sectionLabel rowLabel" id="movementLabel">Movement &amp; you</div>
+    <section class="card activityCard">
+      <div class="activityHeader">
+        <div class="activityIcon" aria-hidden="true" data-icon="activity"></div>
+        <div class="activityTitle">Activity</div>
+      </div>
+      <div class="activityRows">
+        <div class="activityRow" id="stepsRow">
+          <div class="activityRowIcon" aria-hidden="true" data-icon="steps"></div>
+          <div><div class="activityRowName">Steps</div><div class="activityRowMeta" id="stepsMeta">Set up in Settings</div></div>
+        </div>
+        <div class="activityRow" id="moodRow">
+          <div class="activityRowIcon" aria-hidden="true" data-icon="mood"></div>
+          <div><div class="activityRowName">Mood</div><div class="activityRowMeta" id="moodMeta">—</div></div>
+        </div>
+        <div class="activityRow" id="energyLevelRow">
+          <div class="activityRowIcon" aria-hidden="true" data-icon="energy"></div>
+          <div><div class="activityRowName">Energy</div><div class="activityRowMeta" id="energyLevelMeta">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card insightCard" id="insightCard" aria-label="Movement and you"></section>
+    <section class="card weatherCard" id="weatherCard" aria-label="Weather"></section>
+
+    <div class="feelSection">
+      <div class="sectionLabel">How you've felt this week</div>
+      <section class="card feelCard" id="feelCard"></section>
+    </div>
+
+
+  </div>
+</section>
+
+<!-- WORKOUT -->
+<section class="view workoutSurface" id="workoutView"><canvas id="pixelTrailCanvas" class="pixelTrailCanvas" aria-hidden="true"></canvas><div class="workoutContent">
+  <div class="countdown" id="countdown"><canvas class="pixelCanvas" id="countdownPixelCanvas" aria-hidden="true"></canvas><div class="countNum" id="countNum">5</div></div>
+  <div class="sessionHead">
+    <div><div class="exerciseTitle" id="exerciseTitle">Standing reach</div><div class="eyebrow" id="stepLabel">Step</div><div class="meta" id="exerciseMeta" hidden>Move finished</div></div>
+    <div class="sessionActions">
+      <button class="pill" id="restartSegment" type="button">Back</button>
+      <button class="pill holdEnd" id="endWorkout" type="button" aria-label="Hold to end move"><span class="holdEndFill" id="holdEndFill"></span><span class="holdEndLabel">End move</span></button>
+    </div>
+  </div>
+  <div class="progress" id="progress"></div>
+  <div class="workGrid"><section class="timerCard"><div class="fill" id="fill"></div><div class="digits" id="digits">30</div></section><section class="movementCard"><canvas id="movementRippleCanvas" class="movementRippleCanvas" aria-hidden="true"></canvas><div class="videoStage" id="videoStage"><div class="videoFrame" id="videoFrame"></div><button class="primary videoSound" id="videoSound" type="button" hidden>Turn sound on</button></div></section></div>
+
+  <div class="sessionControlRow">
+    <div class="videoClock" id="videoClock" aria-live="off"></div>
+    <button class="skipBtn" id="skipExercise" type="button">Skip</button>
+    <button class="primary pause" id="pause" type="button">Pause</button>
+  </div>
+
+  <div class="nextWrap">
+    <div class="nextLabel">Up next</div>
+    <section class="nextCard">
+      <div class="nextMain">
+        <div class="nextIcon" id="nextIcon" aria-hidden="true" data-icon="clock"></div>
+        <div>
+          <div class="nextName" id="nextName">Arm circles</div>
+          <div class="sub" id="nextMeta">Warm-up</div>
+        </div>
+      </div>
+      <button class="skipSessionBtn" id="skipNextSession" type="button">Skip this session</button>
+    </section>
+    <div class="upcomingList" id="upcomingList" aria-label="Upcoming exercises"></div>
+  </div>
+</div></section>
+
+<!-- SETTINGS -->
+<section class="view" id="settingsView">
+  <div class="settingsHeader"><button class="back" id="settingsBack" aria-label="Back" data-icon="back"></button><div class="settingsTitle">Move Assistant</div></div>
+  <div class="tabs rubberTabs">
+    <div class="rubberIndicator" id="rubberIndicator" aria-hidden="true"></div>
+    <button class="tab segBtn active" data-pane="integrationsPane">Integrations</button>
+    <button class="tab segBtn" data-pane="dataPane">Data</button>
+    <button class="tab segBtn" data-pane="checkinPane">Check-in</button>
+    <button class="tab segBtn" data-pane="appearancePane">Appearance</button>
+    <button class="tab segBtn" data-pane="helpPane">Help</button>
+  </div>
+
+  <div class="settingsPane active" id="integrationsPane">
+    <section class="card">
+      <h2 class="paneTitle">Connected sources</h2>
+      <p class="note">Move Assistant can work on its own. Pick your step sensor so general movement counts alongside your moves.</p>
+      <div class="integrationList">
+        <div class="integration"><div><strong>Steps</strong><div class="status" id="stepsStatus" data-empty="Your phone's step sensor from the Companion app">Your phone's step sensor from the Companion app</div></div><select class="settingsSelect entitySelect" id="stepsEntity" data-kind="steps" aria-label="Steps sensor"></select></div>
+        <div class="integration"><div><strong>Apple Health</strong><div class="status">Use the Home Assistant iPhone app to send your steps</div></div><button class="pill" id="healthHelpOpen" type="button">Help</button></div>
+        <div class="integration"><div><strong>Home Assistant</strong><div class="status">Moves send a <code>move_assistant</code> event on start, each step, rest, pause and finish — use it in automations for lights, sound and displays</div></div><button class="pill" type="button" disabled>Connected</button></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="settingsPane" id="dataPane">
+    <section class="card">
+      <h2 class="paneTitle">What you see</h2>
+      <p class="note">Choose what appears in Move Assistant. Turning these off does not affect move playback.</p>
+      <div class="toggleList">
+        <div class="toggleRow"><div><strong>Steps</strong><div class="status">Daily step count</div></div><button class="switch on" data-toggle="steps"></button></div>
+        <div class="toggleRow"><div><strong>Mood</strong><div class="status">Latest mood in the Activity card</div></div><button class="switch on" data-toggle="mood"></button></div>
+        <div class="toggleRow"><div><strong>Energy</strong><div class="status">Latest energy in the Activity card</div></div><button class="switch on" data-toggle="energyLevel"></button></div>
+        <div class="toggleRow"><div><strong>Reset stats</strong><div class="status">Clears moves done and check-ins. Your moves and settings stay.</div></div><button class="holdDelete" id="resetStats" type="button" aria-label="Hold to reset stats"><span class="holdDeleteFill" id="resetStatsFill"></span><span class="holdDeleteLabel">Hold to reset</span></button></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="settingsPane" id="checkinPane">
+    <section class="card">
+      <h2 class="paneTitle">Check-in</h2>
+      <p class="note">Twice a day, Move Assistant asks how your mood and energy are. When it's time, the check-in tab on the right shows a dot. You can only check in when one is due.</p>
+      <div class="toggleList">
+        <div class="toggleRow"><div><strong>Morning check-in</strong><div class="status">When the morning check-in becomes due</div></div><input class="settingsSelect timeInput" id="morningTime" type="time" value="08:00" aria-label="Morning check-in time"></div>
+        <div class="toggleRow"><div><strong>Evening check-in</strong><div class="status">When the evening check-in becomes due</div></div><input class="settingsSelect timeInput" id="eveningTime" type="time" value="19:00" aria-label="Evening check-in time"></div>
+        <div class="toggleRow"><div><strong>Open automatically</strong><div class="status">Show the check-in window when it's due, instead of just the dot</div></div><button class="switch on" id="checkinAutoOpen" aria-label="Open check-in automatically"></button></div>
+        <div class="toggleRow"><div><strong>Phone notification</strong><div class="status" id="checkinNotifyStatus">Get a Home Assistant notification when it's time to check in</div></div><button class="switch" id="checkinNotify" aria-label="Send a notification when it's time to check in"></button></div>
+        <div class="toggleRow" id="checkinNotifyTargetRow" hidden><div><strong>Send to</strong><div class="status">Your phone from the Companion app</div></div><select class="settingsSelect entitySelect" id="checkinNotifyTarget" aria-label="Notification device"></select></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="settingsPane" id="helpPane">
+    <section class="card helpCard">
+      <h2 class="paneTitle">Connect Apple Health</h2>
+    <p class="note">The Home Assistant app on your iPhone can read Apple Health and send it to Home Assistant. Steps include your Apple Watch.</p>
+
+    <ol class="helpSteps">
+      <li>
+        <strong>Update the Home Assistant app</strong>
+        <span>On your iPhone, update <b>Home Assistant</b> from the App Store. Apple Health needs version <b>2026.9</b> or newer.</span>
+      </li>
+      <li>
+        <strong>Turn on Apple Health</strong>
+        <span>In the app: <b>Settings → Companion app → Sensors → Apple Health</b>. Switch it on.</span>
+      </li>
+      <li>
+        <strong>Allow access</strong>
+        <span>When iPhone asks, allow Home Assistant to read <b>Steps</b>. Turn on the <b>Steps</b> sensor in the Apple Health list.</span>
+      </li>
+      <li>
+        <strong>Pick it in Move Assistant</strong>
+        <span>Settings → Integrations → Steps → choose <b>… Health steps</b>.</span>
+      </li>
+    </ol>
+
+    <div class="helpNote">
+      <strong>When it updates</strong>
+      <span>Your phone sends new numbers when the app syncs, for example when you unlock your phone or open Home Assistant. It isn't live to the second.</span>
+    </div>
+    <div class="helpNote">
+      <strong>Not seeing it?</strong>
+      <span>Check iPhone <b>Settings → Health → Data Access &amp; Devices → Home Assistant</b> and make sure Steps is allowed.</span>
+    </div>
+    </section>
+  </div>
+
+  <div class="settingsPane" id="appearancePane">
+    <section class="card">
+      <h2 class="paneTitle">Appearance</h2>
+      <p class="note">Choose how Move Assistant looks and which visual effects are enabled.</p>
+
+      <div class="toggleList">
+        <div class="toggleRow">
+          <div>
+            <strong>Theme</strong>
+            <div class="status">Choose the app surface treatment.</div>
+          </div>
+          <div class="themeChoice">
+            <button class="themeBtn active" data-theme="dark">Dark</button>
+            <button class="themeBtn" data-theme="light">Light</button>
+          </div>
+        </div>
+
+        <div class="toggleRow">
+          <div>
+            <strong>Sounds</strong>
+            <div class="status">Tones when a move or rest starts, and three ticks before it ends.</div>
+          </div>
+          <button class="switch on" id="soundsToggle" aria-label="Toggle sounds"></button>
+        </div>
+
+        <div class="toggleRow">
+          <div>
+            <strong>Pixel trail</strong>
+            <div class="status">Pointer-reactive pixels across the movement background.</div>
+          </div>
+          <button class="switch on" id="pixelTrailToggle" aria-label="Toggle pixel trail"></button>
+        </div>
+
+        <div class="toggleRow motionControlRow">
+          <div>
+            <strong>Trail strength</strong>
+            <div class="status">Controls how much of the movement surface reacts.</div>
+          </div>
+          <div class="motionRangeWrap">
+            <input id="trailStrength" type="range" min="20" max="100" step="10" value="70" aria-label="Pixel trail strength">
+            <span id="trailStrengthValue">70%</span>
+          </div>
+        </div>
+
+        <div class="toggleRow motionControlRow">
+          <div>
+            <strong>Trail life</strong>
+            <div class="status">How long the pixel trail remains visible.</div>
+          </div>
+          <div class="motionRangeWrap">
+            <input id="trailLife" type="range" min="200" max="1000" step="100" value="600" aria-label="Pixel trail life">
+            <span id="trailLifeValue">600 ms</span>
+          </div>
+        </div>
+
+
+        <div class="toggleRow">
+          <div>
+            <strong>Activities ahead</strong>
+            <div class="status">Choose how many upcoming activities are visible during a move.</div>
+          </div>
+          <select class="settingsSelect" id="upcomingCountSetting" aria-label="Number of upcoming activities to show"></select>
+        </div>
+
+        <div class="toggleRow">
+          <div>
+            <strong>Movement ripple</strong>
+            <div class="status">Animate the movement card in time with each activity.</div>
+          </div>
+          <button class="switch on" id="rippleToggle" aria-label="Toggle movement ripple"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card metaCard">
+      <h2 class="paneTitle">Second line on phones</h2>
+      <p class="note">Hide the small line under a step’s name on phones, by type, to fit more on screen.</p>
+      <div class="metaFilters">
+        <input class="addInput metaSearch" id="metaSearch" type="search" placeholder="Filter types" aria-label="Filter types" autocomplete="off">
+        <div class="metaKinds" id="metaKinds" role="group" aria-label="Show kind">
+          <button class="kindChip active" type="button" data-kind="all">All</button>
+          <button class="kindChip" type="button" data-kind="Warm-up">Warm-up</button>
+          <button class="kindChip" type="button" data-kind="Movement">Movements</button>
+          <button class="kindChip" type="button" data-kind="Cooldown">Cooldown</button>
+          <button class="kindChip" type="button" data-kind="Rest">Rest</button>
+          <button class="kindChip" type="button" data-kind="Video">Video</button>
+        </div>
+      </div>
+      <div class="metaTableWrap">
+        <table class="metaTable">
+          <thead><tr><th scope="col">Type</th><th scope="col" class="metaKindCol">Kind</th><th scope="col" class="metaUsedCol">Used in</th><th scope="col" class="metaSwitchCol">Second line</th></tr></thead>
+          <tbody id="metaTableBody"></tbody>
+        </table>
+      </div>
+      <div class="metaBulk">
+        <span class="status" id="metaCount"></span>
+        <div class="metaBulkActions"><button class="pill" id="metaHideAll" type="button">Hide for these</button><button class="pill" id="metaShowAll" type="button">Show for these</button></div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- WEATHER: the bigger view, opened from the weather card -->
+<div class="confirmBackdrop wxBackdrop" id="wxDialog" aria-hidden="true">
+  <section class="confirmCard wxDialogCard" role="dialog" aria-modal="true" aria-labelledby="wxDialogTitle">
+    <div class="wxDialogHead">
+      <h2 class="activityTitle" id="wxDialogTitle">Weather</h2>
+      <button class="back wxDialogClose" id="wxDialogClose" type="button" aria-label="Close" data-icon="close"></button>
+    </div>
+    <div class="wxNow wxDialogNow" id="wxDialogNow"></div>
+    <div class="wxGraph" id="wxGraph" tabindex="0" role="slider" aria-label="Time in the forecast" aria-valuemin="0" aria-valuemax="143" aria-valuenow="0">
+      <div class="wxGraphDays" id="wxGraphDays" aria-hidden="true"></div>
+      <div class="wxGraphSky" id="wxGraphWrap">
+        <canvas data-wx-strip="dialog" aria-hidden="true"></canvas>
+        <svg class="wxGraphLine" id="wxGraphLine" aria-hidden="true"></svg>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="confirmBackdrop checkinBackdrop" id="checkinModal" aria-hidden="true">
+  <section class="confirmCard checkinCard" role="dialog" aria-modal="true" aria-labelledby="checkinTitle">
+    <div class="confirmTitle" id="checkinTitle">Morning check-in</div>
+    <div class="sub">How are you right now?</div>
+    <div class="checkinSliders">
+        <section class="tile timeTile checkinTile">
+          <div class="timeHeader">
+            <div class="timeIcon" aria-hidden="true" data-icon="mood"></div>
+            <div class="timeCopy">
+              <div class="timeLabel">Mood</div>
+            </div>
+          </div>
+          <div>
+            <div class="rangeTrack">
+              <div class="rangeFill" id="moodFill"></div>
+              <input class="rangeInput" id="moodInput" type="range" min="0" max="100" step="1" value="50" aria-label="Mood, from terrible to great">
+            </div>
+            <div class="scaleEnds" aria-hidden="true"><span>Terrible</span><span>Great</span></div>
+          </div>
+        </section>
+        <section class="tile timeTile checkinTile">
+          <div class="timeHeader">
+            <div class="timeIcon" aria-hidden="true" data-icon="energy"></div>
+            <div class="timeCopy">
+              <div class="timeLabel">Energy</div>
+            </div>
+          </div>
+          <div>
+            <div class="rangeTrack">
+              <div class="rangeFill" id="energyLevelFill"></div>
+              <input class="rangeInput" id="energyLevelInput" type="range" min="0" max="100" step="1" value="50" aria-label="Energy, from terrible to great">
+            </div>
+            <div class="scaleEnds" aria-hidden="true"><span>Terrible</span><span>Great</span></div>
+          </div>
+        </section>
+    </div>
+    <div class="confirmActions">
+      <button class="pill" id="checkinLater" type="button">Later</button>
+      <button class="primary" id="checkinSave" type="button">Done</button>
+    </div>
+  </section>
+</div>
+
+<button class="checkinTab" id="checkinTab" type="button" aria-label="Open check-in">
+  <span class="checkinPeek" id="checkinPeek" aria-live="polite">
+    <span class="peekCountdown" id="peekCountdown">0:00:00</span>
+    <span class="peekAt" id="peekAt">Available at 19:00</span>
+  </span>
+  <span class="checkinTabMain">
+    <span class="checkinTabIcon" aria-hidden="true" data-icon="mood"></span>
+    <span class="checkinTabLabel">Check-in</span>
+  </span>
+  <span class="checkinBadge" id="checkinBadge" hidden></span>
+</button>
+
+<div class="confirmBackdrop" id="deleteMoveConfirm" aria-hidden="true">
+  <section class="confirmCard">
+    <div>
+      <div class="confirmTitle">Are you sure you want to delete the move?</div>
+      <div class="sub">This removes it from your movement list.</div>
+    </div>
+    <div class="confirmActions">
+      <button class="pill" id="deleteMoveCancel">Cancel</button>
+      <button class="holdDelete" id="deleteMoveYes" type="button" aria-label="Hold to confirm delete">
+        <span class="holdDeleteFill" id="deleteMoveFill"></span>
+        <span class="holdDeleteLabel">Yes</span>
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- NAV -->
+<nav class="bottomNav">
+  <button class="navBtn active" id="homeNav" title="Home" aria-label="Home" data-icon="home"></button>
+  <button class="navBtn" id="settingsNav" title="Settings" aria-label="Settings" data-icon="settings"></button>
+  <button class="navBtn" id="tvNav" title="TV mode (full screen)" aria-label="TV mode (full screen)" data-icon="fullscreen"></button>
+</nav>
+
+<!-- CONTROL CENTER MODAL -->
+<div class="modalBackdrop" id="workoutModal" aria-hidden="true">
+  <section class="modal">
+    <div class="modalTop">
+      <div class="modalHead">
+        <div>
+          <h2 id="moveEditorTitle">Edit move</h2>
+          <div class="sub" id="moveEditorSubtitle">Adjust timing and choose which movements are included today.</div>
+        </div>
+        <div class="modalHeaderActions">
+          <button class="pill dangerText" id="deleteMoveOpen">Delete</button>
+          <button class="pill" id="cancelWorkoutEdit">Cancel</button>
+          <button class="primary" id="saveWorkoutEdit">Save</button>
+        </div>
+      </div>
+    </div>
+    <div class="modalStatic">
+
+      <div class="editNameRow">
+        <label class="editNameLabel" for="workoutNameInput">Move name</label>
+        <input id="workoutNameInput" class="editNameInput" type="text" value="Kettlebell full body">
+      </div>
+
+      <section class="createMoveOptions" id="createMoveOptions" hidden>
+        <div class="createOptionLabel">Preset</div>
+        <div class="createPresetChoice" role="group" aria-label="Move preset">
+          <button class="createPresetBtn active" data-move-preset="movement" type="button">
+            <strong>Movement</strong>
+            <span>Seconds-based activity timing</span>
+          </button>
+          <button class="createPresetBtn" data-move-preset="work" type="button">
+            <strong>Work timer</strong>
+            <span>Longer focus blocks in minutes or hours</span>
+          </button>
+        </div>
+
+        <div class="createExtras">
+          <label class="createExtraToggle">
+            <input type="checkbox" id="includeWarmupPreset">
+            <span><strong>Premade warm-up</strong><small>Add a simple warm-up sequence</small></span>
+          </label>
+          <label class="createExtraToggle">
+            <input type="checkbox" id="includeCooldownPreset">
+            <span><strong>Premade cooldown</strong><small>Add a simple cooldown sequence</small></span>
+          </label>
+        </div>
+      </section>
+
+      <div class="timeTiles setupBlock">
+        <div class="setupCaption">Timing</div>
+        <div class="setupGroup">
+          <div class="setupRow timeTotal">
+            <span class="setupName" id="totalLabel">Total time</span>
+            <span class="setupValue" id="totalOut">20 min</span>
+            <div class="rangeTrack" hidden>
+              <div class="rangeFill" id="totalFill"></div>
+              <input class="rangeInput" id="totalTime" type="range" min="3" max="40" step="1" value="20" aria-label="Time per round in minutes" tabindex="-1">
+            </div>
+          </div>
+          <div class="setupRow withSlider">
+            <div class="setupRowTop"><span class="setupName">Work</span><span class="setupValue" id="workOut">45 sec</span></div>
+            <div class="rangeTrack setupSlider">
+              <div class="rangeFill" id="workFill"></div>
+              <input class="rangeInput" id="workTime" type="range" min="20" max="60" step="5" value="45" aria-label="Work interval">
+            </div>
+          </div>
+          <div class="setupRow withSlider">
+            <div class="setupRowTop"><span class="setupName">Rest</span><span class="setupValue" id="restOut">15 sec</span></div>
+            <div class="rangeTrack setupSlider">
+              <div class="rangeFill" id="restFill"></div>
+              <input class="rangeInput" id="restTime" type="range" min="5" max="30" step="5" value="15" aria-label="Rest interval">
+            </div>
+          </div>
+          <div class="setupRow" id="roundsTile">
+            <div class="setupText"><span class="setupName">Rounds</span><span class="setupValue" id="roundsOut">1 round</span></div>
+            <div class="stepper" role="group" aria-label="Rounds">
+              <button class="stepBtn" type="button" data-rounds-step="-1" aria-label="One round fewer">−</button>
+              <span class="stepCount" id="roundsCount" aria-live="polite">1</span>
+              <button class="stepBtn" type="button" data-rounds-step="1" aria-label="One more round">+</button>
+            </div>
+            <div class="rangeTrack" hidden>
+              <div class="rangeFill" id="roundsFill"></div>
+              <input class="rangeInput" id="roundsInput" type="range" min="1" max="10" step="1" value="1" aria-label="How many times to repeat the move" tabindex="-1">
+            </div>
+          </div>
+          <div class="setupRow" id="warmupRow">
+            <span class="setupName">Warm-up</span>
+            <button class="switch on" id="warmupSwitch" type="button" role="switch" aria-checked="true" aria-label="Warm-up"></button>
+          </div>
+        </div>
+      </div>
+
+    <div class="routineSummary" id="routineSummaryModal">20 min · 45 / 15 · warm-up + cooldown</div>
+    <div class="tempoRevealRow">
+      <button class="pill tempoRevealBtn" id="tempoRevealBtn" type="button" aria-expanded="false">Don’t try this!</button>
+    </div>
+
+    <section class="tempoExperiment editTempoExperiment testingZone" id="tempoExperiment" hidden>
+      <div class="testingZoneInner">
+        <div class="testingZoneTitleBlock">
+          <div class="testingZoneTitleRow">
+            <strong>Quad tempo controller</strong>
+            <span id="tempoEstimate" hidden></span>
+          </div>
+          <p class="testingZoneExplanation">This interaction replaces the need for the three sliders, by allowing the user to choose a tempo by feel. It is not intended to make selection easier, but to make it more natural.</p>
+        </div>
+
+        <div class="testingZoneLayout">
+          <form class="testingFeedbackForm" id="testingFeedbackForm">
+            <div class="testingFeedbackHeading">Feedback</div>
+
+            <label class="testingFeedbackField">
+              <span>Do you like eggs?</span>
+              <div class="testingRating" role="group" aria-label="Do you like eggs?">
+                <button type="button" data-feedback-rating="1">1</button>
+                <button type="button" data-feedback-rating="2">2</button>
+                <button type="button" data-feedback-rating="3">3</button>
+                <button type="button" data-feedback-rating="4">4</button>
+                <button type="button" data-feedback-rating="5">5</button>
+              </div>
+            </label>
+
+            <label class="testingFeedbackField">
+              <span>Would you trust a duck with your timing?</span>
+              <select id="testingDuckAnswer">
+                <option value="">Choose one</option>
+                <option>Absolutely</option>
+                <option>Maybe</option>
+                <option>Never</option>
+              </select>
+            </label>
+
+            <label class="testingFeedbackField">
+              <span>Anything suspiciously egg-related?</span>
+              <textarea id="testingFeedbackText" rows="3" placeholder="Optional"></textarea>
+            </label>
+
+            <button class="testingFeedbackSubmit" id="testingFeedbackSubmit" type="submit">Submit feedback</button>
+          </form>
+
+          <div class="testingFeedbackThanks" id="testingFeedbackThanks" hidden>
+            <strong>Thank you!</strong>
+            <p>You can give more feedback <a href="#" id="testingFeedbackAgain">here</a>.</p>
+          </div>
+
+          <div class="testingZoneControllerWrap">
+            <div class="tempoQuadFrame">
+              <div class="tempoQuad" id="tempoQuad" role="slider" tabindex="0" aria-label="Quad tempo controller">
+                <div class="tempoCross" aria-hidden="true"></div>
+                <div class="tempoDot" id="tempoDot" aria-hidden="true"></div>
+                <span class="tempoPole tempoFast">Fast</span>
+                <span class="tempoPole tempoSlow">Slow</span>
+                <span class="tempoPole tempoHard">Hard</span>
+                <span class="tempoPole tempoLow">Low</span>
+              </div>
+            </div>
+            <div class="tempoReadout" id="tempoReadout">Balanced tempo</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <div class="exerciseScroller">
+    <button class="setupSummary" id="setupSummary" type="button"><span class="setupSummaryText"><strong id="setupSummaryName">Move</strong><small id="setupSummaryMeta"></small></span><span class="setupSummaryAction">Setup ›</span></button>
+    <div class="createFlow" id="createFlow" hidden>
+      <section class="createStep active" id="createStepMovements" data-create-step="movements">
+        <button class="createStepHeader" type="button" data-open-step="movements">
+          <span class="createStepIdentity"><span class="createStepNumber">1</span><strong>Movements</strong></span>
+          <span class="createStepSummary" id="movementStepSummary">No movements yet</span>
+        </button>
+        <div class="createStepBody">
+          <div class="createStepSlot" id="createMovementsSlot"></div>
+          <div class="createStepFooter">
+            <button class="primary" id="continueToTiming" type="button" disabled>Continue to timing</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="createStep" id="createStepTiming" data-create-step="timing">
+        <button class="createStepHeader" type="button" data-open-step="timing" disabled>
+          <span class="createStepIdentity"><span class="createStepNumber">2</span><strong>Timing</strong></span>
+          <span class="createStepSummary" id="timingStepSummary">Add a movement first</span>
+        </button>
+        <div class="createStepBody">
+          <div class="createStepSlot" id="createTimingSlot"></div>
+          <div class="createStepFooter">
+            <button class="primary" id="continueToFinish" type="button">Continue to finish</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="createStep" id="createStepFinish" data-create-step="finish">
+        <button class="createStepHeader" type="button" data-open-step="finish" disabled>
+          <span class="createStepIdentity"><span class="createStepNumber">3</span><strong>Finish</strong></span>
+          <span class="createStepSummary" id="finishStepSummary">Name and optional extras</span>
+        </button>
+        <div class="createStepBody">
+          <div class="createStepSlot" id="createFinishSlot"></div>
+          <div class="createStepFooter">
+            <button class="primary" id="finishMoveButton" type="button">Save move</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <section>
+      <div class="sectionTitle">Stretch to start</div>
+      <div class="moveList" id="warmupList"></div>
+    </section>
+
+
+    <div class="movementCreatorLaunch" id="movementCreatorLaunch">
+      <button class="addBtn movementCreatorOpen" id="addMovementBtn" type="button">Add movement</button>
+      <button class="restAddBtn" id="addRestBtn" type="button">Add rest</button>
+      <button class="restAddBtn" id="addVideoBtn" type="button">Add video</button>
+    </div>
+
+    <section class="movementCreator" id="movementCreator" hidden aria-label="Create movement">
+      <div class="movementCreatorHead">
+        <h3 id="movementCreatorHeading">Add movement</h3>
+        <button class="pill movementCreatorClose" id="closeMovementCreator" type="button">Cancel</button>
+      </div>
+
+      <div class="movementCreatorFields" id="movementFields">
+        <label>
+          <span>Name</span>
+          <input class="addInput" id="addMovementInput" type="text" placeholder="e.g. stair climb, deep work">
+        </label>
+
+        <label>
+          <span>Type / group</span>
+          <input class="addInput" id="addMovementGroup" type="text" placeholder="e.g. Mobility, cardio, work">
+        </label>
+
+        <div class="movementTimingRow">
+          <label class="durationStack">
+            <span>Duration</span>
+            <div class="creatorDurationRow">
+              <input class="addInput creatorNumber" id="addMovementDuration" type="number" min="1" max="3600" step="1" value="45">
+              <select class="creatorUnitSelect" id="addMovementUnit" aria-label="Movement duration unit">
+                <option value="sec">seconds</option>
+                <option value="min">minutes</option>
+                <option value="hour">hours</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="globalTimingToggle">
+            <input type="checkbox" id="useGlobalTiming" checked>
+            <span class="toggleTrack" aria-hidden="true"><span class="toggleThumb"></span></span>
+            <span class="toggleLabel" id="globalTimingValue">Use global timing · 45 seconds</span>
+          </label>
+
+          <button class="primary creatorAddButton" id="confirmAddMovement" type="button">Add</button>
+        </div>
+      </div>
+
+      <div class="movementCreatorFields restFields" id="restFields" hidden>
+        <label>
+          <span>Name</span>
+          <input class="addInput" id="addRestTitle" type="text" value="Rest" placeholder="e.g. rest">
+        </label>
+
+        <label>
+          <span>Type / group</span>
+          <input class="addInput" id="addRestGroup" type="text" value="Rest" placeholder="e.g. stand up!">
+        </label>
+
+        <div class="movementTimingRow">
+          <label class="durationStack">
+            <span>Duration</span>
+            <div class="creatorDurationRow">
+              <input class="addInput creatorNumber" id="addRestDuration" type="number" min="5" max="3600" step="5" value="30">
+              <select class="creatorUnitSelect" id="addRestUnit" aria-label="Rest duration unit">
+                <option value="sec">seconds</option>
+                <option value="min">minutes</option>
+                <option value="hour">hours</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="globalTimingToggle">
+            <input type="checkbox" id="useGlobalRestTiming">
+            <span class="toggleTrack" aria-hidden="true"><span class="toggleThumb"></span></span>
+            <span class="toggleLabel" id="globalRestTimingValue">Use global timing · 15 seconds</span>
+          </label>
+
+          <button class="primary creatorAddButton" id="confirmAddRest" type="button">Add</button>
+        </div>
+      </div>
+    </section>
+    <section>
+      <div class="sectionTitle">Kettlebell work</div>
+      <div class="moveList" id="strengthList"></div>
+    </section>
+
+    <section>
+      <div class="sectionTitle">Cooldown</div>
+      <div class="moveList" id="cooldownList"></div>
+    </section>
+    </div>
+
+    <!-- phones: add button, and the bottom sheet that edits a step or the setup -->
+    <button class="addFab" id="addFab" type="button" aria-label="Add a step" data-icon="add"></button>
+    <div class="sheetScrim" id="sheetScrim"></div>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+      <div class="sheetGrab" aria-hidden="true"></div>
+      <h3 class="sheetTitle" id="sheetTitle">Edit</h3>
+      <div class="sheetBody" id="sheetBody"></div>
+    </section>
+  </section>
+</div>

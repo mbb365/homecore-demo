@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Card options</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap">
+<style>body{margin:0;background:#EEEDED}html{scrollbar-width:none}</style>
+</head>
+<body>
+<options-board></options-board>
+<script type="module">
+// Design options for the "Movement & you" and "How you've felt" cards,
+// built only from Move Assistant's own components and type styles.
+import css from "../src/styles.css?inline";
+
+const LEVELS = ["Terrible", "Poor", "Meh", "Okay", "Good", "Great"];
+const COLORS = ["#6E63A8", "#5878A8", "#6F8B8A", "#5F9B72", "#D5A53E", "#D56B54"];
+const band = (v) => Math.max(0, Math.min(5, Math.floor((v / 100) * 6)));
+const label = (v) => LEVELS[band(v)];
+const color = (v) => COLORS[band(v)];
+function face(v, size = 26) {
+  if (v == null) return `<svg class="face empty" style="width:${size}px;height:${size}px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5"/></svg>`;
+  const k = (v - 50) / 50;
+  return `<svg class="face" style="width:${size}px;height:${size}px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="${color(v)}"/><circle cx="8.5" cy="10" r="1.4" fill="#111"/><circle cx="15.5" cy="10" r="1.4" fill="#111"/><path d="M7.5 ${15.5 - k} Q12 ${15.5 + 4 * k} 16.5 ${15.5 - k}" stroke="#111" stroke-width="1.7" fill="none" stroke-linecap="round"/></svg>`;
+}
+
+// sample week (Mon → Sun, today = Fri)
+const days = [
+  { d: "Mon", min: 20, mood: 70, energy: 62 },
+  { d: "Tue", min: 0, mood: 40, energy: 30 },
+  { d: "Wed", min: 16, mood: 74, energy: 66 },
+  { d: "Thu", min: 16, mood: 68, energy: 72 },
+  { d: "Fri", min: 0, mood: 55, energy: null, today: true },
+  { d: "Sat", future: true },
+  { d: "Sun", future: true },
+];
+const week = days.reduce((a, x) => a + (x.min || 0), 0);
+const avg = (k) => { const v = days.map((x) => x[k]).filter((v) => v != null); return v.reduce((a, b) => a + b, 0) / v.length; };
+const GOAL = 150;
+
+const activity = `
+<section class="card activityCard">
+  <div class="activityHeader"><div class="activityIcon">⌁</div><div class="activityTitle">Activity</div></div>
+  <div class="activityRows">
+    <div class="activityRow"><div class="activityRowIcon">↟</div><div><div class="activityRowName">Steps</div><div class="activityRowMeta">6,840</div></div></div>
+    <div class="activityRow"><div class="activityRowIcon">☺</div><div><div class="activityRowName">Mood</div><div class="activityRowMeta">Good</div></div></div>
+    <div class="activityRow"><div class="activityRowIcon">ϟ</div><div><div class="activityRowName">Energy</div><div class="activityRowMeta">Okay</div></div></div>
+  </div>
+</section>`;
+
+const reading = (icon, name, value) =>
+  `<div class="activityRow"><div class="activityRowIcon">${icon}</div><div><div class="activityRowName">${name}</div><div class="activityRowMeta">${value}</div></div></div>`;
+
+const dayBars = () => {
+  const max = Math.max(...days.map((x) => x.min || 0), 10);
+  return `<div class="optBars">${days.map((x) => `
+    <div class="optBarDay${x.today ? " today" : ""}${x.future ? " future" : ""}">
+      <div class="optBarTrack"><span style="height:${x.min ? Math.max(6, (x.min / max) * 100) : 0}%"></span></div>
+      <div class="dayLabel">${x.d}</div>
+    </div>`).join("")}</div>`;
+};
+
+const movement = {
+  M1: {
+    name: "Readings",
+    why: "Same pattern as Activity: small bold title, bigger value. One bar per day this week.",
+    html: `<section class="card optCard">
+      <div class="optReadings">${reading("◷", "This week", `${week} min`)}${reading("↗", "Streak", "2 days")}${reading("▦", "30 days", "172 min")}</div>
+      ${dayBars()}
+    </section>`,
+  },
+  M2: {
+    name: "Goal track",
+    why: "One big number and a HomeCore slider track filling toward a weekly goal. Day segments below show which days you moved.",
+    html: `<section class="card optCard">
+      <div class="optHero"><div class="insightBig">${week} min</div><div class="weekCopy">of ${GOAL} this week</div></div>
+      <div class="rangeTrack optGoal"><div class="rangeFill" style="width:${(week / GOAL) * 100}%"></div></div>
+      <div class="optSegments">${days.map((x) => `<div class="optSeg${x.min ? " done" : ""}${x.today ? " today" : ""}${x.future ? " future" : ""}"><span class="dayLabel">${x.d}</span></div>`).join("")}</div>
+    </section>`,
+  },
+  M3: {
+    name: "Day tiles",
+    why: "Movement and feeling side by side: each day tile shows minutes moved and a face for how you felt.",
+    html: `<section class="card optCard">
+      <div class="optHero"><div class="insightBig">${week} min</div><div class="weekCopy">this week</div></div>
+      <div class="optDayTiles">${days.map((x) => `
+        <div class="weekChip optDayTile${x.today ? " today" : ""}${x.future ? " future" : ""}">
+          <div class="weekChipTop"><strong>${x.d}</strong></div>
+          <div class="optDayTileBottom"><div class="activityRowMeta">${x.future ? "" : x.min}</div>${x.future ? "" : face(x.mood != null && x.energy != null ? (x.mood + x.energy) / 2 : x.mood ?? x.energy, 30)}</div>
+        </div>`).join("")}</div>
+    </section>`,
+  },
+};
+
+const sliderTile = (icon, name, v) => `
+  <section class="tile timeTile checkinTile optSliderTile">
+    <div class="timeHeader"><div class="timeIcon">${icon}</div><div class="timeCopy"><div class="activityRowName">${name}</div><div class="activityRowMeta">${label(v)}</div></div></div>
+    <div><div class="rangeTrack"><div class="rangeFill" style="width:${v}%"></div></div><div class="scaleEnds"><span>Terrible</span><span>Great</span></div></div>
+  </section>`;
+
+const feel = {
+  F1: {
+    name: "Week sliders",
+    why: "The check-in sliders, read back: your average mood and energy for the week on the same Terrible → Great track.",
+    html: `<section class="card optCard"><div class="optTwo">${sliderTile("☺", "Mood", avg("mood"))}${sliderTile("ϟ", "Energy", avg("energy"))}</div></section>`,
+  },
+  F2: {
+    name: "Faces",
+    why: "One face per day, nothing else. Colour and smile carry mood and energy together.",
+    html: `<section class="card optCard">
+      <div class="optFaces">${days.map((x) => `<div class="optFaceDay${x.today ? " today" : ""}">${x.future ? face(null, 56) : face(x.mood != null && x.energy != null ? (x.mood + x.energy) / 2 : x.mood ?? x.energy, 56)}<div class="dayLabel">${x.d}</div></div>`).join("")}</div>
+    </section>`,
+  },
+  F3: {
+    name: "Grid",
+    why: "Mood and energy as two rows of colour blocks, one per day — easy to scan for patterns.",
+    html: `<section class="card optCard">
+      <div class="optGrid">
+        <div></div>${days.map((x) => `<div class="dayLabel${x.today ? " today" : ""}">${x.d}</div>`).join("")}
+        <div class="activityRowName">Mood</div>${days.map((x) => `<div class="optCell${x.mood == null ? " empty" : ""}" style="${x.mood == null ? "" : "background:" + color(x.mood)}" title="${x.mood == null ? "" : label(x.mood)}"></div>`).join("")}
+        <div class="activityRowName">Energy</div>${days.map((x) => `<div class="optCell${x.energy == null ? " empty" : ""}" style="${x.energy == null ? "" : "background:" + color(x.energy)}" title="${x.energy == null ? "" : label(x.energy)}"></div>`).join("")}
+      </div>
+    </section>`,
+  },
+};
+
+const OPT_CSS = `
+.board{max-width:1180px;margin:0 auto;padding:24px 22px 80px}
+.boardHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.optWhy{margin:0 0 10px 16px;color:var(--muted)}
+.optBlock{margin-top:32px}
+.optCard{display:grid;gap:20px;grid-column:span 9}
+.optFull{grid-column:span 12}
+.optReadings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.optBars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.optBarDay{display:grid;gap:8px;justify-items:center}
+.optBarTrack{position:relative;width:100%;height:140px;border-radius:16px;background:#151515;overflow:hidden}
+.optBarTrack span{position:absolute;left:0;right:0;bottom:0;border-radius:16px;background:var(--primary)}
+.optBarDay.today .optBarTrack{box-shadow:inset 0 0 0 1.5px var(--primary)}
+.optBarDay.future{opacity:.35}
+.optHero{display:grid;gap:4px}
+.optGoal .rangeFill{background:var(--primary)!important;border-radius:16px}
+.optSegments{display:flex;gap:4px;height:46px}
+.optSeg{flex:1;border-radius:16px;background:#3f3f3f;display:grid;place-items:center}
+.optSeg.done{background:var(--primary)}
+.optSeg.done .dayLabel{color:#090909!important}
+.optSeg.today{box-shadow:inset 0 0 0 1.5px var(--primary)}
+.optSeg.future{background:transparent;box-shadow:inset 0 0 0 1px #3f3f3f}
+.optDayTiles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.optDayTile{gap:18px}
+.optDayTile.today{box-shadow:inset 0 0 0 1.5px var(--primary)}
+.optDayTile.future{opacity:.35}
+.optDayTileBottom{display:flex;justify-content:space-between;align-items:flex-end;min-height:30px}
+.optTwo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.optSliderTile .rangeFill{background:var(--primary)!important}
+.optSliderTile .activityRowMeta{margin-top:2px}
+.optFaces{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.optFaceDay{display:grid;justify-items:center;gap:10px;padding:18px 0;border-radius:16px;background:#292929}
+.optFaceDay.today{box-shadow:inset 0 0 0 1.5px var(--primary)}
+.optGrid{display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:8px;align-items:center}
+.optGrid .dayLabel{text-align:center}
+.optGrid .dayLabel.today{color:var(--text);font-weight:700}
+.optCell{height:56px;border-radius:16px}
+.optCell.empty{background:transparent;box-shadow:inset 0 0 0 1px #3f3f3f}
+#app.light .optBarTrack{background:#E2E0E0}
+#app.light .optSeg{background:#D8D6D6}
+#app.light .optSeg.done{background:var(--primary)}
+#app.light .optSeg.future,#app.light .optCell.empty{background:transparent;box-shadow:inset 0 0 0 1px #cfcccc}
+#app.light .optFaceDay{background:rgba(255,255,255,.8)}
+@media(max-width:900px){.optCard{grid-column:auto}.optReadings,.optTwo{grid-template-columns:1fr}.optDayTiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+`;
+
+class OptionsBoard extends HTMLElement {
+  connectedCallback() {
+    const root = this.attachShadow({ mode: "open" });
+    const light = new URLSearchParams(location.search).get("theme") !== "dark";
+    const block = (key, o, withActivity) => `
+      <div class="optBlock">
+        <div class="sectionLabel">${key} · ${o.name}</div>
+        <p class="sub optWhy">${o.why}</p>
+        <div class="grid">${withActivity ? activity : ""}${withActivity ? o.html : o.html.replace('class="card optCard"', 'class="card optCard optFull"')}</div>
+      </div>`;
+    root.innerHTML = `<style>${css}${OPT_CSS}</style>
+      <main id="app" class="${light ? "light" : ""}" style="min-height:100vh"><div class="shell"><div class="board">
+        <div class="boardHead"><div class="settingsTitle">Card options</div>
+          <a class="pill" href="?theme=${light ? "dark" : "light"}">${light ? "Dark" : "Light"} mode</a></div>
+        <div class="sectionLabel" style="margin-top:28px">Movement &amp; you</div>
+        ${Object.entries(movement).map(([k, o]) => block(k, o, true)).join("")}
+        <div class="sectionLabel" style="margin-top:56px">How you've felt this week</div>
+        ${Object.entries(feel).map(([k, o]) => block(k, o, false)).join("")}
+      </div></div></main>`;
+  }
+}
+customElements.define("options-board", OptionsBoard);
+</script>
+</body>
+</html>
