@@ -735,7 +735,9 @@ button.tfAreaIcon{cursor:pointer}
 .tfEditTray.open{transform:none}
 .tfEditTray.open.tucked{transform:translateX(100%)}
 .tfEditTray.open :is(.tfTrayInner,.tfTrayTuck){pointer-events:auto}
-.tfTrayTuck{position:absolute;top:20px;left:-40px;display:grid;place-items:center;width:40px;height:56px;min-height:0;padding:0;border:0;border-radius:16px 0 0 16px;background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all);cursor:pointer;--mdc-icon-size:22px}
+/* the tray's tuck: a 40 chip like every back button, 12 off the tray (Matt, 9 Nov: was a 40 × 56 tab, and the buttons'
+   corner rule rounded it all round into a loose rectangle) */
+.tfTrayTuck{position:absolute;top:20px;left:-52px;display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);min-height:0;padding:0;border:0;border-radius:var(--r-inner);background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all);cursor:pointer;--mdc-icon-size:22px}
 .tfTrayTuck svg{width:22px;height:22px}
 .tfEditTray:not(.open) .tfTrayTuck{visibility:hidden}
 .tfTrayInner{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px;overflow:auto;overscroll-behavior:contain;padding:20px;border-radius:var(--r-card) 0 0 var(--r-card);background:var(--card);box-shadow:var(--hc-hair-all),0 0 40px rgba(0,0,0,.3)}

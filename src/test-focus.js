@@ -2544,11 +2544,12 @@ export function mountTestFocus(root, { config, getHass }) {
     if (ids.length) out.push({ key: 'block:' + name, order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
     return out;
   }
-  /* HomeCore demo (9 Nov): the page the site's ⋯ opens as Logbook, built from Home's Activity card, so it stays live.
-     (Energy, History and Media pages went the same day: Matt, "they confuse it") */
-  const DEMO_PAGES = { logbook: 'Logbook' };
+  /* HomeCore demo (9 Nov): the Activity page the site's ⋯ opens (Matt: "I want it to be the Activity page basically";
+     was Logbook), Home's Activity card on a page of its own, so it stays live. (Energy, History and Media pages went
+     the same day: Matt, "they confuse it") */
+  const DEMO_PAGES = { activity: 'Activity' };
   function demoPage(out, key, order) {
-    if (key === 'logbook') {
+    if (key === 'activity') {
       const items = activityItems();
       out.push({ key: 'dash:act', html: card('dash:act', ++order, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act') });
       loadActivity();

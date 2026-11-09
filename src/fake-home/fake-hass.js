@@ -83,6 +83,8 @@ const fakeHourly = () => {
   states["sensor.living_room_temperature"].attributes.state_class = "measurement";
   Object.assign(states, HOUSE.states);
   states["person.wembely"] = { entity_id: "person.wembely", state: "home", attributes: { friendly_name: "Wembely", user_id: "dev-wembely" } };
+  states["person.red"] = { entity_id: "person.red", state: "home", attributes: { friendly_name: "Red", user_id: "dev-red" } };
+  states["person.gobo"] = { entity_id: "person.gobo", state: "home", attributes: { friendly_name: "Gobo", user_id: "dev-gobo" } };
   // a leak earlier today, dry again (its changes are in devLog), for Activity's red row
   const dry = new Date(Date.now() - 20 * 60000).toISOString();
   states["binary_sensor.kitchen_leak"] = { entity_id: "binary_sensor.kitchen_leak", state: "off", last_changed: dry, last_updated: dry, attributes: { friendly_name: "Kitchen leak sensor", device_class: "moisture" } };
@@ -104,6 +106,15 @@ const devLog = () => {
   { when: at(296), entity_id: "switch.dish_washer", state: "on" },
   { when: at(340), entity_id: "light.big_sphere", state: "off", context_user_id: "dev-wembely" },
   { when: at(395), entity_id: "switch.tv_stuff", state: "off" },
+  // the rest of Fraggle rock's day, for the Activity page (Matt, 9 Nov)
+  { when: at(12), entity_id: "lock.another_openable_lock", state: "unlocked", context_user_id: "dev-red" },
+  { when: at(35), entity_id: "light.green_wavy_light", state: "on", context_user_id: "dev-wembely" },
+  { when: at(70), entity_id: "light.fire_place_lamp", state: "on", context_domain: "automation", context_event_type: "automation_triggered", context_name: "Evening lights" },
+  { when: at(71), entity_id: "light.living_room", state: "on", context_domain: "automation", context_event_type: "automation_triggered", context_name: "Evening lights" },
+  { when: at(150), entity_id: "light.big_bedroom", state: "on", context_user_id: "dev-red" },
+  { when: at(210), entity_id: "light.office_2", state: "on", context_user_id: "dev-gobo" },
+  { when: at(300), entity_id: "switch.wiz_socket_a82510", state: "off", context_user_id: "dev-gobo" },
+  { when: at(420), entity_id: "lock.another_basic_lock", state: "locked", context_domain: "automation", context_event_type: "automation_triggered", context_name: "Lock up" },
   ];
 };
 // a device that's on or off: its changes from the log, and the other way round before them

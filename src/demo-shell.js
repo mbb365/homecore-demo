@@ -1,6 +1,6 @@
 // The demo site around HomeCore: the rail from Matt's Claude Design file (Home, Search, Weather, Devices, ⋯ and the
 // account at the bottom), a menu button on phones, and the pages the rail opens.
-// - HomeCore's own pages: Home, Weather, and (from ⋯) Logbook, built in test-focus.js from Home's Activity card, so it
+// - HomeCore's own pages: Home, Weather, and (from ⋯) Activity, built in test-focus.js from Home's Activity card, so it
 //   stays live. Settings is HomeCore's Settings.
 // - The demo's pages (src/pages): Devices, Map and My account, built from HomeCore's parts; Search is a popup.
 // Each page has its own address (#/devices), so a link can open it.
@@ -15,7 +15,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const RAIL = [['home', 'Home', 'mdi:home'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
-const MORE = [['map', 'Map', 'mdi:tooltip-account'], ['logbook', 'Logbook', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
+const MORE = [['map', 'Map', 'mdi:tooltip-account'], ['activity', 'Activity', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
 // the map's code is big (MapLibre), so it loads only when Map opens
 function renderMap(page, ctx) {
   const now = { ...ctx }; // Search's pick, before go() clears it
@@ -24,7 +24,7 @@ function renderMap(page, ctx) {
   return () => { gone = true; off?.(); };
 }
 const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount };
-const HOMECORE_PAGES = new Set(['weather', 'logbook']);
+const HOMECORE_PAGES = new Set(['weather', 'activity']);
 const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
 
 export function mountDemoShell(root, { getHass, homecore }) {
