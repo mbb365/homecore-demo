@@ -855,10 +855,11 @@ button.tfAreaIcon{cursor:pointer}
 /* widgets with an action zone (Matt, 9 Nov): XL (5 rows) on the Weather page, so the callouts show under the zone;
    on the dashboard L is the zone alone, XL adds the callouts; M shows the three callout lines (Matt, 9 Nov) under the reading; S keeps the reading and its parts as before */
 #app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-xl]{grid-row:span 5}
-/* on a phone the Weather page's widgets stay L (4 rows, the zone without its callouts), as they were before the three rows:
-   two columns of XL ran it far too long (Matt, 9 Nov) */
-#app.tfWeatherOpen .tfBento.tfPegs.tfPhonePegs .wbItem[data-xl]{grid-row:span 4}
-#app.tfWeatherOpen .tfBento.tfPhonePegs .wbItem[data-xl] .wbCallouts{display:none}
+/* on a phone the Weather page's half-width widgets are M (3 rows, 212), drawn as the dashboard draws M: the reading where
+   the zone was, its three callout lines under it (Matt, 9 Nov: two columns of XL ran it far too long) */
+#app.tfWeatherOpen .tfBento.tfPegs.tfPhonePegs .wbItem:is([data-xl],[data-size="tile"]){grid-row:span 3}
+#app.tfWeatherOpen .tfBento.tfPhonePegs .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
+#app.tfWeatherOpen .tfBento.tfPhonePegs .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
 #app.tfBoard .tfDashBento:not([data-rows="5"]) .wbItem[data-xl] .wbCallouts{display:none}
 #app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]) .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
 #app.tfBoard .tfDashBento[data-rows="3"] .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}

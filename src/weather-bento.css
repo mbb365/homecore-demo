@@ -466,7 +466,8 @@
 .wbCallout.wbAdvice>span:first-child{color:var(--text)}
 
 /* a card opened to its graph (Matt, 9 Nov): its head, the range (Day, Week, Month) and the graph filling the rest */
-.wbCard.wbHc.wbGraphCard{height:100%;min-height:0;box-sizing:border-box}
+.wbCard.wbSquare.wbGraphCard{height:100%;min-height:0}
+.wbGraphCard .wbHead .wbBack{margin:-4px -6px 0 auto}
 .wbGraphCard .wbRangeBtn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;max-width:100%;height:32px;padding:0 8px 0 10px;border:0;
   border-radius:12px;background:var(--tile);box-shadow:var(--hc-hair-all);color:var(--text);font:600 12px/16px var(--font-tile);cursor:pointer}
 .wb button.wbRangeBtn{border-radius:12px!important}
@@ -475,9 +476,9 @@
 .wbRangeBtn[aria-expanded="true"]{background:var(--bright);color:var(--on-bright)}
 /* the date range picker: over the cards round it, from under its button */
 .wbItem:has(.wbRangePick){position:relative;z-index:30}
-.wbRangePick{position:absolute;top:108px;left:10px;z-index:30;display:flex;flex-direction:column;gap:12px;width:248px;box-sizing:border-box;padding:12px;
+.wbRangePick{position:absolute;top:116px;left:18px;z-index:30;display:flex;flex-direction:column;gap:12px;width:248px;box-sizing:border-box;padding:12px;
   border-radius:24px;background:var(--card);box-shadow:var(--hc-hair-all),0 18px 40px rgba(0,0,0,.35)}
-.wbRangePick.wbPickRight{left:auto;right:10px}
+.wbRangePick.wbPickRight{left:auto;right:18px}
 .wbRangePresets{display:flex;flex-direction:column;gap:2px}
 .wb .wbRangePreset{height:32px;padding:0 12px;border:0;border-radius:12px!important;background:transparent;color:var(--text);font:400 14px/20px var(--font);text-align:left;cursor:pointer}
 .wb .wbRangePreset:hover{background:var(--tile)}

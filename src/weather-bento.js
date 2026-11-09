@@ -1219,10 +1219,11 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   function renderGraph(h,src,name){
     const g=GRAPHS[name],[a,b]=span(),isShort=short(a,b),pts=graphData[name+'|'+rangeKey()]?.points;
     // the graph drawn at the size it shows (what's left of the card under the head and the picker), so its words stay 11
-    const el=items[name].el,gw=Math.max(120,el.clientWidth-2*10-32),gh=Math.max(80,el.clientHeight-14-10-44-10-32-10-20);
+    const el=items[name].el,gw=Math.max(120,el.clientWidth-2*18-32),gh=Math.max(40,el.clientHeight-2*18-44-14-32-14-24);
     const chart=!pts?'<span class="wbGraphNote"><span>Loading…</span></span>':pts.length>1?lineChartHtml(pts,v=>g.fmt(h,src,v,isShort),gh,gw):'<span class="wbGraphNote"><span>No history for these dates</span></span>';
-    return '<div class="wbCard wbHc wbGraphCard"><div class="wbOpenHead"><span class="wbChip">'+svgIcon(g.icon(h))+'</span>'+
-      '<span class="wbText"><span class="wbName">'+esc(g.name(h))+'</span><span class="wbSub">'+esc(g.sub?g.sub(isShort):g.now?g.now(h,src):'')+'</span></span>'+
+    // the widget's own head and padding, so opening it doesn't move its icon or name (Matt, 9 Nov: no jump)
+    return '<div class="wbCard wbSquare wbGraphCard"><div class="wbHead"><div class="wbChip wbPlain">'+fittedIcon(g.icon(h))+'</div>'+
+      '<div class="wbText"><span class="wbName">'+esc(g.name(h))+'</span><span class="wbSub">'+esc(g.sub?g.sub(isShort):g.now?g.now(h,src):'')+'</span></div>'+
       '<button class="wbBack" title="'+esc(T.back)+'" data-wb="graph-close" data-wb-focus="graph-close">'+svgIcon(I.back)+'</button></div>'+
       '<button class="wbRangeBtn" aria-haspopup="dialog" aria-expanded="'+!!ui.picking+'" title="Choose date range" data-wb="graph-pick" data-wb-focus="graph-pick">'+
         svgIcon(I.calendar)+'<span>'+esc(rangeName(h))+'</span>'+svgIcon(I.chevronDown)+'</button>'+
@@ -1256,7 +1257,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       else if(sc?.dataset.start)sc.scrollTo({left:Number(sc.dataset.start)*sc.clientWidth/Number(sc.dataset.span)});
       if(focused&&!focusAfter)it.el.querySelector('[data-wb-focus="'+focused+'"]')?.focus();
     }
-    if(focusAfter){root.querySelector('[data-wb-focus="'+focusAfter+'"]')?.focus();focusAfter=null}
+    if(focusAfter){root.querySelector('[data-wb-focus="'+focusAfter+'"]')?.focus({preventScroll:true});focusAfter=null} // without scrolling the page (Matt, 9 Nov: no jump)
     // Matt's rows (9 Nov) start where he said, at the dashboard's own column widths (more columns leave space at the
     // end, fewer wrap): the first of Moon and what follows it starts row 2, and the first shorter card starts row 3
     let row2=false,row3=false;
