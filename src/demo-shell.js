@@ -1,7 +1,7 @@
 // The demo site around HomeCore: the rail from Matt's Claude Design file (Home, Search, Weather, Devices, ⋯ and the
 // account at the bottom), a menu button on phones, and the pages the rail opens.
-// - HomeCore's own pages: Home, Weather, and (from ⋯) Energy, Logbook, History and Media, built in test-focus.js from the
-//   cards Home already has, so they stay live. Settings is HomeCore's Settings.
+// - HomeCore's own pages: Home, Weather, and (from ⋯) Logbook, built in test-focus.js from Home's Activity card, so it
+//   stays live. Settings is HomeCore's Settings.
 // - The demo's pages (src/pages): Devices, Map and My account, built from HomeCore's parts; Search is a popup.
 // Each page has its own address (#/devices), so a link can open it.
 import { icon, HA_LOGO } from './demo-icons.js';
@@ -14,8 +14,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // the rail, top to bottom (Matt's file has Automation where Weather is: Matt, 9 Nov)
 const RAIL = [['home', 'Home', 'mdi:home'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
-const MORE = [['energy', 'Energy', 'mdi:lightning-bolt'], ['map', 'Map', 'mdi:tooltip-account'], ['logbook', 'Logbook', 'mdi:format-list-bulleted-type'],
-  ['history', 'History', 'mdi:chart-box-outline'], ['media', 'Media', 'mdi:play-box-multiple'], ['settings', 'Settings', 'mdi:cog']];
+// (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
+const MORE = [['map', 'Map', 'mdi:tooltip-account'], ['logbook', 'Logbook', 'mdi:format-list-bulleted-type'], ['settings', 'Settings', 'mdi:cog']];
 // the map's code is big (MapLibre), so it loads only when Map opens
 function renderMap(page, ctx) {
   const now = { ...ctx }; // Search's pick, before go() clears it
@@ -24,7 +24,7 @@ function renderMap(page, ctx) {
   return () => { gone = true; off?.(); };
 }
 const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount };
-const HOMECORE_PAGES = new Set(['weather', 'energy', 'logbook', 'history', 'media']);
+const HOMECORE_PAGES = new Set(['weather', 'logbook']);
 const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
 
 export function mountDemoShell(root, { getHass, homecore }) {
@@ -92,7 +92,34 @@ export function mountDemoShell(root, { getHass, homecore }) {
   homeView.insertAdjacentHTML('beforeend', '<div class="hcPage" hidden></div>');
   const page = homeView.querySelector('.hcPage');
   let pageOn = null, cleanup = null;
-  const ctx = { getHass, homecore, root, esc, icon, opts: null, go: (route, after, opts) => { ctx.opts = opts || null; go(route, true); after?.(); ctx.opts = null; } };
+  /* where you came from (Matt, 9 Nov): a page opened from the side menu starts afresh and has no back arrow; one opened
+     from inside another page (a card, a search result, a row) has ‹ back to it. The trail is a list of places:
+     'home', a page, 'settings', or 'area:<key>' for HomeCore's own pages (Weather, Logbook, a room) */
+  let trail = [], going = false, cur = 'home';
+  const where = () => (settingsView.classList.contains('active') ? 'settings' : homecore.page ? 'area:' + homecore.page : pageOn || 'home');
+  const BACK_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18L9 12L15 6"/></svg>';
+  const ctx = { getHass, homecore, root, esc, icon, opts: null,
+    // from inside a page: remember it, then go
+    go: (route, after, opts) => {
+      const was = where();
+      going = true;
+      if (was !== route) trail.push(was);
+      ctx.opts = opts || null; go(route, true); after?.(); ctx.opts = null;
+      going = false; cur = where(); sync();
+    },
+    // a page's title, with ‹ back when it was opened from another page (HomeCore's page header)
+    head: (title, extra = '') => '<div class="settingsHeader tfAreaHead hcTitle">' + (trail.length ? '<button class="back" type="button" data-hc-back aria-label="Back">' + BACK_SVG + '</button>' : '') +
+      '<h1 class="settingsTitle">' + esc(title) + '</h1>' + extra + '</div>',
+    backBtn: () => (trail.length ? '<button class="back" type="button" data-hc-back aria-label="Back">' + BACK_SVG + '</button>' : ''),
+  };
+  // back: to the last place on the trail
+  function back() {
+    const to = trail.pop();
+    if (!to) return go('home');
+    going = true;
+    if (to.startsWith('area:')) { const k = to.slice(5); if (HOMECORE_PAGES.has(k)) go(k, true); else { go('home', true); homecore.openArea(k); } } else go(to, true);
+    going = false; cur = where(); sync();
+  }
   // every icon is the dashboard's chip (Matt, 9 Nov: "make it all the same"): HomeCore fills, fits and colours them
   Object.assign(ctx, {
     chip: (inner, hex) => '<span class="tfIcon hcChip"' + (hex ? ' data-light style="' + homecore.tint(hex) + '"' : '') + '>' + inner + '</span>',
@@ -116,6 +143,8 @@ export function mountDemoShell(root, { getHass, homecore }) {
 
   function go(route, again = false) {
     if (!ROUTES.has(route)) route = 'home';
+    const outer = !going;
+    going = true;
     closeMenus();
     const inSettings = settingsView.classList.contains('active');
     if (route === 'settings') {
@@ -126,11 +155,16 @@ export function mountDemoShell(root, { getHass, homecore }) {
       if (HOMECORE_PAGES.has(route)) { showPage(null); if (homecore.page !== route) homecore.openArea(route); }
       else { if (homecore.page) homecore.closeArea(); showPage(route === 'home' ? null : route, again); }
     }
+    if (outer) { going = false; cur = where(); }
     sync();
   }
 
   // which rail button is lit, and the address, follow what's open (HomeCore's own back buttons close pages too)
   function sync() {
+    // HomeCore opened a page itself (the weather card, a room): remember where from; back on Home: a fresh start
+    const now = where();
+    if (!going && now !== cur) { if (now === 'home') trail = []; else trail.push(cur); cur = now; }
+    app.classList.toggle('hcNoBack', !trail.length);
     const open = settingsView.classList.contains('active') ? 'settings'
       : HOMECORE_PAGES.has(homecore.page) ? homecore.page : pageOn || 'home';
     const lit = MORE.some(([k]) => k === open) ? 'more' : open;
@@ -141,8 +175,6 @@ export function mountDemoShell(root, { getHass, homecore }) {
     });
     drawer.querySelectorAll('[data-hc-go]').forEach((b) => b.classList.toggle('active', b.dataset.hcGo === open));
     more.querySelectorAll('[data-hc-go]').forEach((b) => b.classList.toggle('active', b.dataset.hcGo === open));
-    // ⋯'s pages are top level here, so HomeCore's back arrow on them goes
-    app.classList.toggle('hcTopPage', HOMECORE_PAGES.has(open) && open !== 'weather');
     const hash = open === 'home' ? '' : '#/' + open;
     if ((location.hash || '') !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
   }
@@ -153,10 +185,18 @@ export function mountDemoShell(root, { getHass, homecore }) {
     more.hidden = true; moreBtn.setAttribute('aria-expanded', 'false');
     drawer.hidden = true; $('hcMenuNav')?.setAttribute('aria-expanded', 'false');
   }
+  // the side menu: a fresh start
   const navigate = (route) => {
+    trail = [];
     const hash = route === 'home' ? '' : '#/' + route;
-    if ((location.hash || '') === hash) go(route); else location.hash = hash || '#/';
+    if ((location.hash || '') === hash) go(route, true); else location.hash = hash || '#/';
   };
+  // HomeCore's own back arrows (a page's, Settings') go back along the trail when it leads somewhere other than Home
+  root.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-hc-back],[data-area-back],#settingsBack');
+    if (!b) return;
+    if (b.matches('[data-hc-back]') || (trail.length && trail[trail.length - 1] !== 'home') || b.id === 'settingsBack') { ev.stopImmediatePropagation(); ev.preventDefault(); back(); }
+  }, true);
 
   root.addEventListener('click', (ev) => {
     const t = ev.target.closest('[data-hc-go],[data-hc-more],[data-hc-close],[data-hc-search],#hcMenuNav,.hcDrawer');
@@ -184,7 +224,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     const typing = ev.composedPath().some((el) => el instanceof HTMLElement && (el.matches('input,textarea,select') || el.isContentEditable));
     if (((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') || (ev.key === '/' && !typing)) { ev.preventDefault(); openSearch(ctx); }
   });
-  addEventListener('hashchange', () => go(location.hash.replace(/^#\/?/, '') || 'home'));
+  addEventListener('hashchange', () => { trail = []; go(location.hash.replace(/^#\/?/, '') || 'home'); });
 
   go(location.hash.replace(/^#\/?/, '') || 'home');
   return { go };

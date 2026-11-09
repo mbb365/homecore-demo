@@ -1420,7 +1420,8 @@ export function mountTestFocus(root, { config, getHass }) {
   // Energy today: Home Assistant's energy dashboard where it's set up (each source's use since midnight); otherwise
   // made up, as the house makes up what it doesn't have. A tile opens to its graph, like a reading
   let energy = null, energyAt = 0;
-  const MADE_UP_ENERGY = [['electricity', 'Electricity', 4.3, 'kWh'], ['gas', 'Gas', 0.21, 'm³'], ['water', 'Water', 0.2, 'm³']];
+  // Solar too (Matt, 9 Nov), in Home Assistant's order: the house's own solar today when it has one
+  const MADE_UP_ENERGY = [['electricity', 'Electricity', 4.3, 'kWh'], ['solar', 'Solar', 2.3, 'kWh'], ['gas', 'Gas', 0.21, 'm³'], ['water', 'Water', 0.2, 'm³']];
   async function loadEnergy() {
     if (Date.now() - energyAt < 5 * 60 * 1000) return;
     energyAt = Date.now();
@@ -1442,6 +1443,7 @@ export function mountTestFocus(root, { config, getHass }) {
   let energyPick = null, energyTiles = [];
   function energyGlance() {
     const tiles = energyTiles = energy?.length ? energy : MADE_UP_ENERGY.map(([key, name, value, unit]) => {
+      if (key === 'solar') { const sun = Object.keys(states).find((x) => x.endsWith('_solar_today') && !x.includes('made_up_energy')); if (sun && Number.isFinite(Number(states[sun].state))) value = Number(states[sun].state); }
       const id = 'sensor.made_up_energy_' + key;
       states[id] = { entity_id: id, state: String(value), last_changed: new Date().toISOString(), attributes: { friendly_name: name + ' today', unit_of_measurement: unit, state_class: 'total_increasing' } };
       return { key, name, id, value, unit };
@@ -2542,28 +2544,14 @@ export function mountTestFocus(root, { config, getHass }) {
     if (ids.length) out.push({ key: 'block:' + name, order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
     return out;
   }
-  /* HomeCore demo (9 Nov): pages the site's ⋯ opens, each built from cards Home already has, so they stay live:
-     Energy (Energy today, and the solar card of a room that has one), Logbook (Activity), History (each room's readings,
-     a tap opens a reading's graph) and Media (the media players' tiles) */
-  const DEMO_PAGES = { energy: 'Energy', logbook: 'Logbook', history: 'History', media: 'Media' };
+  /* HomeCore demo (9 Nov): the page the site's ⋯ opens as Logbook, built from Home's Activity card, so it stays live.
+     (Energy, History and Media pages went the same day: Matt, "they confuse it") */
+  const DEMO_PAGES = { logbook: 'Logbook' };
   function demoPage(out, key, order) {
-    const label = (k, name) => out.push({ key: 'label:' + k, html: '<div class="sectionLabel tfLabel hcPageLabel" data-tf data-k="label:' + esc(k) + '" style="order:' + (++order) + '">' + esc(name) + '</div>' });
-    if (key === 'energy') {
-      out.push({ key: 'dash:energy', html: energyGlance().replace('style="order:0', 'style="order:' + (++order)) });
-      model.rooms.filter((r) => r.solar.length).forEach((r) => { label('solar:' + r.id, r.name); out.push({ key: 'energy:' + r.id, html: energyCard(r, ++order) }); });
-      loadEnergy();
-    }
     if (key === 'logbook') {
       const items = activityItems();
       out.push({ key: 'dash:act', html: card('dash:act', ++order, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act') });
       loadActivity();
-    }
-    if (key === 'history') {
-      model.rooms.filter((r) => r.readings.length || r.power != null).forEach((r) => { label(r.id, r.name); out.push({ key: 'readings:' + r.id, html: roomCard(r, ++order) }); });
-    }
-    if (key === 'media') {
-      const ids = Object.keys(states).filter((id) => id.startsWith('media_player.') && states[id].state !== 'unavailable');
-      if (ids.length) out.push({ key: 'block:media', order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
     }
     return out;
   }

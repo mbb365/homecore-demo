@@ -15,7 +15,7 @@ const local = {
   set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (_e) { /* not remembered */ } },
 };
 
-export function renderAccount(page, { esc, icon, go, root, glyph, paint }) {
+export function renderAccount(page, { esc, icon, go, root, glyph, paint, head }) {
   const me = { ...FIELDS, ...local.get() };
   const photo = new URL('people/wembely.png', document.baseURI).href;
   let showing = null; // narrow only: the profile instead of the list
@@ -29,7 +29,7 @@ export function renderAccount(page, { esc, icon, go, root, glyph, paint }) {
 
   page.innerHTML =
     '<div class="hcAccount">' +
-      '<div class="hcAccList"><h1 class="settingsTitle">My account</h1>' + GROUPS.map((g) => '<section class="card hcRowsCard">' + g.map(row).join('') + '</section>').join('') + '</div>' +
+      '<div class="hcAccList">' + head('My account') + GROUPS.map((g) => '<section class="card hcRowsCard">' + g.map(row).join('') + '</section>').join('') + '</div>' +
       '<div class="hcProfile">' +
         '<div class="settingsHeader tfAreaHead hcProfileHead"><button class="back" type="button" data-acc-back aria-label="Back to My account"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18L9 12L15 6"/></svg></button><div class="settingsTitle">My profile</div></div>' +
         '<div class="hcPhoto"><img src="' + photo + '" alt="Your photo"><button class="hcBtn" type="button">Change photo</button><button class="pill" type="button">Remove</button></div>' +

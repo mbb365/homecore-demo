@@ -46,14 +46,14 @@ export function deviceList(hass, model) {
   });
 }
 
-export function renderDevices(page, { getHass, homecore, esc, icon, opts, device, paint }) {
+export function renderDevices(page, { getHass, homecore, esc, icon, opts, device, paint, head }) {
   const prefs = { group: 'type', sort: 'name', view: 'list', ...local.get() };
   let q = opts?.q || ''; // Search opens this page searched for a device
   const hass = getHass();
   const all = deviceList(hass, homecore.model);
 
   page.innerHTML =
-    '<div class="hcHead"><h1 class="settingsTitle">Devices</h1>' +
+    '<div class="hcHead">' + head('Devices') +
       '<div class="hcHeadActions"><button class="pill" type="button">Select</button><button class="primary hcAdd" type="button">' + icon('mdi:plus') + 'Add device</button></div></div>' +
     '<div class="hcToolbar">' +
       '<button class="hcBtn" type="button">' + icon('mdi:filter-variant') + 'Filters</button>' +

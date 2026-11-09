@@ -20,7 +20,7 @@ function ring([lat, lng], metres) {
   return pts;
 }
 
-export function renderMap(page, { esc, icon, root, opts, glyph, photo, paint }) {
+export function renderMap(page, { esc, icon, root, opts, glyph, photo, paint, backBtn }) {
   const app = root.getElementById('app');
   const url = (src) => new URL(src, document.baseURI).href;
   const zone = (id) => ZONES.find((z) => z.id === id);
@@ -76,7 +76,7 @@ export function renderMap(page, { esc, icon, root, opts, glyph, photo, paint }) 
 
   function draw() {
     card.innerHTML = pick ? detail(pick)
-      : '<div class="tfSeg" role="group" aria-label="Show">' + [['people', 'People'], ['devices', 'Devices'], ['zones', 'Zones']].map(([k, t]) => '<button type="button" data-tab="' + k + '" aria-pressed="' + (k === tab) + '">' + t + '</button>').join('') + '</div>' +
+      : '<div class="hcMapTop">' + backBtn() + '<div class="tfSeg" role="group" aria-label="Show">' + [['people', 'People'], ['devices', 'Devices'], ['zones', 'Zones']].map(([k, t]) => '<button type="button" data-tab="' + k + '" aria-pressed="' + (k === tab) + '">' + t + '</button>').join('') + '</div></div>' +
         '<div class="hcMapRows">' + rows() + '</div>';
     paint(card);
   }

@@ -61,7 +61,7 @@
 /* a button with words in the toolbar: a 46 track like HomeCore's controls */
 #app .hcBtn{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 16px;border:0;border-radius:16px!important;background:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:600 14px/20px var(--font-tile);white-space:nowrap;cursor:pointer}
 .hcBtn .hcI{width:22px;height:22px}
-@media(max-width:620px){.hcHead,.hcAccList>.settingsTitle{padding:0 16px}}
+@media(max-width:620px){.hcHead,.hcAccList>.hcTitle{padding:0 16px}}
 
 /* the toolbar: Filters, search, group, sort, columns, table or cards. Every control 46 tall, as HomeCore's tracks */
 .hcToolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -69,7 +69,7 @@
 .hcToolbar .navBtn{width:46px;background:var(--tile);border:0;box-shadow:var(--hc-hair-all)}
 .hcToolbar .navBtn .hcI{width:22px;height:22px}
 #app .hcToolbar .settingsSelect{min-width:0;border:0;border-radius:16px!important;background-color:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:600 14px/20px var(--font-tile)}
-.hcSearch{position:relative;flex:1 1 240px;display:flex;align-items:center}
+.hcSearch{position:relative;flex:0 1 320px;display:flex;align-items:center}
 .hcSearch .hcI{position:absolute;left:14px;width:22px;height:22px;color:var(--muted);pointer-events:none}
 #app .hcSearch .addInput{width:100%;height:46px;padding-left:46px;border-radius:16px!important;border:0!important;background:var(--tile);box-shadow:var(--hc-hair-all);font:400 16px/1.2 var(--font)}
 .hcViewSeg{width:100px}
@@ -135,13 +135,13 @@
 @media(max-width:620px){.hcSearchPop{padding-top:16px}.hcSearchBox{padding:14px}}
 
 /* ---------- ⋯'s HomeCore pages: top level here, so no back arrow; a room's name above its card ---------- */
-#app.hcTopPage .tfAreaHead .back{display:none}
-.hcPageLabel{flex:0 0 100%;margin:8px 18px -8px}
+/* a page opened from the side menu has no back arrow; one opened from another page has ‹ back (Matt, 9 Nov) */
+#app.hcNoBack :is(.tfAreaHead .back,#settingsBack){display:none}
 
 /* ---------- My account: the list beside the profile; narrow, one then the other ---------- */
 .hcAccount{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,640px);gap:40px;align-items:start}
 .hcAccList{display:grid;gap:16px}
-.hcAccList .settingsTitle{margin:0 0 8px}
+.hcAccList .hcTitle{margin:0 0 8px}
 .hcRowsCard{display:grid;gap:0}
 .hcProfile{display:grid;gap:24px}
 .hcProfileHead{display:none}
@@ -228,7 +228,7 @@
 .hcDevTable :is(th,td):first-child{padding-left:8px}
 .hcDevTable :is(th,td):last-child{padding-right:8px}
 /* the map card: tiles 10 in (24), its controls 18 in (16) */
-#homeView .hcMapCard>.tfSeg{margin:8px 8px 0}
+#homeView .hcMapCard>.hcMapTop{display:flex;align-items:center;gap:8px;margin:8px 8px 0}
 #homeView .hcMapCard>.hcMoreInfo{margin:4px 8px 8px}
 /* Search's popup as a card: rows (tiles) 10 in, the box and the words 18 in */
 #app .hcSearchBox{padding:var(--inset);gap:8px}
@@ -236,3 +236,20 @@
 #app .hcSearchBox>.hcAskHint{margin:4px 18px 10px}
 #app .hcSearchBox .hcResults .hcAskHint{margin:4px 8px 10px}
 #app .hcSearchBox .tfMoreGroupName{margin:6px 0 2px 18px}
+
+/* every page from the left, as Home (Matt, 9 Nov): Settings was centred */
+#app.hcDemo #settingsView{margin-left:0}
+/* a page's title with its back arrow: HomeCore's page header */
+.hcTitle{display:flex;align-items:center;gap:8px;margin:0}
+.hcTitle .settingsTitle{margin:0}
+
+/* segmented controls hug their words (Matt, 9 Nov: "too big… they dominate"): as wide as their segments, from the left.
+   Settings' choices, its lists, the ⋯ menu's sizes, the Weather page's modes and the map's People / Devices / Zones */
+#app.hcDemo #housePane .toggleRow>:is(.themeChoice,.settingsSelect){align-self:flex-start;width:auto;max-width:100%}
+#app.hcDemo #housePane .themeChoice{display:inline-flex}
+#app.hcDemo #housePane .themeChoice>button{flex:0 0 auto;padding:0 16px}
+#app.hcDemo #housePane .toggleRow>.settingsSelect{min-width:200px}
+#app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments){display:inline-flex;width:auto;align-self:flex-start}
+#app.hcDemo :is(.tfBoardMenu .tfHeightTabs,.wb .wbSegments) button{flex:0 0 auto;padding:0 16px}
+#homeView .hcMapTop .tfSeg{flex:0 0 auto}
+#homeView .hcMapTop .tfSeg button{flex:0 0 auto;padding:0 16px}
