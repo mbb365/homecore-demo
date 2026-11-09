@@ -8,8 +8,14 @@
 /* ---------- the rail (desktop): logo, search, the pages in the middle, you at the bottom ---------- */
 .hcRail{position:fixed;z-index:90;inset:0 auto 0 0;width:var(--hc-rail);display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px 0;background:var(--bg);box-shadow:inset -.4px 0 0 var(--line)}
 .hcRailMain{flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px}
-.hcLogo{display:grid;place-items:center;width:48px;height:48px;color:#18bcf2}
-.hcLogo .hcI{width:44px;height:44px}
+.hcLogo{display:grid;place-items:center;width:48px;height:48px}
+.hcLogoMark{display:block;width:40px;height:40px}
+/* the rail's buttons: icons only (Matt, 9 Nov), muted, the open page's in the text colour; named in a tooltip */
+#app .hcRailBtn{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner)!important;background:transparent;color:var(--muted);cursor:pointer;transition:color .15s ease}
+.hcRailBtn .hcI{width:24px;height:24px}
+.hcRailBtn:hover,.hcRailBtn.active,.hcRailBtn[aria-expanded="true"]{color:var(--text)}
+.hcRailBtn:focus-visible{outline:2px solid var(--primary);outline-offset:0}
+.hcRailTip{white-space:nowrap}
 .hcAvatar{width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner);overflow:hidden;background:var(--tile);cursor:pointer;box-shadow:var(--hc-hair-all)}
 .hcAvatar img{display:block;width:100%;height:100%;object-fit:cover}
 .hcAvatar:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -196,12 +202,16 @@
 /* ---------- one icon everywhere (Matt, 9 Nov: "take the icon style from the dashboard and use it throughout"): the
    dashboard's chip (.tfIcon, its glyph fitted and its soft 3D edge by HomeCore), neutral, or a colour by HomeCore's
    rule (data-light) ---------- */
-:is(.hcPage,.hcRail,.hcDrawer,.hcSearchPop,.hcMoreMenu,.bottomNav) .tfIcon{border:0;overflow:hidden;background-color:var(--hc-icon);color:var(--hc-icon-ink)}
-:is(.hcPage,.hcRail,.hcDrawer,.hcSearchPop,.hcMoreMenu) .tfIcon[data-light]{background-color:var(--light-soft);color:var(--light-ink)}
+:is(.hcPage,.hcSearchPop) .tfIcon{border:0;overflow:hidden;background-color:var(--hc-icon);color:var(--hc-icon-ink)}
+:is(.hcPage,.hcSearchPop) .tfIcon[data-light]{background-color:var(--light-soft);color:var(--light-ink)}
 .tfIcon>img{display:block;width:100%;height:100%;object-fit:cover}
-/* the page that's open: HomeCore's selected fill, as its bottom bar had */
-:is(.hcRail,.bottomNav) .navBtn.tfIcon.active{background-color:var(--bright);color:var(--on-bright)}
-.hcRail .navBtn.tfIcon,.bottomNav .navBtn.tfIcon,.hcDrawer .navBtn.tfIcon{width:var(--chip-size);height:var(--chip-size)}
+/* the phone's menu and ⋯: a plain icon beside each name, as on the rail */
+.hcNavRow{grid-template-columns:24px minmax(0,1fr);gap:16px;padding:var(--inset) 18px}
+.hcNavIcon{display:grid;place-items:center;width:24px;height:24px;color:var(--muted)}
+.hcNavIcon .hcI{width:24px;height:24px}
+.hcNavRow:hover .hcNavIcon,.hcNavRow.active .hcNavIcon{color:var(--text)}
+.hcNavMe{border-radius:8px;overflow:hidden}
+.hcNavMe img{width:100%;height:100%;object-fit:cover}
 
 /* ---------- corners that nest (Matt, 9 Nov): inside = outside less the gap ---------- */
 /* a row is a tile in its card: 34 less 10 = 24 (HomeCore's button rule made them 16) */

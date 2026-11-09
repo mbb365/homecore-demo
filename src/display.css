@@ -844,8 +844,8 @@ button.tfAreaIcon{cursor:pointer}
 /* names on two lines can make Favourites taller than its card: its list scrolls inside it, as Activity's does */
 #app.tfBoard .tfDash-favs>.activityRows{min-height:0;overflow-y:auto;scrollbar-width:thin}
 
-/* icon chips (Matt, 8 Nov): soft 3D with a lit top edge, at half strength. A touch lighter at the top, a light line along the top and the
+/* icon chips (Matt, 8 Nov): soft 3D with a lit top edge, at half strength; halved again (Matt, 9 Nov: knock it down 50%). A touch lighter at the top, a light line along the top and the
    chip's own ink (currentColor) along and over the base; stronger on a coloured chip. Icons are in the text colour
    (were grey) */
-#app.house :is(.tfIcon,.activityRowIcon,.tfAreaIcon,.tfRoomIcon){--chip-hi:.075;background-image:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--chip-hi)),inset 0 -1px 0 color-mix(in srgb,currentColor 6%,transparent),inset 0 -3px 6px color-mix(in srgb,currentColor 7%,transparent)}
-#app.house :is(.on[data-light] .tfIcon,.tfIcon.on[data-light],.tfACTile .tfIcon[data-light],.on[data-tone="alarm"] .tfIcon){--chip-hi:.275}
+#app.house :is(.tfIcon,.activityRowIcon,.tfAreaIcon,.tfRoomIcon){--chip-hi:.0375;background-image:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--chip-hi)),inset 0 -1px 0 color-mix(in srgb,currentColor 3%,transparent),inset 0 -3px 6px color-mix(in srgb,currentColor 3.5%,transparent)}
+#app.house :is(.on[data-light] .tfIcon,.tfIcon.on[data-light],.tfACTile .tfIcon[data-light],.on[data-tone="alarm"] .tfIcon,.tfIcon[data-light]){--chip-hi:.1375}

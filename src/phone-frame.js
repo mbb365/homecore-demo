@@ -67,10 +67,11 @@ export function mountPhoneFrame() {
     const s = Math.max(0.36, Math.min(0.62, (innerHeight - 44 - 28 - 48 - 104 - 16) / PHONE.h));
     host.style.setProperty('--s', s.toFixed(3));
   };
+  const wide = matchMedia('(min-width: ' + ROOM + 'px)'); // follows the screen's width however it changes
   let open = local.get() !== 'hidden';
   let editing = false;
   const show = () => {
-    const room = innerWidth >= ROOM;
+    const room = wide.matches;
     host.hidden = !room || editing;
     panel.hidden = !open;
     chip.hidden = open;
@@ -80,6 +81,7 @@ export function mountPhoneFrame() {
   root.querySelector('.hide').addEventListener('click', () => { open = false; local.set('hidden'); show(); });
   chip.addEventListener('click', () => { open = true; local.set('open'); show(); });
   addEventListener('resize', show);
+  wide.addEventListener('change', show);
   // out of the way while the dashboard is being edited (its tray sits on the right)
   const app = () => document.querySelector('homecore-app')?.shadowRoot?.getElementById('app');
   const watch = () => {

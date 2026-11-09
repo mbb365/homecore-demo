@@ -4,7 +4,7 @@
 //   cards Home already has, so they stay live. Settings is HomeCore's Settings.
 // - The demo's pages (src/pages): Devices, Map and My account, built from HomeCore's parts; Search is a popup.
 // Each page has its own address (#/devices), so a link can open it.
-import { icon } from './demo-icons.js';
+import { icon, HA_LOGO } from './demo-icons.js';
 import { renderDevices } from './pages/devices.js';
 import { renderAccount } from './pages/account.js';
 import { openSearch } from './pages/search.js';
@@ -33,34 +33,60 @@ export function mountDemoShell(root, { getHass, homecore }) {
   const avatar = new URL('people/wembely.png', document.baseURI).href; // you are Wembely (Matt, 9 Nov)
   app.classList.add('hcDemo');
 
-  const railBtn = ([k, name, ic]) => '<button class="navBtn tfIcon" type="button" data-hc-go="' + k + '" title="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
+  // the rail: icons only, each named in a tooltip (Matt, 9 Nov: not the chips the pages use)
+  const railBtn = ([k, name, ic]) => '<button class="hcRailBtn" type="button" data-hc-go="' + k + '" data-tip="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
   shell.insertAdjacentHTML('afterbegin',
     '<nav class="hcRail" aria-label="Main">' +
-      '<div class="hcLogo" role="img" aria-label="Home Assistant">' + icon('mdi:home-assistant') + '</div>' +
-      '<button class="navBtn tfIcon" type="button" data-hc-search title="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
+      '<div class="hcLogo" role="img" aria-label="Home Assistant">' + HA_LOGO + '</div>' +
+      '<button class="hcRailBtn" type="button" data-hc-search data-tip="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
       '<div class="hcRailMain">' + RAIL.map(railBtn).join('') +
-        '<button class="navBtn tfIcon" type="button" data-hc-more title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
+        '<button class="hcRailBtn" type="button" data-hc-more data-tip="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
       '</div>' +
-      '<button class="hcAvatar" type="button" data-hc-go="account" title="My account" aria-label="My account"><img src="' + avatar + '" alt=""></button>' +
+      '<button class="hcAvatar" type="button" data-hc-go="account" data-tip="My account" aria-label="My account"><img src="' + avatar + '" alt=""></button>' +
     '</nav>' +
     '<div class="hcTopRight"></div>');
   // HomeCore's edit pencil goes top right of Home, where Home Assistant's dashboard edit is (it hides itself off Home)
   const pen = $('dashEditNav');
   if (pen) shell.querySelector('.hcTopRight').appendChild(pen);
   // phones: HomeCore's bottom bar holds the menu, which opens the rail as a list
-  root.querySelector('.bottomNav')?.insertAdjacentHTML('afterbegin', '<button class="navBtn tfIcon" id="hcMenuNav" type="button" title="Menu" aria-label="Menu" aria-expanded="false">' + icon('mdi:menu') + '</button>');
-  const row = ([k, name, ic], attr = 'data-hc-go="' + k + '"') => '<button class="hcRow" type="button" ' + attr + '><span class="tfIcon hcChip">' + icon(ic) + '</span><span class="hcRowText"><span class="hcRowName">' + name + '</span></span></button>';
+  root.querySelector('.bottomNav')?.insertAdjacentHTML('afterbegin', '<button class="navBtn" id="hcMenuNav" type="button" title="Menu" aria-label="Menu" aria-expanded="false">' + icon('mdi:menu') + '</button>');
+  // the phone's menu and ⋯: plain icons beside their names, as the rail
+  const row = ([k, name, ic], attr = 'data-hc-go="' + k + '"') => '<button class="hcRow hcNavRow" type="button" ' + attr + '><span class="hcNavIcon">' + icon(ic) + '</span><span class="hcRowText"><span class="hcRowName">' + name + '</span></span></button>';
   const drawerRow = (r, attr) => row(r, attr);
   app.insertAdjacentHTML('beforeend',
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
-      '<div class="hcDrawerHead"><div class="hcLogo">' + icon('mdi:home-assistant') + '</div><button class="navBtn tfIcon" type="button" data-hc-close title="Close" aria-label="Close">' + icon('mdi:close') + '</button></div>' +
+      '<div class="hcDrawerHead"><div class="hcLogo">' + HA_LOGO + '</div><button class="hcRailBtn" type="button" data-hc-close aria-label="Close">' + icon('mdi:close') + '</button></div>' +
       drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + RAIL.map((r) => drawerRow(r)).join('') +
       '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') +
-      '<button class="hcRow hcDrawerMe" type="button" data-hc-go="account"><span class="tfIcon hcChip"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
+      '<button class="hcRow hcNavRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcNavIcon hcNavMe"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
     '<div class="card hcMoreMenu" role="menu" hidden>' + MORE.map((r) => row(r, 'role="menuitem" data-hc-go="' + r[0] + '"')).join('') + '</div>');
   const drawer = app.querySelector('.hcDrawer'), more = app.querySelector('.hcMoreMenu'), moreBtn = shell.querySelector('[data-hc-more]');
-  [shell.querySelector('.hcRail'), drawer, more, root.querySelector('.bottomNav')].forEach((x) => x && homecore.paint(x));
+  // the rail's tooltips: HomeCore's tooltip look and timing (the first after 0.7 s, then straight away for a second),
+  // beside the icon; by the mouse or keyboard focus, not touch
+  const tip = Object.assign(document.createElement('div'), { className: 'tfTooltip hcRailTip', hidden: true });
+  tip.setAttribute('aria-hidden', 'true');
+  app.appendChild(tip);
+  let tipTimer = 0, tipGone = -Infinity;
+  const showTip = (el) => {
+    clearTimeout(tipTimer);
+    const go = () => {
+      if (!el.isConnected) return;
+      tip.textContent = el.dataset.tip;
+      tip.hidden = false;
+      const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+      tip.style.left = r.right + 8 + 'px';
+      tip.style.top = Math.max(8, r.top + r.height / 2 - t.height / 2) + 'px';
+    };
+    if (!tip.hidden || performance.now() - tipGone < 1000) go(); else tipTimer = setTimeout(go, 700);
+  };
+  const hideTip = () => { clearTimeout(tipTimer); if (!tip.hidden) tipGone = performance.now(); tip.hidden = true; };
+  const rail = shell.querySelector('.hcRail');
+  rail.addEventListener('pointerover', (ev) => { const el = ev.pointerType !== 'touch' && ev.target.closest('[data-tip]'); if (el) showTip(el); else hideTip(); });
+  rail.addEventListener('pointerleave', hideTip);
+  rail.addEventListener('focusin', (ev) => { const el = ev.target.closest('[data-tip]'); if (el?.matches(':focus-visible')) showTip(el); });
+  rail.addEventListener('focusout', hideTip);
+  rail.addEventListener('click', hideTip);
 
   // a page of the demo's own sits in Home's view, so HomeCore's card and tile styles apply to it; HomeCore's board hides
   homeView.insertAdjacentHTML('beforeend', '<div class="hcPage" hidden></div>');
