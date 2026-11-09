@@ -943,13 +943,22 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     // || 0 turns -0 into 0
     const difference=Math.round(high-average)||0,key=difference>0?'above':difference<0?'below':'same';
     const list=[...history.days,{date:new Date(),high,today:true}];
-    const W=220,H=158,top=22,bottom=20,values=list.map(d=>d.high).concat(average),min=Math.min(...values)-3,max=Math.max(...values)+1;
-    const y=v=>top+(1-(v-min)/(max-min))*(H-top-bottom),slot=W/list.length,barWidth=Math.min(18,slot*.6);
-    const bars='<svg class="wbCompareBars" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><line class="wbAvgLine" x1="0" x2="'+W+'" y1="'+y(average)+'" y2="'+y(average)+'"></line>'+
-      list.map((d,i)=>{const x=i*slot+slot/2,barTop=y(d.high),t=d.today?' wbToday':'';
-        return '<rect class="wbAvgBar'+t+'" x="'+(x-barWidth/2)+'" y="'+barTop+'" width="'+barWidth+'" height="'+(H-bottom-barTop)+'" rx="5"></rect>'+
-          '<text class="wbAvgValue'+t+'" x="'+x+'" y="'+(barTop-6)+'">'+esc(deg(h,d.high))+'</text><text class="wbAvgDay'+t+'" x="'+x+'" y="'+(H-4)+'">'+esc(fmtWeekdayNarrow(d.date,h))+'</text>'}).join('')+'</svg>';
-    // the big number, then what it means in words and in temperatures; the bars sit where a square's drawing would be
+    /* the highs as a line graph (Matt, 9 Nov; were bars) that fills its side of the card to the card's bottom inset: the
+       line and the shade under it stretch with the space, the points, values and days stay their size. Today in the
+       accent, the average as a dashed line with its value */
+    const values=list.map(d=>d.high).concat(average),min=Math.min(...values)-1,max=Math.max(...values)+1;
+    const fy=v=>(1-(v-min)/(max-min))*100,fx=i=>(i+.5)/list.length*100;
+    const pts=list.map((d,i)=>[fx(i),fy(d.high)]),line=pts.map(([x,y],i)=>(i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join('');
+    const bars='<div class="wbCompareBars wbTrend" aria-hidden="true"><div class="wbTrendPlot">'+
+      '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><defs><linearGradient id="'+P+'trend" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--primary)" stop-opacity=".28"></stop><stop offset="1" style="stop-color:var(--primary)" stop-opacity="0"></stop></linearGradient></defs>'+
+        '<path class="wbTrendArea" d="'+line+'L'+pts[pts.length-1][0].toFixed(2)+' 100L'+pts[0][0].toFixed(2)+' 100Z" fill="url(#'+P+'trend)"></path>'+
+        '<line class="wbAvgLine" x1="0" x2="100" y1="'+fy(average).toFixed(2)+'" y2="'+fy(average).toFixed(2)+'" vector-effect="non-scaling-stroke"></line>'+
+        '<path class="wbTrendLine" d="'+line+'" vector-effect="non-scaling-stroke"></path></svg>'+
+      '<span class="wbTrendAvg" style="top:'+fy(average).toFixed(2)+'%">'+esc(deg(h,average))+'</span>'+
+      list.map((d,i)=>{const t=d.today?' wbToday':'',at='left:'+fx(i).toFixed(2)+'%;top:'+fy(d.high).toFixed(2)+'%';
+        return '<i class="wbTrendDot'+t+'" style="'+at+'"></i><span class="wbAvgValue'+t+'" style="'+at+'">'+esc(deg(h,d.high))+'</span>'}).join('')+'</div>'+
+      '<div class="wbTrendDays">'+list.map((d,i)=>'<span class="wbAvgDay'+(d.today?' wbToday':'')+'" style="left:'+fx(i).toFixed(2)+'%">'+esc(fmtWeekdayNarrow(d.date,h))+'</span>').join('')+'</div></div>';
+    // the big number, then what it means in words and in temperatures; the graph beside them
     return tile({icon:I.chartLine,name:T.metrics.compared_to_average,double:true,sub:fill(T.highsLastDays,{days:history.days.length}),
       visual:'<div class="wbCompare"><div class="wbCompareText"><div class="wbCompareNumber">'+(difference>0?'+':'')+esc(deg(h,difference))+'</div>'+
         '<div class="wbCompareWords">'+esc(T.average[key])+'</div><div class="wbCompareTemps">'+esc(fill(T.todayVsAverage,{today:deg(h,high),average:deg(h,average)}))+'</div></div>'+bars+'</div>'});
@@ -1086,7 +1095,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     return '<div class="wbPollenAir" aria-hidden="true">'+Array.from({length:n},(_,i)=>{
       const [cls,svg]=POLLEN_GLYPHS[i%3],dur=10+(i*7)%9,bob=2.6+(i*5)%4*.4;
       return '<span class="wbFloat '+cls+'" style="top:'+(4+(i*37)%52)+'%;--x:'+((i*29)%90+4)+'%;--s:'+(.8+((i*13)%5)/10).toFixed(1)+';animation-duration:'+dur+'s;animation-delay:-'+((i*2.3)%dur).toFixed(1)+'s">'+
-        '<span class="wbBob" style="animation-duration:'+bob.toFixed(1)+'s;animation-delay:-'+((i*.7)%bob).toFixed(1)+'s">'+svg+'</span></span>'}).join('')+'</div>';
+        '<span class="wbPush"><span class="wbBob" style="animation-duration:'+bob.toFixed(1)+'s;animation-delay:-'+((i*.7)%bob).toFixed(1)+'s">'+svg+'</span></span></span>'}).join('')+'</div>';
   };
   function renderPollenTile(h){
     const all=anyPollen(h).sort((a,b)=>pollenRank(b)-pollenRank(a));
@@ -1264,6 +1273,29 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   root.addEventListener('keydown',onKeyDown);
   root.addEventListener('mousedown',onMouseDown);
 
+  /* Pollen's seeds move away from the pointer (Matt, 9 Nov): while it's over the card, each one near it is pushed
+     away, more the closer it is; once it leaves they ease back into their drift. Not with Reduce motion */
+  const PUSH_R=64,PUSH_MOST=30;let pushAt=null,pushRaf=0;
+  const pushFrame=()=>{
+    pushRaf=0;
+    root.querySelectorAll('.wbPollen .wbPush').forEach(el=>{
+      let x=0,y=0;
+      if(pushAt){const b=el.parentElement.getBoundingClientRect(),dx=b.left+b.width/2-pushAt.x,dy=b.top+b.height/2-pushAt.y,d=Math.hypot(dx,dy)||1;
+        if(d<PUSH_R){const f=(1-d/PUSH_R)*PUSH_MOST;x=dx/d*f;y=dy/d*f}}
+      el.style.transform=x||y?'translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)':'';
+    });
+    if(pushAt)pushRaf=requestAnimationFrame(pushFrame); // the seeds keep drifting under a still pointer
+  };
+  const onPointerMove=e=>{
+    const card=e.target.closest?.('.wbPollen');
+    if(!card||motionQuery?.matches){if(pushAt){pushAt=null;if(!pushRaf)pushRaf=requestAnimationFrame(pushFrame)}return}
+    pushAt={x:e.clientX,y:e.clientY};
+    if(!pushRaf)pushRaf=requestAnimationFrame(pushFrame);
+  };
+  const onPointerLeave=()=>{pushAt=null;if(!pushRaf)pushRaf=requestAnimationFrame(pushFrame)};
+  root.addEventListener('pointermove',onPointerMove);
+  root.addEventListener('pointerleave',onPointerLeave);
+
   // Sizes change (phone and desktop, or the page comes into view): repaint the art at its new size
   const resize=typeof ResizeObserver==='function'?new ResizeObserver(()=>paint(performance.now())):null;
   resize?.observe(root);
@@ -1290,6 +1322,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       render(true);wake();
     },
     destroy(){
+      cancelAnimationFrame(pushRaf);root.removeEventListener('pointermove',onPointerMove);root.removeEventListener('pointerleave',onPointerLeave);
       destroyed=true;
       timers.forEach(clearInterval);
       if(raf)cancelAnimationFrame(raf);
