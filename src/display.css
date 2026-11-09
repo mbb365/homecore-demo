@@ -451,7 +451,8 @@ button.tfAreaIcon{cursor:pointer}
 .tfMoreActions{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:20px}
 .tfMoreActions .tfAction{grid-column:auto}
 /* a reading tile beside a taller device keeps its icon and name at the top */
-.tfMoreActions>.activityRow{display:grid;grid-auto-flow:column;grid-template-columns:auto minmax(0,1fr);align-items:center;align-content:start;gap:12px;min-width:0;padding:18px;border-radius:28px;background:var(--card);box-shadow:var(--hc-hair)}
+/* a reading has nothing to control, so it stays as tall as its name and value, not its row (Matt, 9 Nov) */
+.tfMoreActions>.activityRow{align-self:start;display:grid;grid-auto-flow:column;grid-template-columns:auto minmax(0,1fr);align-items:center;align-content:start;gap:12px;min-width:0;padding:18px;border-radius:28px;background:var(--card);box-shadow:var(--hc-hair)}
 .tfMoreActions>.activityRow .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
 .tfMoreActions>.tfPlug .tfIcon{border:0;padding:0;cursor:pointer}
 .tfMoreActions>.activityRow :is(.activityRowName,.activityRowMeta){display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -852,13 +853,12 @@ button.tfAreaIcon{cursor:pointer}
 #app.house :is(.tfIcon,.activityRowIcon,.tfAreaIcon,.tfRoomIcon){--chip-hi:.0375;background-image:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--chip-hi)),inset 0 -1px 0 color-mix(in srgb,currentColor 3%,transparent),inset 0 -3px 6px color-mix(in srgb,currentColor 3.5%,transparent)}
 #app.house :is(.on[data-light] .tfIcon,.tfIcon.on[data-light],.tfACTile .tfIcon[data-light],.on[data-tone="alarm"] .tfIcon,.tfIcon[data-light]){--chip-hi:.1375}
 /* widgets with an action zone (Matt, 9 Nov): XL (5 rows) on the Weather page, so the callouts show under the zone;
-   on the dashboard L is the zone alone, XL adds the callouts; M and S keep the reading and its parts as before */
+   on the dashboard L is the zone alone, XL adds the callouts; M shows the three callout lines (Matt, 9 Nov) under the reading; S keeps the reading and its parts as before */
 #app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-xl]{grid-row:span 5}
 #app.tfBoard .tfDashBento:not([data-rows="5"]) .wbItem[data-xl] .wbCallouts{display:none}
 #app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]) .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
 #app.tfBoard .tfDashBento[data-rows="3"] .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
 #app.tfBoard .tfDashBento[data-rows="1"] :is(.wbZone,.wbCallouts){display:none}
-#app.tfBoard .tfDashBento[data-rows="3"] .wbCallout:nth-child(n+3){display:none}
 /* the Weather page in rows by height (Matt, 9 Nov): no packing of later cards into earlier gaps, and the first 4-row card
    starts a new row, so the 5-row cards share rows and the 4-row cards share rows */
 #app.tfWeatherOpen .tfBento.tfPegs .wbBento{grid-auto-flow:row}
