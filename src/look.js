@@ -6,8 +6,18 @@
 const KEY = 'homecore-demo-look', IMG_KEY = 'homecore-demo-look-image';
 const BLANK = { card: null, opacity: 100, bg: 'theme', bgColour: null, stroke: null, strokeClear: null, imgLum: null };
 const INK = { dark: ['#26221e', '#6a625a'], light: ['#d9d9d9', '#969696'] };
-// what HomeCore paints in the card colour
-const SURFACES = '#homeView .card,.hcPage .card,.tfAction,.wbCard,.tfMore,.tfMoreSideInner,.tfMoreActions>.activityRow,.tfBoardMenu,.tfTrayInner,.hcDrawerPanel,.hcSumsPop,.hcMoreMenu,#settingsView .toggleList';
+// everything painted in the card colour (every rule with background: var(--card), --card2, --modal or --group-bg), so
+// the text in any of them follows the card; Settings' .card is only a wrapper on the background, so it doesn't count
+const SURFACES = [
+  '.card:not(#settingsView .card)', '.panel', '.workoutPanel', '.tfAction', '.wbCard', '.tfMore', '.tfMoreSideInner', '.tfMoreActions>.activityRow',
+  '.tfBoardMenu', '.tfTrayInner', '.tfTrayTuck', '.tfMiniPhone', '.tfPhoneBlock', '.tfFavHide', '.hcDrawerPanel', '.hcSumsPop', '.hcMoreMenu',
+  '.hcMapCard', '.hcPin', '.hcMap .maplibregl-ctrl-group', '#settingsView .toggleList', '#settingsView .integrationList', '#settingsView .helpSteps',
+  '.setupGroup', '.modal', '.modalStatic', '.sheet', '.confirmCard', '.nextCard', '.upcomingCard',
+].join(',');
+// and what's painted in the page colour though it sits in or over cards: the wide popups and the floating phone's
+// screen; their text follows the page. (#hcPageInk.hcA.hcB matches nothing: it only lifts the rule
+// to the same weight as the cards' one, which has an id and two classes in it, so this one, coming after, wins)
+const ON_PAGE = ['#hcPageInk.hcA.hcB', '.tfMore.wide', '.tfMorePair.over .tfMore.wide+.tfMoreSide .tfMoreSideInner', '.tfPhoneScreen'].join(',');
 
 const read = (k, fallback) => { try { return localStorage.getItem(k) ?? fallback; } catch (_e) { return fallback; } };
 const write = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); return true; } catch (_e) { return false; } };
@@ -46,14 +56,17 @@ export function mountLook(root, { toast }) {
     const seen = s.bg === 'image' && s.imgLum != null ? lum(card) * a + s.imgLum * (1 - a) : lum(mix(ground, card, a));
     const [text, muted] = inkFor(seen), [pageText, pageMuted] = inkFor(groundLum);
     const tile = mix(card, hexRgb(text), 0.07);
+    // tiles on the page itself (a page's search and buttons): from the background, or see-through over an image
+    const pageTile = s.bg === 'image' ? (pageText === INK.dark[0] ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.35)') : rgbHex(mix(ground, hexRgb(pageText), 0.07));
     const line = s.stroke ? hexRgb(s.stroke) : t.line.slice(0, 3), lineA = s.strokeClear != null ? 1 - s.strokeClear / 100 : t.line[3];
     const rgba = (c, al) => 'rgba(' + c.map(Math.round).join(',') + ',' + +al.toFixed(3) + ')';
     style.textContent =
       '#app.hcDemo.hcLook{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + ';' +
-        (s.bg !== 'theme' ? '--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) + ';--text:' + pageText + ';--muted:' + pageMuted + ';color:var(--text);' : '') + '}' +
+        (s.bg !== 'theme' ? '--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) + ';--text:' + pageText + ';--muted:' + pageMuted + ';--tile:' + pageTile + ';color:var(--text);' : '') + '}' +
       (s.bg === 'image' && img ? '#app.hcDemo.hcLook .shell{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' +
         '#app.hcDemo.hcLook .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
       '#app.hcDemo.hcLook :is(' + SURFACES + '){--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
+      '#app.hcDemo.hcLook :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
       (a < 1 ? '#app.hcDemo.hcLook :is(' + SURFACES + '){-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '');
     draw();
   }
