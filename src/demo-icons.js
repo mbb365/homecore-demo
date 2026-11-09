@@ -9,7 +9,7 @@ import {
   mdiDoorClosed, mdiWindowClosed, mdiGauge, mdiFan, mdiSmokeDetector, mdiWater, mdiTelevision, mdiSpeaker,
   mdiCurtainsClosed, mdiRollerShade, mdiRollerShadeClosed, mdiBlindsHorizontal, mdiBlindsHorizontalClosed,
   mdiWindowShutter, mdiWindowShutterOpen, mdiUpdate, mdiAccountCircleOutline, mdiMapMarker, mdiHeartPulse, mdiCalendar,
-  mdiShieldAccount, mdiPalette, mdiHuman, mdiBell, mdiCart, mdiChartBoxOutline, mdiTooltipAccount,
+  mdiShieldAccount, mdiPalette, mdiHuman, mdiBell, mdiCart, mdiChartBoxOutline, mdiTooltipAccount, mdiAccountMultiple, mdiDoorOpen,
 } from '@mdi/js';
 
 export const DEMO_ICONS = {
@@ -31,6 +31,7 @@ export const DEMO_ICONS = {
   'mdi:update': mdiUpdate, 'mdi:account-circle-outline': mdiAccountCircleOutline, 'mdi:map-marker': mdiMapMarker, 'mdi:heart-pulse': mdiHeartPulse,
   'mdi:calendar': mdiCalendar, 'mdi:shield-account': mdiShieldAccount, 'mdi:palette': mdiPalette, 'mdi:human': mdiHuman, 'mdi:bell': mdiBell,
   'mdi:cart': mdiCart, 'mdi:chart-box-outline': mdiChartBoxOutline, 'mdi:tooltip-account': mdiTooltipAccount,
+  'mdi:account-multiple': mdiAccountMultiple, 'mdi:door-open': mdiDoorOpen,
 };
 
 // an inline icon, filled like Home Assistant's

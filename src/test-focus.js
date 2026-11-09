@@ -54,7 +54,14 @@ const SUMMARIES = {
   media_players: { name: 'Media players', icon: 'mdi:multimedia', colour: '#2196f3' },
   maintenance: { name: 'Maintenance', icon: 'mdi:wrench', colour: '#9e9e9e' },
   energy: { name: 'Energy', icon: 'mdi:lightning-bolt', colour: '#ffc107' },
+  // HomeCore demo (Matt, 9 Nov): more to choose from, all off until switched on in the edit tray
+  covers: { name: 'Covers', icon: 'mdi:blinds-horizontal', colour: '#9c27b0' },
+  people: { name: 'People', icon: 'mdi:account-multiple', colour: '#03a9f4' },
+  openings: { name: 'Doors and windows', icon: 'mdi:door-open', colour: '#ff9800' },
+  leaks: { name: 'Leaks', icon: 'mdi:water', colour: '#2196f3' },
+  vacuum: { name: 'Vacuum', icon: 'mdi:robot-vacuum', colour: '#4caf50' },
 };
+const EXTRA_SUMS = ['covers', 'people', 'openings', 'leaks', 'vacuum'];
 const HOUSE_KEY = 'move_assistant_house'; // the house page's own saved data (its favourites), apart from the moves
 const USED_KEY = 'move-assistant-house-used'; // how often each device is used here, for suggested favourites
 const TOGGLES = ['switch', 'fan', 'input_boolean', 'automation'];
@@ -1252,6 +1259,22 @@ export function mountTestFocus(root, { config, getHass }) {
     };
   }
   // each summary's line, worked out as Home Assistant's summary card does, and the devices it opens to
+  // a summary shows when it's on: Home Assistant's own unless switched off, the demo's extras only once switched on
+  const sumOn = (k) => (EXTRA_SUMS.includes(k) ? (prefs.shownSums || []).includes(k) : !(prefs.hiddenSums || []).includes(k));
+  function extraSums(rooms, groups, of) {
+    const covers = rooms.flatMap((r) => of(r, /^cover\./)), open = covers.filter((id) => ['open', 'opening'].includes(states[id]?.state)).length;
+    const people = Object.keys(states).filter((id) => id.startsWith('person.')), home = people.filter((id) => states[id]?.state === 'home').length;
+    const openings = model.security.openings.filter((id) => states[id]), opened = openings.filter((id) => states[id].state === 'on').length;
+    const leaks = Object.keys(states).filter((id) => id.startsWith('binary_sensor.') && attr(id).device_class === 'moisture'), wet = leaks.filter((id) => states[id].state === 'on').length;
+    const vac = model.vacuums.filter((id) => states[id]);
+    return {
+      covers: covers.length && { value: open ? open + ' open' : 'All closed', groups: groups((r) => of(r, /^cover\./)) },
+      people: people.length && { value: home ? home + ' home' : 'Nobody home', groups: [{ name: 'People', ids: people }] },
+      openings: openings.length && { value: opened ? opened + ' open' : 'All closed', groups: [{ name: 'Doors and windows', ids: openings }] },
+      leaks: leaks.length && { value: wet ? count(wet, 'leak', 'leaks') : 'All dry', groups: [{ name: 'Leak sensors', ids: leaks }] },
+      vacuum: vac.length && { value: cap(states[vac[0]].state), groups: [{ name: 'Vacuum', ids: vac }] },
+    };
+  }
   function summaryData() {
     const rooms = model.rooms, sec = model.security, of = (r, re) => r.actions.filter((id) => re.test(id));
     const groups = (pick) => rooms.map((r) => ({ name: r.name, ids: pick(r) })).filter((g) => g.ids.length);
@@ -1273,13 +1296,14 @@ export function mountTestFocus(root, { config, getHass }) {
       media_players: players.length && { value: playing ? playing + ' playing' : 'No media playing', groups: groups((r) => of(r, /^media_player\./)) },
       maintenance: maint,
       energy: model.grid && { value: watts(Number(states[solarNow]?.state || 0) * 1000 + Number(states[model.grid].state)) + ' now', groups: [{ name: 'Energy', ids: [...solar, model.grid] }] },
+      ...extraSums(rooms, groups, of),
     };
     const out = [];
     const active = alerts.filter((x) => x.severity !== 'warning' && x.on);
     if (active.length) out.push({ key: 'alerts', name: 'Alerts', icon: 'mdi:alarm-plus', colour: '#f44336', value: count(active.length, 'active alert', 'active alerts'), groups: [{ name: 'Active', ids: active.map((x) => x.entity) }] });
     shortcutItems().forEach((it) => {
       if (it.type !== 'summary') out.push({ key: 'path:' + it.path, name: it.label || it.path, icon: it.icon || 'mdi:link-variant', colour: '', value: '' });
-      else if (!it.hidden && all[it.key] && !(prefs.hiddenSums || []).includes(it.key)) out.push({ key: it.key, ...SUMMARIES[it.key], ...all[it.key] });
+      else if (!it.hidden && all[it.key] && sumOn(it.key)) out.push({ key: it.key, ...SUMMARIES[it.key], ...all[it.key] });
     });
     return out;
   }
@@ -1313,7 +1337,7 @@ export function mountTestFocus(root, { config, getHass }) {
     ]);
     // edit mode's old choices (sections, order, sizes…) are left behind: the page is laid out as Home Assistant has it
     const v = mine?.value || {};
-    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
+    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
     haHome = home?.value || {};
     haSecurity = security?.value || {};
     predicted = Array.isArray(usage?.entities) ? usage.entities : [];
@@ -3346,6 +3370,13 @@ export function mountTestFocus(root, { config, getHass }) {
     paint(scope) { fillIcons(scope); },
     // Settings' choices measured again (they're measured on resize; a late font changes their words' widths too)
     refit() { fitChoices(); },
+    // the summaries to choose from, and switching one (the edit tray's popout)
+    sums() { return Object.entries(SUMMARIES).map(([key, x]) => ({ key, ...x, on: sumOn(key) })); },
+    setSum(key, on) {
+      if (EXTRA_SUMS.includes(key)) { const shown = new Set(prefs.shownSums || []); if (on) shown.add(key); else shown.delete(key); prefs = { ...prefs, shownSums: [...shown] }; }
+      else { const hidden = new Set(prefs.hiddenSums || []); if (on) hidden.delete(key); else hidden.add(key); prefs = { ...prefs, hiddenSums: [...hidden] }; }
+      savePrefs(); refresh();
+    },
     update(next) {
       if (!testFocus) return;
       const first = !Object.keys(states).length;

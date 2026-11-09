@@ -321,6 +321,30 @@ export function mountDemoShell(root, { getHass, homecore }) {
     if (editing && pen.parentElement !== trayHead) { trayHead.appendChild(pen); loadFonts(); }
     if (!editing && pen.parentElement === trayHead) topRight.appendChild(pen);
   }).observe(app, { attributes: true, attributeFilter: ['class'] });
+  /* the summaries are chosen in the edit tray now (Matt, 9 Nov): a Summaries section whose button pops out the list,
+     each with its switch; the Settings tab for them goes */
+  (function summariesInTray() {
+    $('housePane')?.querySelector('[data-house-tab="sums"]')?.remove();
+    const inner = root.querySelector('.tfTrayInner'), headEl = inner?.querySelector('.tfTrayHead');
+    if (!inner || !headEl) return;
+    headEl.insertAdjacentHTML('afterend', '<section class="tfTraySection hcTraySums"><div class="sectionLabel">Summaries</div><p class="tfTrayNote">Which summaries show under the title.</p>' +
+      '<button class="pill tfTrayAdd" type="button" data-hc-sums aria-expanded="false">Choose summaries</button></section>');
+    const btn = inner.querySelector('[data-hc-sums]');
+    app.insertAdjacentHTML('beforeend', '<div class="card hcSumsPop" role="dialog" aria-label="Summaries" hidden></div>');
+    const pop = app.querySelector('.hcSumsPop');
+    const draw = () => {
+      pop.innerHTML = '<div class="hcCardTitle">Summaries</div>' + homecore.sums().map((x) => '<div class="hcSumRow">' +
+        '<button class="switch' + (x.on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + x.on + '" aria-label="' + esc(x.name) + '" data-sum="' + esc(x.key) + '"></button>' +
+        '<span class="tfIcon hcChip" style="color:' + esc(x.colour || 'var(--hc-icon-ink)') + '" data-icon-for="" data-icon-name="' + esc(x.icon) + '"></span><span class="hcRowName">' + esc(x.name) + '</span></div>').join('');
+      homecore.paint(pop);
+    };
+    const place = () => { const r = btn.getBoundingClientRect(); pop.style.top = Math.max(16, Math.min(r.top - 12, innerHeight - pop.offsetHeight - 16)) + 'px'; };
+    const close = () => { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', () => { if (!pop.hidden) { close(); return; } draw(); pop.hidden = false; btn.setAttribute('aria-expanded', 'true'); place(); });
+    pop.addEventListener('click', (ev) => { const sw = ev.target.closest('[data-sum]'); if (!sw) return; const on = !sw.classList.contains('on'); homecore.setSum(sw.dataset.sum, on); sw.classList.toggle('on', on); sw.setAttribute('aria-checked', String(on)); });
+    new MutationObserver(() => { if (!app.classList.contains('tfEditing')) close(); }).observe(app, { attributes: true, attributeFilter: ['class'] });
+    root.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !pop.hidden) { ev.stopPropagation(); close(); btn.focus(); } }, true);
+  })();
   document.fonts?.ready.then(() => homecore.refit());
   go(location.hash.replace(/^#\/?/, '') || 'home');
   return { go };
