@@ -1160,9 +1160,15 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       if(focused&&!focusAfter)it.el.querySelector('[data-wb-focus="'+focused+'"]')?.focus();
     }
     if(focusAfter){root.querySelector('[data-wb-focus="'+focusAfter+'"]')?.focus();focusAfter=null}
-    // the first shorter card that shows starts a row of its own
-    let broke=false;
-    for(const name of CARDS){const it=items[name],tall=SIZES[name]==='wide'||XL.includes(name),mark=!it.el.hidden&&!tall&&!broke;if(mark)broke=true;it.el.toggleAttribute('data-break',mark)}
+    // Matt's rows (9 Nov) start where he said, at the dashboard's own column widths (more columns leave space at the
+    // end, fewer wrap): the first of Moon and what follows it starts row 2, and the first shorter card starts row 3
+    let row2=false,row3=false;
+    for(const name of CARDS){
+      const it=items[name],shows=!it.el.hidden,tall=SIZES[name]==='wide'||XL.includes(name),past=CARDS.indexOf(name)>=CARDS.indexOf('moon');
+      const mark=shows&&((past&&tall&&!row2)||(!tall&&!row3));
+      if(mark&&tall)row2=true;if(mark&&!tall)row3=true;
+      it.el.toggleAttribute('data-break',mark);
+    }
     paint(performance.now());
   }
   function queue(){
