@@ -306,14 +306,10 @@
 /* light mode: the summaries' icons as bright as in dark mode (Matt, 9 Nov: Lights, Energy and Climate went dull) */
 #app.hcDemo.house.light .tfSum{--sum-ink:var(--sum-d,var(--hc-icon-ink))}
 #app.hcDemo.house.light .tfSum[data-summary="climate"]{--g0:var(--g0-d);--g1:var(--g1-d);--g2:var(--g2-d)}
-/* editing: the tick in the tray's head instead of Done; the title's font list where the pencil was */
+/* editing: the tick in the tray's head instead of Done */
 #app.hcDemo .tfTrayHead>[data-tray-done]{display:none}
 #app.hcDemo .tfTrayHead{align-items:center}
 #app.hcDemo .tfTrayHead>#dashEditNav{margin-left:auto}
-.hcTitleFontPick{display:none}
-#app.tfEditing .hcTopRight{right:calc(360px + 22px)}
-#app.tfEditing .hcTitleFontPick{display:block;height:40px;min-width:200px}
-#app.hcTitleFont .tfDashTitle{font-family:var(--hc-title-font)!important;font-weight:var(--hc-title-weight)!important;letter-spacing:-.01em!important}
 
 /* ---------- Activity: Home Assistant's logbook in HomeCore's parts (Matt, 9 Nov) ---------- */
 .hcActivityBar .tfSeg{flex:0 0 auto}
@@ -331,3 +327,9 @@
 .hcSumRow{display:flex;align-items:center;gap:12px;min-height:var(--tile-min);padding:0 8px}
 .hcSumRow .hcRowName{flex:1}
 .hcSumRow .tfIcon{background-color:var(--hc-icon)}
+
+/* the edit tray's settings further apart (Matt, 9 Nov): 32 between sections, 12 inside one */
+#app.hcDemo .tfTrayInner{gap:32px}
+#app.hcDemo .tfTraySection{gap:12px}
+/* the map box and its controls in Geist too (MapLibre sets Helvetica Neue on them) */
+.hcMap :is(.maplibregl-map,.maplibregl-ctrl,.maplibregl-ctrl *){font-family:var(--font)!important}

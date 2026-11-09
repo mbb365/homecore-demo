@@ -15,12 +15,12 @@ const local = {
 };
 
 const CSS = `
-:host{all:initial;position:fixed;z-index:2147483000;right:22px;bottom:22px;font-family:Geist,Inter,system-ui,sans-serif;color:#d9d9d9;--line:rgba(255,255,255,.14)}
+:host{all:initial;position:fixed;z-index:2147483000;right:22px;bottom:22px;font-family:Geist,system-ui,sans-serif;color:#d9d9d9;--line:rgba(255,255,255,.14)}
 :host([hidden]),.panel[hidden],.chip[hidden]{display:none}
 .panel{box-sizing:border-box;width:calc(${PHONE.w}px * var(--s) + 44px);display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px;border-radius:28px;background:#222;box-shadow:inset 0 0 0 .4px var(--line),0 18px 50px rgba(0,0,0,.45)}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
-.name{font:500 18px/1.2 Geist,Inter,system-ui,sans-serif;letter-spacing:-.01em;padding-left:4px}
-button{font:600 14px/20px Geist,Inter,system-ui,sans-serif;color:#d9d9d9;cursor:pointer}
+.name{font:500 18px/1.2 Geist,system-ui,sans-serif;letter-spacing:-.01em;padding-left:4px}
+button{font:600 14px/20px Geist,system-ui,sans-serif;color:#d9d9d9;cursor:pointer}
 .hide{height:34px;padding:0 12px;border:0;border-radius:12px;background:transparent;text-decoration:underline;text-underline-offset:3px}
 .hide:hover{color:#fff}
 .device{position:relative;flex:none;border-radius:calc(48px * var(--s) + 8px);background:#0b0b0b;padding:8px;box-shadow:inset 0 0 0 1px #3a3a3a,0 0 0 1px #000}
@@ -30,8 +30,8 @@ iframe{position:absolute;top:calc(${BAR}px * var(--s));left:0;width:${PHONE.w}px
 .qr{display:flex;align-items:center;gap:12px;width:100%}
 .code{flex:none;padding:6px;border-radius:12px;background:#fff;line-height:0}
 .code svg{display:block;width:72px;height:72px}
-.say{display:grid;gap:2px;font:400 14px/1.3 Inter,system-ui,sans-serif;color:#969696}
-.say strong{font:600 14px/20px Geist,Inter,system-ui,sans-serif;color:#d9d9d9}
+.say{display:grid;gap:2px;font:400 14px/1.3 Geist,system-ui,sans-serif;color:#969696}
+.say strong{font:600 14px/20px Geist,system-ui,sans-serif;color:#d9d9d9}
 .chip{display:flex;align-items:center;gap:8px;height:46px;padding:0 16px 0 12px;border:0;border-radius:16px;background:#222;box-shadow:inset 0 0 0 .4px var(--line),0 10px 30px rgba(0,0,0,.4)}
 .chip svg{width:22px;height:22px;fill:currentColor}
 `;

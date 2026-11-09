@@ -13,14 +13,14 @@ import { mountDemoShell } from "./demo-shell.js";
 // The saved-data key app.js reads and writes. Kept as it was so HomeCore's own keys stay unchanged.
 const STORAGE_KEY = "move_assistant";
 
-// Fonts declared inside a shadow root are ignored, so Inter and Geist are added to the page once.
+// Fonts declared inside a shadow root are ignored, so Geist is added to the page once (the one font: Matt, 9 Nov).
 function loadFonts() {
   if (document.getElementById("homecore-fonts")) return;
   const link = document.createElement("link");
   link.id = "homecore-fonts";
   link.rel = "stylesheet";
   link.href =
-    "https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap";
+    "https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700;800&display=swap"; // Geist only (Matt, 9 Nov)
   document.head.appendChild(link);
 }
 

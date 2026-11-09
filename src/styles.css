@@ -20,7 +20,7 @@
   --color-state-pressed:rgba(255,255,255,.14);--color-state-hover-on-bright:rgba(0,0,0,.06);--color-state-pressed-on-bright:rgba(0,0,0,.12);
   --scrim:rgba(0,0,0,.66);--lift:rgba(0,0,0,.5)}
 *{box-sizing:border-box}
-#app{color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background .25s ease,color .25s ease;-webkit-font-smoothing:antialiased}
+#app{color:var(--text);font-family:var(--font);transition:background .25s ease,color .25s ease;-webkit-font-smoothing:antialiased}
 [hidden]{display:none!important}
 button,input{font:inherit}
 #app{flex:1;display:flex;flex-direction:column;width:100%;margin:0;padding:0;background:var(--bg);text-align:left}
@@ -1419,7 +1419,7 @@ button,input{font:inherit}
 :host{
   --primary:#03A9F4;
   --secondary:#D0FF00;
-  --font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font:Geist,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; /* Geist only (Matt, 9 Nov; was Inter) */
   --font-tile:Geist,var(--font);
   /* Synced from Figma text styles Desktop/*, Phone/*, Tile/* and Weather/* (2026-10-19) */
   --w-regular:400;--w-medium:500;--w-semibold:600;--w-bold:700;--w-heavy:800;

@@ -287,38 +287,13 @@ export function mountDemoShell(root, { getHass, homecore }) {
   }
   ctx.oops = oops;
   root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
-  /* the home title's font (Matt, 9 Nov): a list beside the title while the dashboard is being edited; kept in this
-     browser, and the phone's copy follows it */
-  const FONTS = [['', 'Inter (HomeCore)'], ['Geist', 'Geist', 600], ['Space Grotesk', 'Space Grotesk', 700], ['Bricolage Grotesque', 'Bricolage Grotesque', 700],
-    ['Fraunces', 'Fraunces', 600], ['DM Serif Display', 'DM Serif Display', 400], ['Playfair Display', 'Playfair Display', 700], ['JetBrains Mono', 'JetBrains Mono', 700], ['Caveat', 'Caveat', 700]];
-  const FONT_KEY = 'homecore-demo-title-font';
-  const loadFonts = () => {
-    if (document.getElementById('hc-title-fonts')) return;
-    const link = Object.assign(document.createElement('link'), { id: 'hc-title-fonts', rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?' + FONTS.filter(([f]) => f && f !== 'Geist').map(([f, , w]) => 'family=' + f.replace(/ /g, '+') + ':wght@' + w).join('&') + '&display=swap' });
-    document.head.appendChild(link);
-  };
-  const setTitleFont = (f) => {
-    const [, , w] = FONTS.find(([k]) => k === f) || FONTS[0];
-    app.style.setProperty('--hc-title-font', f ? '"' + f + '", var(--font)' : '');
-    app.style.setProperty('--hc-title-weight', f ? String(w) : '');
-    app.classList.toggle('hcTitleFont', Boolean(f));
-    try { if (f) localStorage.setItem(FONT_KEY, f); else localStorage.removeItem(FONT_KEY); } catch (_e) { /* this visit only */ }
-  };
-  let titleFont = '';
-  try { titleFont = localStorage.getItem(FONT_KEY) || ''; } catch (_e) { /* the default */ }
-  if (titleFont) { loadFonts(); setTitleFont(titleFont); }
   const topRight = shell.querySelector('.hcTopRight');
-  topRight.insertAdjacentHTML('afterbegin', '<select class="settingsSelect hcTitleFontPick" aria-label="Title font">' + FONTS.map(([k, name]) => '<option value="' + esc(k) + '">' + esc(name) + '</option>').join('') + '</select>');
-  const fontPick = topRight.querySelector('.hcTitleFontPick');
-  fontPick.value = titleFont;
-  fontPick.addEventListener('change', () => { loadFonts(); setTitleFont(fontPick.value); });
   /* the edit tick lives in the edit tray's head while editing (Matt, 9 Nov: the tray covered it), in place of Done */
   const trayHead = root.querySelector('.tfTrayHead');
   new MutationObserver(() => {
     const editing = app.classList.contains('tfEditing'), pen = $('dashEditNav');
     if (!pen || !trayHead) return;
-    if (editing && pen.parentElement !== trayHead) { trayHead.appendChild(pen); loadFonts(); }
+    if (editing && pen.parentElement !== trayHead) trayHead.appendChild(pen);
     if (!editing && pen.parentElement === trayHead) topRight.appendChild(pen);
   }).observe(app, { attributes: true, attributeFilter: ['class'] });
   /* the summaries are chosen in the edit tray now (Matt, 9 Nov): a Summaries section whose button pops out the list,
