@@ -83,6 +83,8 @@ const I={
 
 // The patch's English text (ui.card.weather.*); placeholders in braces
 const T={
+  // the XL widgets' callout rows (Matt, 9 Nov)
+  callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today'},
   now:'Now',today:'Today',tomorrow:'Tomorrow',back:'Back',nextHours:'Next hours',nextDays:'Next days',views:{strip:'Hours',bars:'Days'},showAs:'Show as',
   rangeRow:'{day}: low {low}, high {high}',humidity:'Humidity',high:'High',low:'Low',
   modes:{temperature:'Temperature',precipitation:'Rain',wind:'Wind'},
@@ -327,10 +329,14 @@ const moonShadowPath=(cx,cy,r,f)=>{const rx=r*Math.abs(1-2*f),sweep=f<.5?0:1;ret
 
 /* ---- Pieces every card uses (homecore.ts) ---- */
 // Square data tile: chip, name and subdata, then one drawing that fills the rest
-const tile=({icon,name,sub,visual,double,backdrop,cls})=>'<div class="wbCard wbSquare'+(double?' wbDouble':'')+(backdrop?' wbHasBackdrop':'')+(cls?' '+cls:'')+'">'+
+// A widget with an action zone (Matt, 9 Nov; Figma 986:10196): the head, then the zone, 216 x 198 at the drawn 252
+// (the whole of an L's space); at XL the same zone, then up to three lines of data callouts under it
+const tile=({icon,name,sub,visual,double,backdrop,cls,zone,callouts})=>'<div class="wbCard wbSquare'+(double?' wbDouble':'')+(backdrop?' wbHasBackdrop':'')+(zone!=null?' wbZoned':'')+(cls?' '+cls:'')+'">'+
   (backdrop?'<div class="wbBackdrop" aria-hidden="true">'+backdrop+'</div>':'')+
   '<div class="wbHead"><div class="wbChip wbPlain">'+fittedIcon(icon)+'</div><div class="wbText"><span class="wbName">'+esc(name)+'</span>'+
-  (sub?'<span class="wbSub">'+esc(sub)+'</span>':'')+'</div></div><div class="wbVisual">'+visual+'</div></div>';
+  (sub?'<span class="wbSub">'+esc(sub)+'</span>':'')+'</div></div>'+
+  (zone!=null?'<div class="wbZone">'+zone+'</div>'+(callouts?.length?'<div class="wbCallouts">'+callouts.slice(0,3).map(([a,b])=>'<span class="wbCallout"><span>'+esc(a)+'</span><span>'+esc(b)+'</span></span>').join('')+'</div>':'')
+    :'<div class="wbVisual">'+visual+'</div>')+'</div>';
 const valueHtml=(n,unit)=>'<div class="wbValue"><span class="wbNum">'+esc(n)+'</span>'+(unit?'<span class="wbUnitV">'+esc(unit)+'</span>':'')+'</div>';
 
 // One day from midnight to midnight: night shaded, sunrise and sunset along the top, the hours along the bottom,
@@ -404,10 +410,13 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   const CARDS=['current','hourly','sun','moon','wind','uv_index','compared_to_average','humidity','pressure','precipitation','visibility','air_quality',...BASE_CARDS]
     .filter(name=>!cards||cards.includes(name));
   const SIZES={current:'wide',hourly:'wide',compared_to_average:'double'};
+  // the widgets with an action zone are XL on the Weather page, so their callouts show (Matt, 9 Nov)
+  const XL=['sun','moon','uv_index','aq_tile','pollen_tile'];
   const items={};
   CARDS.forEach(name=>{
     const el=document.createElement('div');
     el.className='wbItem';el.dataset.card=name;el.dataset.size=SIZES[name]||'tile';el.hidden=true;
+    if(XL.includes(name))el.dataset.xl='';
     bento.appendChild(el);items[name]={el,html:null};
   });
 
@@ -834,13 +843,13 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     // solar noon, named above the top of the path
     const noon=rise&&set?new Date((rise.getTime()+set.getTime())/2):null;
     return tile({icon:I.sunny,name:T.sun,sub:daylight?fill(T.daylightShort,{hours,minutes}):undefined,
-      visual:'<div class="wbSunSky" style="background:linear-gradient(180deg, '+top+', '+bottom+');--wb-sun-line:'+line+'"><svg viewBox="0 0 200 124" aria-hidden="true">'+
+      callouts:[[T.callout.sunrise,time(rise)],[T.callout.sunset,time(set)],...(noon?[[T.callout.noon,time(noon)]]:[])],
+      zone:'<div class="wbSunSky" style="background:linear-gradient(180deg, '+top+', '+bottom+');--wb-sun-line:'+line+'"><svg viewBox="0 0 200 124" aria-hidden="true">'+
         '<defs><radialGradient id="'+P+'sun-glow"><stop offset="0" stop-color="'+core+'"></stop><stop offset="0.45" stop-color="'+core+'"></stop><stop offset="1" stop-color="'+edge+'"></stop></radialGradient>'+
         '<clipPath id="'+P+'above-horizon"><rect x="0" y="0" width="200" height="100"></rect></clipPath></defs>'+
         '<path class="wbSunPath" d="M 26 100 A 74 74 0 0 1 174 100"></path><line class="wbHorizon" x1="0" x2="200" y1="100" y2="100"></line>'+
         (up?'<circle cx="'+sunX+'" cy="'+sunY+'" r="14" fill="url(#'+P+'sun-glow)" clip-path="url(#'+P+'above-horizon)"></circle>':'')+
-        (noon?'<text class="wbSunTime wbNoon" x="100" y="1">'+esc(time(noon))+'</text>':'')+
-        '<text class="wbSunTime" x="26" y="117">'+esc(time(rise))+'</text><text class="wbSunTime" x="174" y="117">'+esc(time(set))+'</text></svg></div>'});
+        '</svg></div>'});
   }
 
   /* ---- Moon: phase, how much is lit and moonrise or moonset, worked out from the home location ---- */
@@ -877,8 +886,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const litOnLeft=ill.phase>.5!==lat<0;
     const lit=fmtNum(Math.round(ill.fraction*100),h.locale)+'%',riseOrSet=rise??set,time=riseOrSet?fmtTime(riseOrSet,h):undefined;
     return tile({icon:I.night,name:T.moon,sub:T.phases[phase],
-      visual:'<div class="wbMoonBox">'+moonSvg(ill.fraction,litOnLeft,lat<0)+'</div>'+
-        '<div class="wbScaleNote wbMoonCaption"><span>'+(time?esc(fill(rise?T.moonriseAt:T.moonsetAt,{time})):'')+'</span><span>'+esc(fill(T.lit,{illumination:lit}))+'</span></div>'});
+      callouts:[...(rise?[[T.callout.moonrise,fmtTime(rise,h)]]:[]),...(set?[[T.callout.moonset,fmtTime(set,h)]]:[]),[T.callout.lit,lit]],
+      zone:'<div class="wbMoonBox">'+moonSvg(ill.fraction,litOnLeft,lat<0)+'</div>'});
   }
 
   /* ---- Wind: speed, direction and Beaufort on a round compass ---- */
@@ -921,7 +930,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       '<text class="wbVuLabel" x="100" y="70.1">UV</text><g class="wbVuNeedle" style="--wb-angle:'+angleOf(v)+'deg"><line x1="'+PX+'" y1="'+PY+'" x2="'+PX+'" y2="'+(PY-116)+'"></line></g>'+
       '<path class="wbVuHousing" d="M 64 134 L 64 128 A 36 36 0 0 1 136 128 L 136 134 Z"></path><text class="wbVuValue" x="100" y="114.9">'+esc(fmtNum(Math.round(v),h.locale))+'</text></svg>';
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
-      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,visual:meter});
+      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:meter,
+      callouts:[[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
   }
   function renderCompared(h){
     const today=forecast('daily')[0],history=data.temperatureHistory;
@@ -1052,22 +1062,21 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   const POLLEN_RANK=['none','very_low','low','moderate','high','very_high'];
   const pollenRank=s=>num(s.state)?Number(s.state):POLLEN_RANK.indexOf(String(s.state).toLowerCase().replace(/ /g,'_'));
   const sayLevel=t=>{const w=String(t).replace(/_/g,' ');return w[0].toUpperCase()+w.slice(1)};
-  const baseRows=rows=>rows.length?'<div class="wbBaseRows">'+rows.map(([a,b])=>'<span class="wbBaseRow"><span>'+esc(a)+'</span><span>'+esc(b)+'</span></span>').join('')+'</div>':'';
   function renderAqTile(h){
     const air=anyAir(h),main=air[0];
     if(!main)return tile({icon:I.airFilter,name:T.airQuality,sub:T.noAir,visual:valueHtml('–',''),cls:'wbBase'});
     const dc=main.attributes.device_class,v=Number(main.state),n=num(main.state);
     const sub=dc==='aqi'&&n?aqiWord(v):dc==='pm25'&&n?AQ_WORDS[pm25Level(v)]:stateText(h,main);
     return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbBase',
-      visual:valueHtml(n?fmtNum(Math.round(v),h.locale):String(main.state),dc==='aqi'?'AQI':main.attributes.unit_of_measurement||'')+
-        baseRows(air.slice(1,3).map(s=>[entityName(h,s),stateText(h,s)]))});
+      zone:valueHtml(n?fmtNum(Math.round(v),h.locale):String(main.state),dc==='aqi'?'AQI':main.attributes.unit_of_measurement||''),
+      callouts:air.slice(1,4).map(s=>[entityName(h,s),stateText(h,s)])});
   }
   function renderPollenTile(h){
     const all=anyPollen(h).sort((a,b)=>pollenRank(b)-pollenRank(a));
     if(!all.length)return tile({icon:I.flower,name:T.pollen,sub:T.noPollen,visual:valueHtml('–',''),cls:'wbBase'});
     const top=all[0],level=s=>num(s.state)?stateText(h,s):sayLevel(s.state);
     return tile({icon:I.flower,name:T.pollen,sub:entityName(h,top)+' · '+level(top),cls:'wbBase',
-      visual:valueHtml(level(top),'')+baseRows(all.slice(1,3).map(s=>[entityName(h,s),level(s)]))});
+      zone:valueHtml(level(top),''),callouts:all.slice(0,3).map(s=>[entityName(h,s),level(s)])});
   }
   function renderRadarTile(h){
     const now=Date.now(),hours=forecast('hourly').filter(e=>{const t=new Date(e.datetime).getTime();return t>now-HOUR&&t<now+12*HOUR});

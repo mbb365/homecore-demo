@@ -851,3 +851,11 @@ button.tfAreaIcon{cursor:pointer}
    (were grey) */
 #app.house :is(.tfIcon,.activityRowIcon,.tfAreaIcon,.tfRoomIcon){--chip-hi:.0375;background-image:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--chip-hi)),inset 0 -1px 0 color-mix(in srgb,currentColor 3%,transparent),inset 0 -3px 6px color-mix(in srgb,currentColor 3.5%,transparent)}
 #app.house :is(.on[data-light] .tfIcon,.tfIcon.on[data-light],.tfACTile .tfIcon[data-light],.on[data-tone="alarm"] .tfIcon,.tfIcon[data-light]){--chip-hi:.1375}
+/* widgets with an action zone (Matt, 9 Nov): XL (5 rows) on the Weather page, so the callouts show under the zone;
+   on the dashboard L is the zone alone, XL adds the callouts; M and S keep the reading and its parts as before */
+#app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-xl]{grid-row:span 5}
+#app.tfBoard .tfDashBento:not([data-rows="5"]) .wbItem[data-xl] .wbCallouts{display:none}
+#app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]) .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
+#app.tfBoard .tfDashBento[data-rows="3"] .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
+#app.tfBoard .tfDashBento[data-rows="1"] :is(.wbZone,.wbCallouts){display:none}
+#app.tfBoard .tfDashBento[data-rows="3"] .wbCallout:nth-child(n+3){display:none}

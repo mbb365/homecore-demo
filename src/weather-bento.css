@@ -413,3 +413,22 @@
 /* a level as a track with a marker */
 .wbScale{position:relative;height:4px;border-radius:9999px}
 .wbScale i{position:absolute;top:50%;box-sizing:content-box;width:10px;height:10px;border-radius:50%;background-color:var(--text);border:2px solid var(--wb-scale-edge);transform:translate(-50%,-50%)}
+
+/* ---- Widgets with an action zone (Matt, 9 Nov; Figma "XL widget example" / "L widget example" 986:10196) ----
+   The head 18 in, then 14 below it the zone: as wide as the tile allows, 198 tall (216 x 198 at the drawn 252), corner
+   16, the track fill and edge line. L is the head and the zone; XL the same zone, then 8 under it up to three callout
+   lines (name, value), 20 tall every 24, ending 18 from the bottom */
+.wbZoned{gap:14px}
+.wbZone{position:relative;flex:none;height:198px;display:flex;align-items:center;justify-content:center;border-radius:16px;overflow:hidden;background:var(--tile);box-shadow:var(--hc-hair-all,inset 0 0 0 .4px var(--line))}
+.wbCallouts{display:none;flex-direction:column;gap:4px;margin-top:-6px}
+.wbCallout{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:400 14px/20px var(--font)}
+.wbCallout>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wbCallout>span:last-child{flex:none;color:var(--text);white-space:nowrap}
+/* what each zone holds: the sun's sky fills it; the moon and the UV meter sit in it; a reading sits 16 in from its foot */
+.wbZone>.wbSunSky{flex:1;align-self:stretch;border-radius:0}
+.wbZone>.wbSunSky svg{overflow:hidden}
+.wbZone>.wbMoonBox{flex:none;height:150px}
+.wbZone>.wbVu{width:86%;height:auto;max-height:170px}
+.wbBase .wbZone{align-items:flex-end;justify-content:flex-start;padding:16px}
+/* where the callouts show: XL on the Weather page; on the dashboard XL, and M (the reading and its parts, as before) */
+.wbItem[data-xl] .wbCallouts{display:flex}
