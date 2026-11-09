@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090909">
 <title>HomeCore</title>
 <style>body{margin:0;background:#111}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}</style>
 </head>
@@ -10,5 +11,7 @@
 <!-- the Dual Axis Controller as if installed from HACS (v9.0.5), for Settings → Lights -->
 <script src="https://cdn.jsdelivr.net/gh/mbb365/Dual-Axis-Controller-v4@v9.0.5/dist/dual-axis-controller-v4.js"></script>
 <script type="module" src="./src/fake-home/fake-hass.js"></script>
+<!-- desktop: the phone beside the site, with a QR code (not on phones, not inside the phone itself) -->
+<script type="module">import { mountPhoneFrame } from "./src/phone-frame.js"; mountPhoneFrame();</script>
 </body>
 </html>
