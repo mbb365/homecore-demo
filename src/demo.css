@@ -368,3 +368,8 @@
 /* a Settings row's line wraps rather than cutting off, as Home Assistant's do */
 #app .hcConfigRow{height:auto;min-height:60px}
 .hcConfigRow .hcRowSub{white-space:normal;line-height:1.25}
+
+/* every choice of segments the size of Settings' (Matt, 9 Nov): a 32 track, 26 buttons, 12 type; the weather cards' tabs and
+   the board's height tabs were 38 in a 46 */
+#app.hcDemo :is(.wb .wbSegments,.tfBoardMenu .tfHeightTabs){height:32px;padding:3px;gap:3px;box-sizing:border-box}
+#app.hcDemo :is(.wb .wbSegments button,.tfBoardMenu .tfHeightTabs button){height:26px!important;padding:0 12px;border-radius:13px!important;font:600 12px/16px var(--font-tile)!important}

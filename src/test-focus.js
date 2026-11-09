@@ -1827,7 +1827,8 @@ export function mountTestFocus(root, { config, getHass }) {
     cards.forEach((it) => {
       const p = placed.get(it.key);
       it.el.style.height = p.h + 'px';
-      it.el.dataset.rows = sizeOf(it.key);
+      // a phone shows the weather card whole, its sentence and days, whatever its size on the big board (Matt, 9 Nov)
+      it.el.dataset.rows = phone && it.key === 'wx' ? 5 : sizeOf(it.key);
       // one column wide on a board of more (not a phone's single column): the card's narrow version (Matt, 6 Nov)
       it.el.toggleAttribute('data-narrow', !phone && p.cols === 1 && n > 1);
       it.el.dataset.cols = p.cols; // how many columns it spans (a room's tile lays out by it)

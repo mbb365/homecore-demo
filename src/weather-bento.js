@@ -65,6 +65,8 @@ const WALKING_KMH=5;
 // Material Design Icons, as the patch uses them
 const I={
   back:'M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z',
+  calendar:'M9,10H7V12H9V10M13,10H11V12H13V10M17,10H15V12H17V10M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z',
+  chevronDown:'M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z',
   sunsetUp:'M3,12H7A5,5 0 0,1 12,7A5,5 0 0,1 17,12H21A1,1 0 0,1 22,13A1,1 0 0,1 21,14H3A1,1 0 0,1 2,13A1,1 0 0,1 3,12M15,12A3,3 0 0,0 12,9A3,3 0 0,0 9,12H15M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M12.71,16.3L15.82,19.41C16.21,19.8 16.21,20.43 15.82,20.82C15.43,21.21 14.8,21.21 14.41,20.82L12,18.41L9.59,20.82C9.2,21.21 8.57,21.21 8.18,20.82C7.79,20.43 7.79,19.8 8.18,19.41L11.29,16.3C11.5,16.1 11.74,16 12,16C12.26,16 12.5,16.1 12.71,16.3Z',
   sunsetDown:'M3,12H7A5,5 0 0,1 12,7A5,5 0 0,1 17,12H21A1,1 0 0,1 22,13A1,1 0 0,1 21,14H3A1,1 0 0,1 2,13A1,1 0 0,1 3,12M15,12A3,3 0 0,0 12,9A3,3 0 0,0 9,12H15M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M12.71,20.71L15.82,17.6C16.21,17.21 16.21,16.57 15.82,16.18C15.43,15.79 14.8,15.79 14.41,16.18L12,18.59L9.59,16.18C9.2,15.79 8.57,15.79 8.18,16.18C7.79,16.57 7.79,17.21 8.18,17.6L11.29,20.71C11.5,20.9 11.74,21 12,21C12.26,21 12.5,20.9 12.71,20.71Z',
   chartLine:'M16,11.78L20.24,4.45L21.97,5.45L16.74,14.5L10.23,10.75L5.46,19H22V21H2V3H4V17.54L9.5,8L16,11.78Z',
@@ -426,7 +428,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
 
   let destroyed=false,lastKey=null,raf=0,lastStep=-1,queued=false,focusAfter=null;
   const VIEW_KEY='homecore-next-view',saved=(()=>{try{return localStorage.getItem(VIEW_KEY)}catch(_e){return null}})();
-  const ui={graph:undefined,range:'day',openDay:undefined,opener:undefined,dayMode:'temperature',hourlyMode:'temperature',hourlyView:saved==='bars'?'bars':'strip',aq:undefined};
+  const ui={graph:undefined,range:{preset:'day'},picking:false,openDay:undefined,opener:undefined,dayMode:'temperature',hourlyMode:'temperature',hourlyView:saved==='bars'?'bars':'strip',aq:undefined};
   const data={todayHistory:undefined,rain:undefined,temperatureHistory:undefined,pressureHistory:undefined,aqHistory:undefined,categories:undefined,lastFetch:0};
   let sunNow=new Date(),moonNow=new Date();
   const strips={};   // the painted skies, by name (Next hours' is hourly)
@@ -1132,32 +1134,50 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     compared_to_average:renderCompared,humidity:renderHumidity,pressure:renderPressure,precipitation:renderPrecipitation,visibility:renderVisibility,air_quality:renderAirQuality,
     aq_tile:renderAqTile,pollen_tile:renderPollenTile,radar_tile:renderRadarTile};
 
-  /* ---- Graphs behind the cards (Matt, 9 Nov): tap a card and it opens to its history in place, the last day to start,
-     or the last week or month. Readings come from the recorder (the weather entity's attributes, or the air
-     quality and pollen sensors); the sun's height, daylight and the moon's light are worked out, as the cards do. Next
-     hours / Days and Compared to average are graphs already, and the radar has no reading to graph ---- */
-  const RANGES=[['day','Day',1],['week','Week',7],['month','Month',30]]; // the last 24 hours, 7 days, 30 days
+  /* ---- Graphs behind the cards (Matt, 9 Nov): tap a card and it opens to its history in place, the last 24 hours to
+     start. "Choose date range" (Matt, 9 Nov: a picker, not tabs) gives the last 24 hours, 7 days or 30 days, or any From and
+     To. Readings come from the recorder (the weather entity's attributes, or the air quality and pollen sensors); the
+     sun's height, daylight and the moon's light are worked out, as the cards do. Next hours / Days and Compared to
+     average are graphs already, and the radar has no reading to graph ---- */
+  const PRESETS=[['day','Last 24 hours',1],['week','Last 7 days',7],['month','Last 30 days',30]];
   const shortDate=(h,d)=>d.toLocaleDateString(h.locale?.language,{day:'numeric',month:'short'});
-  const labelFor=(h,d,days)=>days===1?fmtTime(d,h):shortDate(h,d);
+  const isoDay=d=>{const x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,10)};
+  // the range shown: [start, end] in ms, and its name
+  const span=()=>{
+    const r=ui.range,now=Date.now();
+    if(r.preset!=='custom'){const days=PRESETS.find(([k])=>k===r.preset)[2];return [now-days*DAY,now]}
+    const from=startOfDay(new Date(r.from+'T00:00')).getTime(),to=Math.min(now,startOfDay(new Date(r.to+'T00:00')).getTime()+DAY);
+    return [Math.min(from,to-HOUR),to];
+  };
+  const rangeName=h=>{
+    const r=ui.range;
+    if(r.preset!=='custom')return PRESETS.find(([k])=>k===r.preset)[1];
+    const [a,b]=span();return r.from===r.to?shortDate(h,new Date(a)):shortDate(h,new Date(a))+' – '+shortDate(h,new Date(b-1));
+  };
+  const rangeKey=()=>ui.range.preset==='custom'?ui.range.from+'_'+ui.range.to:ui.range.preset;
+  const short=(a,b)=>b-a<=2*DAY; // two days or less: times along the bottom, else dates
+  const labelFor=(h,d,a,b)=>short(a,b)?fmtTime(d,h):shortDate(h,d);
   const thin=(pts,most=60)=>{const step=Math.max(1,Math.ceil(pts.length/most));return pts.filter((_p,i)=>i%step===0||i===pts.length-1)};
+  const history=(h,id,a,b,minimal=false)=>h.callWS({type:'history/history_during_period',start_time:new Date(a).toISOString(),end_time:new Date(b).toISOString(),
+    entity_ids:[id],minimal_response:minimal,no_attributes:minimal,significant_changes_only:false});
   // a weather attribute's history (or the sensor that gives it)
-  const attrPoints=attr=>async(h,src,days)=>{
+  const attrPoints=attr=>async(h,src,a,b)=>{
     const v=value(h,src,attr);if(!v)return [];
-    const id=v.stateObj.entity_id,res=await attrHistory(h,id,new Date(Date.now()-days*DAY));
-    return thin((res?.[id]??[]).map(item=>{const x=item.a?.[attr]??(num(item.s)?Number(item.s):undefined);return typeof x==='number'?{t:new Date((item.lu??item.lc)*1000),value:x}:null}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,days),value:p.value}));
+    const id=v.stateObj.entity_id,res=await history(h,id,a,b);
+    return thin((res?.[id]??[]).map(item=>{const x=item.a?.[attr]??(num(item.s)?Number(item.s):undefined),t=(item.lu??item.lc)*1000;return typeof x==='number'&&t>=a&&t<=b?{t:new Date(t),value:x}:null}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,a,b),value:p.value}));
   };
-  const sensorPoints=(pick,toNumber)=>async(h,_src,days)=>{
+  const sensorPoints=(pick,toNumber)=>async(h,_src,a,b)=>{
     const s=pick(h);if(!s)return [];
-    const id=s.entity_id,res=await attrHistory(h,id,new Date(Date.now()-days*DAY),true);
-    return thin((res?.[id]??[]).map(item=>{const x=toNumber(item.s);return x==null||!Number.isFinite(x)?null:{t:new Date(item.lu*1000),value:x}}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,days),value:p.value}));
+    const id=s.entity_id,res=await history(h,id,a,b,true);
+    return thin((res?.[id]??[]).map(item=>{const x=toNumber(item.s),t=item.lu*1000;return x==null||!Number.isFinite(x)||t<a||t>b?null:{t:new Date(t),value:x}}).filter(Boolean)).map(p=>({label:labelFor(h,p.t,a,b),value:p.value}));
   };
-  // worked out: every half hour over a day, or once a day
-  const worked=(perHour,perDay)=>async(h,_src,days)=>{
+  // worked out: every half hour over two days or less, else once a day
+  const worked=(perHour,perDay)=>async(h,_src,a,b)=>{
     const at=home(h);if(!at)return [];
-    const now=Date.now(),out=[];
-    if(days===1)for(let t=now-DAY;t<=now;t+=HOUR/2)out.push({label:fmtTime(new Date(t),h),value:perHour(new Date(t),at)});
-    else for(let i=days-1;i>=0;i--){const d=new Date(now-i*DAY);const v=perDay(d,at,h);if(v!=null)out.push({label:shortDate(h,d),value:v})}
-    return out;
+    const out=[];
+    if(short(a,b))for(let t=a;t<=b;t+=HOUR/2)out.push({label:fmtTime(new Date(t),h),value:perHour(new Date(t),at)});
+    else for(let t=b;t>=a;t-=DAY){const d=new Date(t);const v=perDay(d,at,h);if(v!=null)out.unshift({label:shortDate(h,d),value:v})}
+    return thin(out);
   };
   const topPollen=h=>anyPollen(h).sort((a,b)=>pollenRank(b)-pollenRank(a))[0];
   const unitOf=(h,src,attr)=>{const v=value(h,src,attr);return v?weatherUnit(h,v.stateObj,attr):''};
@@ -1165,7 +1185,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     current:{name:()=>T.modes.temperature,icon:()=>I.sunny,load:attrPoints('temperature'),fmt:(h,_s,v)=>deg(h,v),now:(h,src)=>deg(h,value(h,src,'temperature')?.value)},
     sun:{name:()=>T.sun,icon:()=>I.sunny,
       load:worked((d,at)=>Math.round(sunAltitude(d,at.lat,at.lon)/RAD),(d,_at,h)=>{const t=sunTimes(h,d);return t.rise&&t.set?Math.round((t.set-t.rise)/HOUR*10)/10:null}),
-      fmt:(h,_s,v,days)=>days===1?fmtNum(v,h.locale)+'°':fmtNum(v,h.locale)+' h',sub:days=>days===1?'How high the sun was':'Hours of daylight a day'},
+      fmt:(h,_s,v,isShort)=>isShort?fmtNum(v,h.locale)+'°':fmtNum(v,h.locale)+' h',sub:isShort=>isShort?'How high the sun was':'Hours of daylight a day'},
     moon:{name:()=>T.moon,icon:()=>I.night,
       load:worked(d=>Math.round(moonIllumination(d).fraction*100),d=>Math.round(moonIllumination(d).fraction*100)),fmt:(h,_s,v)=>fmtNum(v,h.locale)+'%',sub:()=>'How much of it was lit'},
     uv_index:{name:()=>T.metrics.uv_index,icon:()=>I.sunnyAlert,load:attrPoints('uv_index'),fmt:(h,_s,v)=>fmtNum(Math.round(v*10)/10,h.locale),now:(h,src)=>{const v=value(h,src,'uv_index');return v?fmtNum(Number(v.value),h.locale):''}},
@@ -1181,22 +1201,32 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   const graphData={};
   async function loadGraph(name){
     const h=getHass?.();if(!h||!GRAPHS[name])return;
-    const days=RANGES.find(([k])=>k===ui.range)[2],key=name+'|'+ui.range;
+    const key=name+'|'+rangeKey(),[a,b]=span();
     if(graphData[key]&&Date.now()-graphData[key].at<5*MINUTE)return;
     graphData[key]={at:Date.now(),points:null};
-    try{graphData[key].points=await GRAPHS[name].load(h,sources(h),days)}catch(_e){graphData[key].points=[]}
+    try{graphData[key].points=await GRAPHS[name].load(h,sources(h),a,b)}catch(_e){graphData[key].points=[]}
     render(true);
   }
+  // the picker: a popover under its button (over the cards round it), the three ranges, or From and To (today at the latest)
+  function rangePicker(h,right){
+    const r=ui.range,today=isoDay(Date.now()),[a,b]=span(),from=r.pickFrom||isoDay(a),to=r.pickTo||isoDay(b-1);
+    return '<div class="wbRangePick'+(right?' wbPickRight':'')+'" role="dialog" aria-label="Choose date range">'+
+      '<div class="wbRangePresets">'+PRESETS.map(([k,t])=>'<button class="wbRangePreset" aria-pressed="'+(r.preset===k)+'" data-wb="graph-preset" data-range="'+k+'" data-wb-focus="graph-preset-'+k+'">'+esc(t)+'</button>').join('')+'</div>'+
+      '<div class="wbRangeDates"><label><span>From</span><input type="date" data-range-from value="'+from+'" max="'+today+'"></label>'+
+        '<label><span>To</span><input type="date" data-range-to value="'+to+'" max="'+today+'"></label></div>'+
+      '<button class="wbRangeApply" data-wb="graph-apply" data-wb-focus="graph-apply">Show these dates</button></div>';
+  }
   function renderGraph(h,src,name){
-    const g=GRAPHS[name],days=RANGES.find(([k])=>k===ui.range)[2],pts=graphData[name+'|'+ui.range]?.points;
-    // the graph drawn at the size it shows (what's left of the card under the head and the range), so its words stay 11
-    const el=items[name].el,gw=Math.max(120,el.clientWidth-2*10-32),gh=Math.max(80,el.clientHeight-14-10-44-10-46-10-20);
-    const chart=!pts?'<span class="wbGraphNote"><span>Loading…</span></span>':pts.length>1?lineChartHtml(pts,v=>g.fmt(h,src,v,days),gh,gw):'<span class="wbGraphNote"><span>No history for this yet</span></span>';
+    const g=GRAPHS[name],[a,b]=span(),isShort=short(a,b),pts=graphData[name+'|'+rangeKey()]?.points;
+    // the graph drawn at the size it shows (what's left of the card under the head and the picker), so its words stay 11
+    const el=items[name].el,gw=Math.max(120,el.clientWidth-2*10-32),gh=Math.max(80,el.clientHeight-14-10-44-10-32-10-20);
+    const chart=!pts?'<span class="wbGraphNote"><span>Loading…</span></span>':pts.length>1?lineChartHtml(pts,v=>g.fmt(h,src,v,isShort),gh,gw):'<span class="wbGraphNote"><span>No history for these dates</span></span>';
     return '<div class="wbCard wbHc wbGraphCard"><div class="wbOpenHead"><span class="wbChip">'+svgIcon(g.icon(h))+'</span>'+
-      '<span class="wbText"><span class="wbName">'+esc(g.name(h))+'</span><span class="wbSub">'+esc(g.sub?g.sub(days):g.now?g.now(h,src):'')+'</span></span>'+
+      '<span class="wbText"><span class="wbName">'+esc(g.name(h))+'</span><span class="wbSub">'+esc(g.sub?g.sub(isShort):g.now?g.now(h,src):'')+'</span></span>'+
       '<button class="wbBack" title="'+esc(T.back)+'" data-wb="graph-close" data-wb-focus="graph-close">'+svgIcon(I.back)+'</button></div>'+
-      '<div class="wbSegments wbRanges" role="group" aria-label="Time range">'+RANGES.map(([k,t])=>'<button aria-pressed="'+(k===ui.range)+'" data-wb="graph-range" data-range="'+k+'" data-wb-focus="graph-range-'+k+'">'+t+'</button>').join('')+'</div>'+
-      '<div class="wbGraph">'+chart+'</div></div>';
+      '<button class="wbRangeBtn" aria-haspopup="dialog" aria-expanded="'+!!ui.picking+'" title="Choose date range" data-wb="graph-pick" data-wb-focus="graph-pick">'+
+        svgIcon(I.calendar)+'<span>'+esc(rangeName(h))+'</span>'+svgIcon(I.chevronDown)+'</button>'+
+      '<div class="wbGraph">'+chart+'</div></div>'+(ui.picking?rangePicker(h,el.getBoundingClientRect().left>innerWidth/2):'');
   }
 
   /* ---- Drawing: each card is redrawn only when its markup changes; focus and the strip's scroll stay put ---- */
@@ -1335,14 +1365,22 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       case 'hours-day':{const sc=root.querySelector('.wbStripScroll');if(sc)sc.scrollTo({left:Number(el.dataset.hours)*sc.clientWidth/Number(sc.dataset.span),behavior:'smooth'});return}
       case 'aq-open':ui.aq=el.dataset.entity;fetchAqHistory(ui.aq);break;
       case 'aq-close':ui.aq=undefined;break;
-      case 'graph-close':ui.graph=undefined;break;
-      case 'graph-range':ui.range=el.dataset.range;render(true);loadGraph(ui.graph);return;
+      case 'graph-close':ui.graph=undefined;ui.picking=false;break;
+      case 'graph-pick':ui.picking=!ui.picking;focusAfter=ui.picking?'graph-preset-'+(ui.range.preset==='custom'?'day':ui.range.preset):'graph-pick';break;
+      case 'graph-preset':ui.range={preset:el.dataset.range};ui.picking=false;focusAfter='graph-pick';render(true);loadGraph(ui.graph);return;
+      case 'graph-apply':{
+        let from=ui.range.pickFrom||root.querySelector('[data-range-from]')?.value,to=ui.range.pickTo||root.querySelector('[data-range-to]')?.value;
+        if(!from||!to)return;
+        if(from>to)[from,to]=[to,from];
+        ui.range={preset:'custom',from,to};ui.picking=false;focusAfter='graph-pick';render(true);loadGraph(ui.graph);return;
+      }
       default:return;
     }
     render(true);
   }
   function onKeyDown(ev){
     if(ev.key==='Escape'&&ui.openDay!==undefined&&ev.target.closest?.('[data-wb-open="day"]')){ui.openDay=undefined;focusAfter=ui.opener;ui.opener=undefined;render(true)}
+    else if(ev.key==='Escape'&&ui.picking&&ev.target.closest?.('.wbGraphCard')){ui.picking=false;focusAfter='graph-pick';render(true)}
     else if(ev.key==='Escape'&&ui.graph&&ev.target.closest?.('.wbGraphCard')){ui.graph=undefined;render(true)}
   }
   // Drag the hours sideways with a mouse (touch scrolls by itself)
@@ -1372,6 +1410,9 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const snaps=[...sc.querySelectorAll('.wbSnap')];
     if(snaps.length){const to=snaps.reduce((a,b)=>Math.abs(b.offsetLeft-sc.scrollLeft)<Math.abs(a.offsetLeft-sc.scrollLeft)?b:a);sc.scrollTo({left:to.offsetLeft,behavior:'smooth'})}
   }
+  // dates typed in the picker are kept, so a redraw (once a minute) doesn't lose them
+  const onRangeInput=ev=>{const t=ev.target;if(t.matches?.('[data-range-from]'))ui.range.pickFrom=t.value;else if(t.matches?.('[data-range-to]'))ui.range.pickTo=t.value};
+  root.addEventListener('change',onRangeInput);
   root.addEventListener('click',onClick);
   root.addEventListener('keydown',onKeyDown);
   root.addEventListener('mousedown',onMouseDown);
@@ -1433,7 +1474,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       resize?.disconnect();
       motionQuery?.removeEventListener?.('change',onMotionChange);
       onMouseUp();
-      root.removeEventListener('click',onClick);
+      root.removeEventListener('click',onClick);root.removeEventListener('change',onRangeInput);
       root.removeEventListener('keydown',onKeyDown);
       root.removeEventListener('mousedown',onMouseDown);
       ['daily','hourly'].forEach(unsubscribe);
