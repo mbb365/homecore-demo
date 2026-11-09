@@ -1,12 +1,13 @@
 {
-  "name": "move-assistant-card",
+  "name": "homecore-demo",
   "private": true,
-  "version": "0.69.0",
+  "version": "0.1.0",
   "type": "module",
-  "description": "Move Assistant for Home Assistant — guided movement timer card",
+  "description": "HomeCore demo: the HomeCore house page with a made-up house, no Home Assistant needed",
   "scripts": {
-    "dev": "vite --port 5190 --open /dev/",
-    "build": "vite build"
+    "dev": "vite --port 5195 --open /",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^5.4.10"

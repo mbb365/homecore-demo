@@ -2193,7 +2193,7 @@ workoutView.addEventListener('pointermove',e=>{
 workoutView.addEventListener('pointerleave',()=>trailLast.ready=false);
 new ResizeObserver(sizeTrailCanvas).observe(workoutView);
 sizeTrailCanvas();
-trailRAF=requestAnimationFrame(drawTrail);
+// HomeCore demo: no workouts, so the pixel trail never starts
 
 /* Ripple-grid-inspired movement animation */
 const rippleCanvas=$('movementRippleCanvas');
@@ -2261,7 +2261,7 @@ function drawRipple(now){
 }
 new ResizeObserver(sizeRippleCanvas).observe(rippleCanvas.parentElement);
 sizeRippleCanvas();
-rippleRAF=requestAnimationFrame(drawRipple);
+// HomeCore demo: no workouts, so the movement ripple never starts
 
 
 const title=$('exerciseTitle'),meta=$('exerciseMeta'),stepLabel=$('stepLabel'),digits=$('digits'),fill=$('fill'),progress=$('progress'),pauseBtn=$('pause');
@@ -3759,8 +3759,6 @@ return {
   resume(){
     if(alive)return;
     alive=true;
-    if(!trailRAF)trailRAF=requestAnimationFrame(drawTrail);
-    if(!rippleRAF)rippleRAF=requestAnimationFrame(drawRipple);
     wxWake();
     positionRubberIndicator(root.querySelector('.tab.active'),false);
   },

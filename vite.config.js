@@ -1,14 +1,7 @@
 import { defineConfig } from "vite";
 
+// A plain static site. Relative paths so it works from any folder (GitHub Pages serves it under /homecore-demo/).
 export default defineConfig({
-  build: {
-    lib: {
-      entry: "src/move-assistant-card.js",
-      formats: ["es"],
-      fileName: () => "move-assistant-card.js",
-    },
-    outDir: "dist",
-    emptyOutDir: true,
-    minify: true,
-  },
+  base: "./",
+  build: { outDir: "dist", emptyOutDir: true },
 });

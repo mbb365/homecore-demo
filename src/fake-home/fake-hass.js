@@ -1,19 +1,6 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Move Assistant dev</title>
-<style>body{margin:0;background:#111}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}</style>
-</head>
-<body>
-<move-assistant-card></move-assistant-card>
-<!-- the Dual Axis Controller as if installed from HACS (v9.0.5), for Settings → Lights. ?nodac=1 leaves it out, so
-     HomeCore fetches it itself once a light uses it -->
-<script>if (!new URLSearchParams(location.search).has("nodac")) document.write('<script src="https://cdn.jsdelivr.net/gh/mbb365/Dual-Axis-Controller-v4@v9.0.5/dist/dual-axis-controller-v4.js"><\/script>');</script>
-<script type="module">
-// Fake Home Assistant so the card can be previewed without a real instance.
-// Saved data lives in this browser's localStorage under "ma-dev".
-import "../src/move-assistant-card.js";
+// A fake Home Assistant, so HomeCore runs with no instance: a made-up house (house-data.js), its history, weather and
+// activity. Changes are kept in this browser's localStorage.
+import "../homecore-app.js";
 import { HOUSE, houseService } from "./house-data.js";
 import { ICONS } from "./icons.js";
 // Home Assistant's ha-icon and ha-state-icon, stood in for the preview: the icon at --mdc-icon-size (the page's
@@ -43,16 +30,14 @@ customElements.define("ha-state-icon", class extends HTMLElement {
 });
 
 const listeners = [];
-// Move Assistant's data is "ma-dev"; anything else the card saves (the house page's favourites) gets its own key
-const slot = (key) => (!key || key === "move_assistant" ? "ma-dev" : "ma-dev:" + key);
+// each saved key in its own localStorage slot
+const slot = (key) => "homecore:" + (key || "move_assistant");
 const read = (key) => { try { return JSON.parse(localStorage.getItem(slot(key))); } catch { return null; } };
 const states = {
-  "sensor.pixel_daily_steps": { entity_id: "sensor.pixel_daily_steps", state: "6840", attributes: { friendly_name: "Pixel Daily steps", unit_of_measurement: "steps" } },
-  "sensor.matts_iphone_health_steps": { entity_id: "sensor.matts_iphone_health_steps", state: "8212", attributes: { friendly_name: "Matt's iPhone Health steps", unit_of_measurement: "steps" } },
   "sensor.living_room_temperature": { entity_id: "sensor.living_room_temperature", state: "21.4", attributes: { friendly_name: "Living room temperature", unit_of_measurement: "°C" } },
   "weather.forecast_home": { entity_id: "weather.forecast_home", state: "sunny", attributes: { friendly_name: "Forecast Amsterdam", temperature: 26, temperature_unit: "°C" } },
 };
-// ?test=1: the Test focus layout with ten made-up entities (lights you can press and drag, readings with 24 hours of history)
+// The house page with ten made-up entities (lights you can press and drag, readings with 24 hours of history)
 const TEST_ENTITIES = {
   "light.floor_lamp": { state: "on", attributes: { friendly_name: "Floor lamp", brightness: 179, supported_color_modes: ["color_temp", "xy"], color_mode: "color_temp", color_temp_kelvin: 2400 } },
   "light.ceiling": { state: "off", attributes: { friendly_name: "Ceiling", supported_color_modes: ["brightness"] } },
@@ -85,9 +70,7 @@ const fakeHourly = () => {
     return { datetime: t.toISOString(), condition, temperature };
   });
 };
-const params = new URLSearchParams(location.search);
-const testMode = params.get("test") === "1";
-if (testMode) {
+{
   Object.entries(TEST_ENTITIES).forEach(([id, st]) => { states[id] = { entity_id: id, ...st }; });
   states["sensor.living_room_temperature"].attributes.device_class = "temperature";
   states["sensor.living_room_temperature"].attributes.state_class = "measurement";
@@ -130,26 +113,18 @@ const fakeHistory = (id) => {
 };
 const hass = {
   states,
-  config: testMode ? HOUSE.config : {},
-  areas: testMode ? HOUSE.areas : {},
-  entities: testMode ? HOUSE.entities : {},
+  config: HOUSE.config,
+  areas: HOUSE.areas,
+  entities: HOUSE.entities,
   devices: {},
   callWS: async (msg) => {
     if (msg.type === "frontend/get_user_data") return { value: read(msg.key) };
     if (msg.type === "frontend/set_user_data") {
       localStorage.setItem(slot(msg.key), JSON.stringify(msg.value));
-      if (slot(msg.key) === "ma-dev") listeners.forEach((cb) => cb({ value: msg.value }));
       return null;
     }
     // Home Assistant's home view settings (favourites, summary order): none set, as on a new install
     if (msg.type === "frontend/get_system_data") return { value: null };
-    if (msg.type === "recorder/statistics_during_period") {
-      // 30 days of fake step totals
-      const id = msg.statistic_ids[0];
-      const start = new Date(msg.start_time);
-      const rows = [...Array(30)].map((_, i) => ({ start: new Date(start.getFullYear(), start.getMonth(), start.getDate() + i).getTime(), max: 3000 + ((i * 2654435761) % 9000) }));
-      return { [id]: rows };
-    }
     if (msg.type === "fire_event") { console.log("event", msg.event_data); return null; }
     // a week of the forecast's readings every 3 hours, for the bento's Compared to average and pressure
     if (msg.type === "history/history_during_period" && msg.entity_ids[0].startsWith("weather.")) {
@@ -186,7 +161,7 @@ const hass = {
   },
   // the Dual Axis Controller calls services this way
   callService: (domain, service, data) => hass.callWS({ type: "call_service", domain, service, service_data: data }),
-  services: { notify: { mobile_app_matts_iphone: {}, persistent_notification: {} } },
+  services: {},
   callApi: async (method, path, data) => { console.log("api", method, path, data); window.__api = { method, path, data }; return {}; },
   connection: {
     subscribeMessage: async (cb, msg) => {
@@ -199,32 +174,10 @@ const hass = {
     },
   },
 };
-const card = document.querySelector("move-assistant-card");
-card.setConfig(testMode
-  ? { layout: "test-focus", spacing: params.get("spacing") || undefined, test_focus: [
+const card = document.querySelector("homecore-app");
+card.setConfig({ layout: "test-focus", test_focus: [
       { title: "Status", entities: ["sensor.house_power", "sensor.energy_today", "sensor.solar_power", "sensor.grid_import", "sensor.living_room_temperature", "sensor.living_room_humidity", "sensor.internet_usage"] },
       { type: "lights", entities: ["light.floor_lamp", "light.ceiling", "light.kitchen_spots", "light.ceiling"] },
-    ] }
-  : {});
+    ] });
 card.hass = hass;
 window.__fakeHass = hass;
-
-// Preview helpers for dev/compare.html: ?edge=1 tries the full-width phone layout, ?nopop=1 skips the check-in popup.
-const waitForApp = () => new Promise((resolve) => {
-  const tick = () => card.shadowRoot?.getElementById("app")?.style.opacity === "" ? resolve() : setTimeout(tick, 50);
-  tick();
-});
-waitForApp().then(async () => {
-  if (params.get("edge") === "1") {
-    const css = await (await fetch("/dev/edge-to-edge.txt")).text();
-    const style = document.createElement("style");
-    style.textContent = css;
-    card.shadowRoot.appendChild(style);
-  }
-  if (params.get("nopop") === "1") {
-    setTimeout(() => card.shadowRoot.getElementById("checkinModal").classList.remove("open"), 900);
-  }
-});
-</script>
-</body>
-</html>
