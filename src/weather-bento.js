@@ -918,19 +918,19 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const endOfDay=new Date();endOfDay.setHours(23,59,59,999);
     const peak=forecast('hourly').filter(e=>e.uv_index!=null&&new Date(e.datetime)>new Date()&&new Date(e.datetime)<=endOfDay)
       .reduce((best,e)=>!best||e.uv_index>best.uv?{uv:e.uv_index,time:new Date(e.datetime)}:best,undefined);
-    const SWEEP=48,PX=100,PY=130,angleOf=x=>-SWEEP+(Math.min(x,11)/11)*2*SWEEP;
-    const at=(a,r)=>{const rad=(a*Math.PI)/180;return [PX+r*Math.sin(rad),PY-r*Math.cos(rad)]};
-    const arc=(from,to,r)=>{const [x1,y1]=at(angleOf(from),r),[x2,y2]=at(angleOf(to),r);return 'M '+x1+' '+y1+' A '+r+' '+r+' 0 0 1 '+x2+' '+y2};
-    const zones=[[0,3,UV_COLORS.low],[3,6,UV_COLORS.moderate],[6,8,UV_COLORS.high],[8,11,UV_COLORS.very_high]];
-    // 21 ticks evenly over the sweep, every other one long
-    const meter='<svg class="wbVu" viewBox="0 0 200 134" preserveAspectRatio="xMidYMax meet" aria-hidden="true">'+
-      zones.map(([a,b,c])=>'<path class="wbVuZone" d="'+arc(a,b,96)+'" style="stroke:'+c+'"></path>').join('')+
-      Array.from({length:21},(_,i)=>({angle:-SWEEP+i*(2*SWEEP/20),major:i%2===0})).map(({angle,major})=>{const [x1,y1]=at(angle,102),[x2,y2]=at(angle,major?114:108);
-        return '<line class="wbVuTick'+(major?' wbMajor':'')+'" x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"></line>'}).join('')+
-      '<text class="wbVuLabel" x="100" y="70.1">UV</text><g class="wbVuNeedle" style="--wb-angle:'+angleOf(v)+'deg"><line x1="'+PX+'" y1="'+PY+'" x2="'+PX+'" y2="'+(PY-116)+'"></line></g>'+
-      '<path class="wbVuHousing" d="M 64 134 L 64 128 A 36 36 0 0 1 136 128 L 136 134 Z"></path><text class="wbVuValue" x="100" y="114.9">'+esc(fmtNum(Math.round(v),h.locale))+'</text></svg>';
+    /* the sun's rays coming down (Matt, 9 Nov, sketch D without its sun): rays fan from the zone's top-left corner,
+       more of them, longer and brighter as UV rises, in its level's colour; dashed, and the dashes drift down them while
+       the widget is hovered (sketch F). The number big in the bottom right, its level under it */
+    const k=Math.min(Math.max(v,0),12)/12,n=6+Math.round(k*14),len=90+k*190,colour=UV_COLORS[uvLevel(v)],O=-6;
+    const rays='<svg class="wbUvRays" viewBox="0 0 216 198" preserveAspectRatio="xMinYMin slice" aria-hidden="true" style="color:'+colour+';--wb-ray-o:'+(.35+k*.6).toFixed(2)+';--wb-ray-dur:'+(1.6-k*.6).toFixed(2)+'s">'+
+      '<defs><radialGradient id="'+P+'uv-ray" gradientUnits="userSpaceOnUse" cx="'+O+'" cy="'+O+'" r="'+len+'">'+
+        '<stop offset="0" style="stop-color:var(--wb-ray-hi,#fff2c4)" stop-opacity=".95"></stop><stop offset=".35" style="stop-color:'+colour+'" stop-opacity=".75"></stop>'+
+        '<stop offset="1" style="stop-color:'+colour+'" stop-opacity="0"></stop></radialGradient></defs>'+
+      Array.from({length:n},(_,i)=>{const a=(8+i*(74/(n-1)))*Math.PI/180;
+        return '<line class="wbUvRay" x1="'+O+'" y1="'+O+'" x2="'+(O+Math.cos(a)*len).toFixed(1)+'" y2="'+(O+Math.sin(a)*len).toFixed(1)+'" stroke="url(#'+P+'uv-ray)" stroke-width="'+(2+k*3).toFixed(1)+'" style="animation-delay:-'+((i*.17)%1).toFixed(2)+'s"></line>'}).join('')+'</svg>'+
+      '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>';
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
-      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:meter,
+      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:rays,cls:'wbUv',
       callouts:[[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
   }
   function renderCompared(h){
