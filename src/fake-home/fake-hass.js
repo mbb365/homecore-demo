@@ -42,7 +42,7 @@ const slot = (key) => "homecore:" + (key || "move_assistant");
 const read = (key) => { try { return JSON.parse(localStorage.getItem(slot(key))); } catch { return null; } };
 const states = {
   "sensor.living_room_temperature": { entity_id: "sensor.living_room_temperature", state: "21.4", attributes: { friendly_name: "Living room temperature", unit_of_measurement: "°C" } },
-  "weather.forecast_home": { entity_id: "weather.forecast_home", state: "sunny", attributes: { friendly_name: "Forecast Amsterdam", temperature: 26, temperature_unit: "°C" } },
+  "weather.forecast_home": { entity_id: "weather.forecast_home", state: "sunny", attributes: { friendly_name: "Forecast Fraggle rock", temperature: 26, temperature_unit: "°C" } },
 };
 // The house page with ten made-up entities (lights you can press and drag, readings with 24 hours of history)
 const TEST_ENTITIES = {
@@ -82,27 +82,27 @@ const fakeHourly = () => {
   states["sensor.living_room_temperature"].attributes.device_class = "temperature";
   states["sensor.living_room_temperature"].attributes.state_class = "measurement";
   Object.assign(states, HOUSE.states);
-  states["person.matt"] = { entity_id: "person.matt", state: "home", attributes: { friendly_name: "Matt", user_id: "dev-matt" } };
+  states["person.wembely"] = { entity_id: "person.wembely", state: "home", attributes: { friendly_name: "Wembely", user_id: "dev-wembely" } };
   // a leak earlier today, dry again (its changes are in devLog), for Activity's red row
   const dry = new Date(Date.now() - 20 * 60000).toISOString();
   states["binary_sensor.kitchen_leak"] = { entity_id: "binary_sensor.kitchen_leak", state: "off", last_changed: dry, last_updated: dry, attributes: { friendly_name: "Kitchen leak sensor", device_class: "moisture" } };
 }
-// the dashboard's activity: a few changes over the last two hours, by Matt (person.matt) or an automation
+// the dashboard's activity: a few changes over the last two hours, by Wembely (person.wembely) or an automation
 const devLog = () => {
   const at = (min) => (Date.now() - min * 60000) / 1000;
   return [
-  { when: at(4), entity_id: "lock.openable_lock", state: "unlocked", context_user_id: "dev-matt" },
+  { when: at(4), entity_id: "lock.openable_lock", state: "unlocked", context_user_id: "dev-wembely" },
   { when: at(20), entity_id: "binary_sensor.kitchen_leak", state: "off" },
   { when: at(40), entity_id: "binary_sensor.kitchen_leak", state: "on" },
   { when: at(23), entity_id: "light.kitchen", state: "on", context_domain: "automation", context_event_type: "automation_triggered", context_name: "Morning lights" },
-  { when: at(51), entity_id: "media_player.telly", state: "off", context_user_id: "dev-matt" },
+  { when: at(51), entity_id: "media_player.telly", state: "off", context_user_id: "dev-wembely" },
   { when: at(96), entity_id: "light.office_ceiling", state: "off" },
-  { when: at(131), entity_id: "switch.clothes_washer", state: "on", context_user_id: "dev-matt" },
+  { when: at(131), entity_id: "switch.clothes_washer", state: "on", context_user_id: "dev-wembely" },
   { when: at(164), entity_id: "light.small_sphere_chappy", state: "on", context_domain: "automation", context_event_type: "automation_triggered", context_name: "Office at dusk" },
-  { when: at(205), entity_id: "media_player.jeremy_clarkson", state: "playing", context_user_id: "dev-matt" },
-  { when: at(248), entity_id: "lock.basic_lock", state: "locked", context_user_id: "dev-matt" },
+  { when: at(205), entity_id: "media_player.doozer_speaker", state: "playing", context_user_id: "dev-wembely" },
+  { when: at(248), entity_id: "lock.basic_lock", state: "locked", context_user_id: "dev-wembely" },
   { when: at(296), entity_id: "switch.dish_washer", state: "on" },
-  { when: at(340), entity_id: "light.big_sphere", state: "off", context_user_id: "dev-matt" },
+  { when: at(340), entity_id: "light.big_sphere", state: "off", context_user_id: "dev-wembely" },
   { when: at(395), entity_id: "switch.tv_stuff", state: "off" },
   ];
 };

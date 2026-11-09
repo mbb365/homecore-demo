@@ -14,6 +14,8 @@
 .hcAvatar{width:var(--chip-size);height:var(--chip-size);padding:0;border:0;border-radius:var(--r-inner);overflow:hidden;background:var(--tile);cursor:pointer;box-shadow:var(--hc-hair-all)}
 .hcAvatar img{display:block;width:100%;height:100%;object-fit:cover}
 .hcAvatar:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+/* on My account: lit like the rail's other buttons, a bright ring round the photo */
+.hcAvatar.active{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--bright)}
 #app.hcDemo .shell{position:relative;padding-left:var(--hc-rail)}
 #app.hcDemo .tfMiniPhone{margin-left:var(--hc-rail)}
 /* the rail does what HomeCore's bottom bar did on desktop; Settings moves behind ⋯, and TV mode goes */
@@ -61,7 +63,7 @@
 /* a button with words in the toolbar: a 46 track like HomeCore's controls */
 #app .hcBtn{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 16px;border:0;border-radius:16px!important;background:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:600 14px/20px var(--font-tile);white-space:nowrap;cursor:pointer}
 .hcBtn .hcI{width:22px;height:22px}
-@media(max-width:620px){.hcHead{padding:0 16px}}
+@media(max-width:620px){.hcHead,.hcAccList>.settingsTitle{padding:0 16px}}
 
 /* the toolbar: Filters, search, group, sort, columns, table or cards. Every control 46 tall, as HomeCore's tracks */
 .hcToolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -114,3 +116,90 @@
 .hcPills{display:flex;flex-wrap:wrap;gap:6px}
 .hcPill{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:10px;background:var(--tile);color:var(--muted);font:600 12px/16px var(--font-tile);box-shadow:var(--hc-hair-all)}
 .hcPill.on{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);box-shadow:none}
+
+/* ---------- a row: HomeCore's tile head (icon chip, name, line under it) as a button ---------- */
+.hcRow{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr);align-items:center;gap:12px;width:100%;min-height:var(--tile-min);padding:var(--inset);border:0;border-radius:var(--r-tile);background:transparent;color:var(--text);text-align:start;cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+.hcRow:not(.hcStatic):hover,.hcRow.active{background:var(--tile);box-shadow:inset 0 0 0 .2px var(--line),inset 0 -.4px 0 var(--line)}
+.hcRow.hcStatic{cursor:default}
+.hcRowText{display:grid;min-width:0}
+.hcRowName{font:600 14px/20px var(--font-tile);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcRowSub{font:400 16px/1.15 var(--font);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcChip ha-icon,.hcChip ha-state-icon{--mdc-icon-size:24px}
+/* a coloured chip, by HomeCore's rule: the colour mixed 55% with white, the icon in the colour itself */
+.hcChip.hcTint{background:color-mix(in srgb,var(--tint) 55%,#ffffff);color:var(--tint)}
+.hcChip.hcTint .hcI{filter:saturate(1.4)}
+
+/* ---------- Search: HomeCore's popup near the top, the box a 46 track, results as tiles in groups ---------- */
+.hcSearchPop{place-items:start center;padding-top:12vh}
+.hcSearchBox{width:640px;max-height:76vh;gap:12px}
+.hcAsk .addInput{padding-right:52px}
+.hcMic{position:absolute;right:4px;display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:12px!important;background:transparent;color:var(--muted);cursor:pointer}
+.hcMic .hcI{position:static;width:22px;height:22px}
+.hcAskHint{margin:0 6px;color:var(--muted);font:400 16px/1.4 var(--font)}
+.hcAskHint[hidden]{display:none}
+.hcResults:empty{display:none}
+@media(max-width:620px){.hcSearchPop{padding-top:16px}.hcSearchBox{padding:14px}}
+
+/* ---------- ⋯'s HomeCore pages: top level here, so no back arrow; a room's name above its card ---------- */
+#app.hcTopPage .tfAreaHead .back{display:none}
+.hcPageLabel{flex:0 0 100%;margin:8px 18px -8px}
+
+/* ---------- My account: the list beside the profile; narrow, one then the other ---------- */
+.hcAccount{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,640px);gap:40px;align-items:start}
+.hcAccList{display:grid;gap:16px}
+.hcAccList .settingsTitle{margin:0 0 8px}
+.hcRowsCard{display:grid;gap:0}
+.hcProfile{display:grid;gap:24px}
+.hcProfileHead{display:none}
+.hcPhoto{display:grid;justify-items:center;gap:10px}
+.hcPhoto img{width:88px;height:88px;border-radius:var(--r-card);object-fit:cover;box-shadow:var(--hc-hair-all)}
+.hcPhoto .hcBtn{height:40px}
+.hcFields{display:grid;gap:16px;padding:18px!important}
+.hcField{display:grid;gap:8px}
+.hcFieldName{font:600 14px/20px var(--font-tile);color:var(--text)}
+.hcFieldNote{color:var(--muted);font:400 14px/1.3 var(--font)}
+#app .hcInput{width:100%;min-height:46px;padding:12px 16px;border:0;border-radius:16px!important;background:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:400 16px/1.2 var(--font);resize:vertical}
+#app .hcInput::placeholder{color:var(--muted);opacity:1}
+#app .hcInput:focus{outline:2px solid var(--primary);outline-offset:-1px}
+.hcSince{font:400 16px/1.2 var(--font);color:var(--text)}
+@container hcpage (width < 760px){
+  .hcAccount{grid-template-columns:minmax(0,1fr)}
+  .hcProfile{display:none}
+  .hcAccList .hcRow.active{background:transparent;box-shadow:none}
+  .hcAccount.hcShowProfile .hcAccList{display:none}
+  .hcAccount.hcShowProfile .hcProfile{display:grid}
+  .hcAccount.hcShowProfile .hcProfileHead{display:flex}
+}
+
+/* ---------- Map: the map fills the page, one card floats on it (Figma 981:9937, HomeCore's padding and corners) ---------- */
+.hcPage[data-page="map"]{min-height:calc(100vh - 100px)}
+.hcMap{position:fixed;z-index:1;inset:0 0 0 var(--hc-rail)}
+.hcMapCanvas,.hcMapCanvas.maplibregl-map{position:absolute;inset:0;background:var(--bg)}
+.hcMapCanvas .maplibregl-canvas{outline:none}
+#homeView .hcMapCard{position:absolute;z-index:500;top:22px;left:22px;width:420px;max-width:calc(100% - 44px);max-height:calc(100% - 44px);overflow:auto;display:flex;flex-direction:column;gap:10px;background:var(--card)}
+.hcMapRows{display:grid}
+.hcMapDetailHead{display:flex;align-items:center;gap:6px;padding:4px 4px 0}
+.hcTrail{gap:0}
+.hcTrail .tfOpenHead{padding:0 0 6px}
+.hcTrailTitle{font:500 18px/1.2 var(--font-tile)}
+.hcTrail .hcRow{padding:6px 0;min-height:0}
+.hcAway .hcChip.hcLine{background:transparent;height:40px;position:relative}
+.hcAway .hcChip.hcLine::after{content:"";position:absolute;inset:0 auto 0 50%;width:2px;margin-left:-1px;border-radius:1px;background:var(--line)}
+.hcMoreInfo{align-self:flex-start;margin:4px 0 2px}
+.hcPin{width:40px;height:40px;padding:0;border:0;border-radius:var(--r-inner);overflow:hidden;background:var(--card);box-shadow:0 0 0 2px var(--card),0 4px 12px rgba(0,0,0,.35);cursor:pointer}
+.hcPin img{display:block;width:100%;height:100%;object-fit:cover}
+/* zoom: HomeCore chips in one track, bottom right */
+.hcMap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group{margin:0 22px 22px 0;border-radius:16px;overflow:hidden;background:var(--card);box-shadow:var(--hc-hair-all)}
+.hcMap .maplibregl-ctrl-group button{width:40px;height:40px}
+.hcMap .maplibregl-ctrl-group button+button{border-top:.5px solid var(--line)}
+#app:not(.light) .hcMap .maplibregl-ctrl-icon{filter:invert(1)}
+.hcMap .maplibregl-ctrl-attrib{font:400 11px/1.4 var(--font);background:color-mix(in srgb,var(--card) 85%,transparent)!important;color:var(--muted)}
+.hcMap .maplibregl-ctrl-attrib a{color:var(--text)}
+#app:not(.light) .hcMap .maplibregl-ctrl-attrib-button{filter:invert(1)}
+@media(max-width:620px){
+  .hcMap{inset:0}
+  #homeView .hcMapCard{top:16px;left:16px;right:16px;width:auto;max-width:none;max-height:46vh}
+  /* above HomeCore's bottom bar */
+  .hcMap .maplibregl-ctrl-bottom-right{bottom:76px}
+  .hcMap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group{margin:0 16px 12px 0}
+}

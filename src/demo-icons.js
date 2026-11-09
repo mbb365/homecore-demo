@@ -8,7 +8,8 @@ import {
   mdiAirHumidifier, mdiShieldHome, mdiFlower, mdiThermometer, mdiWaterPercent, mdiFlash, mdiMotionSensor,
   mdiDoorClosed, mdiWindowClosed, mdiGauge, mdiFan, mdiSmokeDetector, mdiWater, mdiTelevision, mdiSpeaker,
   mdiCurtainsClosed, mdiRollerShade, mdiRollerShadeClosed, mdiBlindsHorizontal, mdiBlindsHorizontalClosed,
-  mdiWindowShutter, mdiWindowShutterOpen,
+  mdiWindowShutter, mdiWindowShutterOpen, mdiUpdate, mdiAccountCircleOutline, mdiMapMarker, mdiHeartPulse, mdiCalendar,
+  mdiShieldAccount, mdiPalette, mdiHuman, mdiBell, mdiCart, mdiChartBoxOutline, mdiTooltipAccount,
 } from '@mdi/js';
 
 export const DEMO_ICONS = {
@@ -27,6 +28,9 @@ export const DEMO_ICONS = {
   'mdi:television': mdiTelevision, 'mdi:speaker': mdiSpeaker, 'mdi:curtains-closed': mdiCurtainsClosed,
   'mdi:roller-shade': mdiRollerShade, 'mdi:roller-shade-closed': mdiRollerShadeClosed, 'mdi:blinds-horizontal': mdiBlindsHorizontal,
   'mdi:blinds-horizontal-closed': mdiBlindsHorizontalClosed, 'mdi:window-shutter': mdiWindowShutter, 'mdi:window-shutter-open': mdiWindowShutterOpen,
+  'mdi:update': mdiUpdate, 'mdi:account-circle-outline': mdiAccountCircleOutline, 'mdi:map-marker': mdiMapMarker, 'mdi:heart-pulse': mdiHeartPulse,
+  'mdi:calendar': mdiCalendar, 'mdi:shield-account': mdiShieldAccount, 'mdi:palette': mdiPalette, 'mdi:human': mdiHuman, 'mdi:bell': mdiBell,
+  'mdi:cart': mdiCart, 'mdi:chart-box-outline': mdiChartBoxOutline, 'mdi:tooltip-account': mdiTooltipAccount,
 };
 
 // an inline icon, filled like Home Assistant's

@@ -1,4 +1,4 @@
-// ?test=1: a stand-in for Matt's house, copied from his Home Assistant on 26 Oct 2026 (areas, lights and what
+// The made-up house, Fraggle rock (Matt, 9 Nov: Fraggle Rock names throughout). Copied from Matt's Home Assistant on 26 Oct 2026, renamed (areas, lights and what
 // they support, media players, plugs and power). The card adds its made-up devices on top, as it does on HA.
 // [id, name, floor, icon]: the Balcony and Test Area have no icon, as an area can have none
 const AREAS = [
@@ -13,7 +13,7 @@ const ENTITIES = {
     "light.fire_place_lamp": light("Fire place lamp", "on", ["color_temp", "xy"], { min_color_temp_kelvin: 1000, max_color_temp_kelvin: 20000 }),
     "light.living_room": light("Living room", "on", ["color_temp", "xy"], { is_hue_group: true }),
     "light.hanging_one_one": { state: "unavailable", attributes: { friendly_name: "Hanging one one" } },
-    "media_player.jeremy_clarkson": { state: "playing", attributes: { friendly_name: "Jeremy Clarkson", supported_features: 450487, media_title: "Why The Entire Ocean Is Terrified of Blue Whales", media_artist: "BeyondTheBlue" } },
+    "media_player.doozer_speaker": { state: "playing", attributes: { friendly_name: "Doozer speaker", supported_features: 450487, media_title: "Fraggle Rock", media_artist: "The Fraggles" } },
     "media_player.telly": { state: "on", attributes: { friendly_name: "Telly", device_class: "tv", supported_features: 24381, volume_level: 0.16 } },
     "switch.tv_stuff": { state: "on", attributes: { friendly_name: "TV stuff" } },
     "sensor.tv_stuff_power": { state: "88.6", attributes: { friendly_name: "TV stuff Power", device_class: "power", unit_of_measurement: "W", state_class: "measurement" } },
@@ -48,7 +48,7 @@ const ENTITIES = {
   "": {
     "sensor.p1_meter_power": { state: "243.0", attributes: { friendly_name: "P1 Meter Power", device_class: "power", unit_of_measurement: "W", state_class: "measurement" } },
     // what met.no and the sun give the weather bento on HA
-    "weather.forecast_home": { state: "sunny", attributes: { friendly_name: "Forecast Amsterdam", temperature: 26, temperature_unit: "°C", humidity: 58, dew_point: 17.1, pressure: 1016.4, pressure_unit: "hPa", wind_speed: 18.7, wind_gust_speed: 34.2, wind_bearing: 236, wind_speed_unit: "km/h", uv_index: 4, visibility: 14, visibility_unit: "km", precipitation_unit: "mm", supported_features: 3 } },
+    "weather.forecast_home": { state: "sunny", attributes: { friendly_name: "Forecast Fraggle rock", temperature: 26, temperature_unit: "°C", humidity: 58, dew_point: 17.1, pressure: 1016.4, pressure_unit: "hPa", wind_speed: 18.7, wind_gust_speed: 34.2, wind_bearing: 236, wind_speed_unit: "km/h", uv_index: 4, visibility: 14, visibility_unit: "km", precipitation_unit: "mm", supported_features: 3 } },
     // no rising or setting times, so the card works them out from the home's location (fixed times here put tomorrow's
     // sunrise before today's)
     "sun.sun": { state: new Date().getHours() >= 7 && new Date().getHours() < 18 ? "above_horizon" : "below_horizon", attributes: { friendly_name: "Sun" } },
@@ -67,7 +67,7 @@ const ENTITIES = {
 };
 
 export const HOUSE = {
-  config: { latitude: 52.3676, longitude: 4.9041, location_name: "Amsterdam", time_zone: "Europe/Amsterdam", unit_system: { temperature: "°C", length: "km" } },
+  config: { latitude: 52.3676, longitude: 4.9041, location_name: "Fraggle rock", time_zone: "Europe/Amsterdam", unit_system: { temperature: "°C", length: "km" } },
   areas: Object.fromEntries(AREAS.map(([area_id, name, floor_id, icon]) => [area_id, { area_id, name, floor_id, ...(icon ? { icon } : {}) }])),
   entities: {},
   states: {},

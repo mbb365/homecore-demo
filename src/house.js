@@ -81,7 +81,7 @@ export function createHouse({ onChange }) {
     }
   });
   // the whole house
-  add('alarm_control_panel.' + PREFIX + 'house', null, 'disarmed', { friendly_name: 'Alarm', supported_features: 1 | 2 | 4, code_format: null, changed_by: 'Matt' });
+  add('alarm_control_panel.' + PREFIX + 'house', null, 'disarmed', { friendly_name: 'Alarm', supported_features: 1 | 2 | 4, code_format: null, changed_by: 'Wembely' });
   opening(null, 'Front door', 'door', false);
   opening(null, 'Smoke alarm', 'smoke', false);
   add('sensor.' + PREFIX + 'doorbell', null, '', { friendly_name: 'Doorbell', device_class: 'timestamp', rang: Date.now() - 47 * 60 * 1000 });
@@ -185,9 +185,9 @@ export function createHouse({ onChange }) {
       if (['open_valve', 'close_valve', 'toggle'].includes(service)) set(open ? 'open' : 'closed');
     }
     if (domain === 'alarm_control_panel') {
-      if (service === 'alarm_disarm') { arming = null; set('disarmed', { changed_by: 'Matt' }); }
+      if (service === 'alarm_disarm') { arming = null; set('disarmed', { changed_by: 'Wembely' }); }
       const mode = { alarm_arm_home: 'home', alarm_arm_away: 'away', alarm_arm_night: 'night' }[service];
-      if (mode) { arming = { mode, at: Date.now() }; set('arming', { changed_by: 'Matt' }); }
+      if (mode) { arming = { mode, at: Date.now() }; set('arming', { changed_by: 'Wembely' }); }
     }
     onChange();
     return true;

@@ -30,7 +30,7 @@ const local = {
 };
 const hash = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 
-function deviceList(hass, model) {
+export function deviceList(hass, model) {
   const states = model?.states || hass.states;
   return Object.values(states).filter((st) => {
     const d = st.entity_id.split('.')[0], e = hass.entities?.[st.entity_id];
@@ -46,9 +46,9 @@ function deviceList(hass, model) {
   });
 }
 
-export function renderDevices(page, { getHass, homecore, esc, icon }) {
+export function renderDevices(page, { getHass, homecore, esc, icon, opts }) {
   const prefs = { group: 'type', sort: 'name', view: 'list', ...local.get() };
-  let q = '';
+  let q = opts?.q || ''; // Search opens this page searched for a device
   const hass = getHass();
   const all = deviceList(hass, homecore.model);
 
@@ -71,6 +71,7 @@ export function renderDevices(page, { getHass, homecore, esc, icon }) {
   const box = page.querySelector('.hcGroups');
   page.querySelector('[data-group]').value = prefs.group;
   page.querySelector('[data-sort]').value = prefs.sort;
+  page.querySelector('.hcSearch input').value = q;
 
   const iconCell = (x) => '<span class="tfIcon"><ha-state-icon data-eid="' + esc(x.id) + '"></ha-state-icon></span>';
   const pills = (x) => '<div class="hcPills"><span class="hcPill">' + esc(x.type) + '</span><span class="hcPill' + (x.on ? ' on' : '') + '">' + esc(x.stateText) + '</span></div>';

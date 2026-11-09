@@ -2523,7 +2523,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // Home is the dashboard (Matt, 27 Oct: no house page any more). A section has its own page: a room's from its area
     // card's Go; its header, then only that section. The weather card opens the Weather
     // page: its header and the whole bento
-    const page = areaPage === 'weather' ? { key: 'weather', name: 'Weather' } : areaPage && secs.find((x) => x.key === areaPage);
+    const page = areaPage === 'weather' ? { key: 'weather', name: 'Weather' } : DEMO_PAGES[areaPage] ? { key: areaPage, name: DEMO_PAGES[areaPage], demo: true } : areaPage && secs.find((x) => x.key === areaPage);
     if (!page) areaPage = null;
     app.classList.toggle('tfAreaOpen', Boolean(page));
     app.classList.toggle('tfWeatherOpen', page?.key === 'weather');
@@ -2533,12 +2533,38 @@ export function mountTestFocus(root, { config, getHass }) {
     if (!page) return dashboard(out, summaryData());
     out.push({ key: 'areahead', html: areaHead(page, ++order) });
     if (page.key === 'weather') { out.weather = ++order; return out; }
+    if (page.demo) return demoPage(out, page.key, order);
     // the section: a room's energy, readings and plants, then its tiles
     const ids = page.ids, name = page.room ? page.room.id : page.key, r = page.room;
     if (r?.solar.length) out.push({ key: 'energy:' + r.id, html: energyCard(r, ++order) });
     if (r && (r.readings.length || r.plugs.length || r.power != null)) out.push({ key: 'readings:' + r.id, html: roomCard(r, ++order) });
     r?.plants.forEach((p) => out.push({ key: 'plant:' + p.id, html: plantCard(p, ++order) }));
     if (ids.length) out.push({ key: 'block:' + name, order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
+    return out;
+  }
+  /* HomeCore demo (9 Nov): pages the site's ⋯ opens, each built from cards Home already has, so they stay live:
+     Energy (Energy today, and the solar card of a room that has one), Logbook (Activity), History (each room's readings,
+     a tap opens a reading's graph) and Media (the media players' tiles) */
+  const DEMO_PAGES = { energy: 'Energy', logbook: 'Logbook', history: 'History', media: 'Media' };
+  function demoPage(out, key, order) {
+    const label = (k, name) => out.push({ key: 'label:' + k, html: '<div class="sectionLabel tfLabel hcPageLabel" data-tf data-k="label:' + esc(k) + '" style="order:' + (++order) + '">' + esc(name) + '</div>' });
+    if (key === 'energy') {
+      out.push({ key: 'dash:energy', html: energyGlance().replace('style="order:0', 'style="order:' + (++order)) });
+      model.rooms.filter((r) => r.solar.length).forEach((r) => { label('solar:' + r.id, r.name); out.push({ key: 'energy:' + r.id, html: energyCard(r, ++order) }); });
+      loadEnergy();
+    }
+    if (key === 'logbook') {
+      const items = activityItems();
+      out.push({ key: 'dash:act', html: card('dash:act', ++order, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act') });
+      loadActivity();
+    }
+    if (key === 'history') {
+      model.rooms.filter((r) => r.readings.length || r.power != null).forEach((r) => { label(r.id, r.name); out.push({ key: 'readings:' + r.id, html: roomCard(r, ++order) }); });
+    }
+    if (key === 'media') {
+      const ids = Object.keys(states).filter((id) => id.startsWith('media_player.') && states[id].state !== 'unavailable');
+      if (ids.length) out.push({ key: 'block:media', order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
+    }
     return out;
   }
   // a section's page header, as Move Assistant's pages have: a big back arrow and the section's name
