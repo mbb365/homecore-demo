@@ -84,7 +84,7 @@ const I={
 // The patch's English text (ui.card.weather.*); placeholders in braces
 const T={
   // the XL widgets' callout rows (Matt, 9 Nov)
-  callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today'},
+  callout:{sunrise:'Sunrise',sunset:'Sunset',noon:'Solar noon',riseTomorrow:'Sunrise tomorrow',setTomorrow:'Sunset tomorrow',dayTomorrow:'Daylight tomorrow',moonrise:'Moonrise',moonset:'Moonset',lit:'Lit',now:'Now',peak:'Peak today'},
   now:'Now',today:'Today',tomorrow:'Tomorrow',back:'Back',nextHours:'Next hours',nextDays:'Next days',views:{strip:'Hours',bars:'Days'},showAs:'Show as',
   rangeRow:'{day}: low {low}, high {high}',humidity:'Humidity',high:'High',low:'Low',
   modes:{temperature:'Temperature',precipitation:'Rain',wind:'Wind'},
@@ -842,14 +842,18 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const time=d=>d?fmtTime(d,h):'–';
     // solar noon, named above the top of the path
     const noon=rise&&set?new Date((rise.getTime()+set.getTime())/2):null;
+    // today's times are in the picture; the callouts are tomorrow's (Matt, 9 Nov)
+    const next=new Date(now);next.setDate(next.getDate()+1);
+    const t2=sunTimes(h,next),day2=t2.rise&&t2.set?Math.round((t2.set.getTime()-t2.rise.getTime())/MINUTE):0;
     return tile({icon:I.sunny,name:T.sun,sub:daylight?fill(T.daylightShort,{hours,minutes}):undefined,
-      callouts:[[T.callout.sunrise,time(rise)],[T.callout.sunset,time(set)],...(noon?[[T.callout.noon,time(noon)]]:[])],
+      callouts:[[T.callout.riseTomorrow,time(t2.rise)],[T.callout.setTomorrow,time(t2.set)],...(day2?[[T.callout.dayTomorrow,Math.floor(day2/60)+'h '+(day2%60)+'m']]:[])],
       zone:'<div class="wbSunSky" style="background:linear-gradient(180deg, '+top+', '+bottom+');--wb-sun-line:'+line+'"><svg viewBox="0 0 200 124" aria-hidden="true">'+
         '<defs><radialGradient id="'+P+'sun-glow"><stop offset="0" stop-color="'+core+'"></stop><stop offset="0.45" stop-color="'+core+'"></stop><stop offset="1" stop-color="'+edge+'"></stop></radialGradient>'+
         '<clipPath id="'+P+'above-horizon"><rect x="0" y="0" width="200" height="100"></rect></clipPath></defs>'+
         '<path class="wbSunPath" d="M 26 100 A 74 74 0 0 1 174 100"></path><line class="wbHorizon" x1="0" x2="200" y1="100" y2="100"></line>'+
         (up?'<circle cx="'+sunX+'" cy="'+sunY+'" r="14" fill="url(#'+P+'sun-glow)" clip-path="url(#'+P+'above-horizon)"></circle>':'')+
-        '</svg></div>'});
+        (noon?'<text class="wbSunTime wbNoon" x="100" y="1">'+esc(time(noon))+'</text>':'')+
+        '<text class="wbSunTime" x="26" y="117">'+esc(time(rise))+'</text><text class="wbSunTime" x="174" y="117">'+esc(time(set))+'</text></svg></div>'});
   }
 
   /* ---- Moon: phase, how much is lit and moonrise or moonset, worked out from the home location ---- */
@@ -918,16 +922,23 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const endOfDay=new Date();endOfDay.setHours(23,59,59,999);
     const peak=forecast('hourly').filter(e=>e.uv_index!=null&&new Date(e.datetime)>new Date()&&new Date(e.datetime)<=endOfDay)
       .reduce((best,e)=>!best||e.uv_index>best.uv?{uv:e.uv_index,time:new Date(e.datetime)}:best,undefined);
-    /* the sun's rays coming down (Matt, 9 Nov, sketch D without its sun): rays fan from the zone's top-left corner,
+    /* the sun's rays coming down (Matt, 9 Nov, sketch D): rays fan from the zone's top-left corner under a sun there,
        more of them, longer and brighter as UV rises, in its level's colour; dashed, and the dashes drift down them while
        the widget is hovered (sketch F). The number big in the bottom right, its level under it */
     const k=Math.min(Math.max(v,0),12)/12,n=6+Math.round(k*14),len=90+k*190,colour=UV_COLORS[uvLevel(v)],O=-6;
+    const sunR=216*Math.min(1,Math.max(.08,.4+(v-4.5)*(.5/5.5)));
     const rays='<svg class="wbUvRays" viewBox="0 0 216 198" preserveAspectRatio="xMinYMin slice" aria-hidden="true" style="color:'+colour+';--wb-ray-o:'+(.35+k*.6).toFixed(2)+';--wb-ray-dur:'+(1.6-k*.6).toFixed(2)+'s">'+
       '<defs><radialGradient id="'+P+'uv-ray" gradientUnits="userSpaceOnUse" cx="'+O+'" cy="'+O+'" r="'+len+'">'+
         '<stop offset="0" style="stop-color:var(--wb-ray-hi,#fff2c4)" stop-opacity=".95"></stop><stop offset=".35" style="stop-color:'+colour+'" stop-opacity=".75"></stop>'+
         '<stop offset="1" style="stop-color:'+colour+'" stop-opacity="0"></stop></radialGradient></defs>'+
       Array.from({length:n},(_,i)=>{const a=(8+i*(74/(n-1)))*Math.PI/180;
-        return '<line class="wbUvRay" x1="'+O+'" y1="'+O+'" x2="'+(O+Math.cos(a)*len).toFixed(1)+'" y2="'+(O+Math.sin(a)*len).toFixed(1)+'" stroke="url(#'+P+'uv-ray)" stroke-width="'+(2+k*3).toFixed(1)+'" style="animation-delay:-'+((i*.17)%1).toFixed(2)+'s"></line>'}).join('')+'</svg>'+
+        return '<line class="wbUvRay" x1="'+O+'" y1="'+O+'" x2="'+(O+Math.cos(a)*len).toFixed(1)+'" y2="'+(O+Math.sin(a)*len).toFixed(1)+'" stroke="url(#'+P+'uv-ray)" stroke-width="'+(2+k*3).toFixed(1)+'" style="animation-delay:-'+((i*.17)%1).toFixed(2)+'s"></line>'}).join('')+
+      // the sun in the corner, its size the intensity (Matt, 9 Nov): about 40% of the zone at 4-5, nearly 90% at 10; a
+      // toned gradient, light at its heart to the level's colour at its edge
+      '<radialGradient id="'+P+'uv-sun" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="'+sunR.toFixed(1)+'">'+
+        '<stop offset="0" style="stop-color:color-mix(in srgb, '+colour+' 28%, #fff6dd)"></stop><stop offset=".62" style="stop-color:color-mix(in srgb, '+colour+' 62%, #fff6dd)"></stop>'+
+        '<stop offset="1" style="stop-color:'+colour+'"></stop></radialGradient>'+
+      '<circle class="wbUvSun" cx="0" cy="0" r="'+sunR.toFixed(1)+'" fill="url(#'+P+'uv-sun)"></circle></svg>'+
       '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>';
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
       sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:rays,cls:'wbUv',

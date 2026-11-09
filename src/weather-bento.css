@@ -428,7 +428,6 @@
 .wbCallout>span:last-child{flex:none;color:var(--text);white-space:nowrap}
 /* what each zone holds: the sun's sky fills it; the moon and the UV meter sit in it; a reading sits 16 in from its foot */
 .wbZone>.wbSunSky{flex:1;align-self:stretch;border-radius:0}
-.wbZone>.wbSunSky svg{overflow:hidden}
 .wbZone>.wbMoonBox{flex:none;height:150px}
 .wbBase .wbZone{align-items:flex-end;justify-content:flex-start}
 /* where the callouts show: XL on the Weather page; on the dashboard XL, and M (the reading and its parts, as before) */
