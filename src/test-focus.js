@@ -1774,6 +1774,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const { n, w } = phone ? { n: 2, w: Math.floor((W - PEG_GAP) / 2) } : pegsFor(W);
     // the Weather page is laid on the same board, its columns the dashboard's (Matt, 1 Nov: one rule set)
     bentoBox.classList.add('tfPegs');
+    bentoBox.classList.toggle('tfPhonePegs', phone); // a phone's Weather page: its cards L, not XL (Matt, 9 Nov: too long)
     bentoBox.style.setProperty('--peg-n', n);
     bentoBox.style.setProperty('--peg-w', w + 'px');
     const off = new Set(dashPrefs().hidden);
