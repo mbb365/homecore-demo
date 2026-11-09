@@ -3,6 +3,9 @@
 import "../homecore-app.js";
 import { HOUSE, houseService } from "./house-data.js";
 import { ICONS } from "./icons.js";
+import { DEMO_ICONS } from "../demo-icons.js";
+// the demo pages' icons too, for any the house's own list doesn't have
+for (const [k, v] of Object.entries(DEMO_ICONS)) if (!ICONS[k]) ICONS[k] = v;
 // Home Assistant's ha-icon and ha-state-icon, stood in for the preview: the icon at --mdc-icon-size (the page's
 // glyph-size, 34 in a 40 room, as the guide draws it), from the icon's name or, for a device, its kind and state
 const svgFor = (name) => '<svg viewBox="0 0 24 24" aria-hidden="true" style="display:block;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)"><path fill="currentColor" d="' + (ICONS[name] || ICONS["mdi:circle-medium"]) + '"/></svg>';
@@ -14,6 +17,10 @@ function stateIconName(st) {
     door: on ? "mdi:door-open" : "mdi:door-closed", window: on ? "mdi:window-open" : "mdi:window-closed", motion: on ? "mdi:motion-sensor" : "mdi:motion-sensor-off", smoke: on ? "mdi:smoke-detector-variant-alert" : "mdi:smoke-detector",
     illuminance: "mdi:brightness-5", outlet: on ? "mdi:power-plug" : "mdi:power-plug-off", tv: s === "off" ? "mdi:television-off" : "mdi:television", speaker: s === "off" ? "mdi:speaker-off" : "mdi:speaker" };
   if (byClass[dc]) return byClass[dc];
+  if (d === 'cover') { // as Home Assistant: the kind of cover, open or closed
+    const shut = s === 'closed';
+    return ({ curtain: shut ? 'mdi:curtains-closed' : 'mdi:curtains', blind: shut ? 'mdi:blinds-horizontal-closed' : 'mdi:blinds-horizontal', shade: shut ? 'mdi:roller-shade-closed' : 'mdi:roller-shade' })[dc] || (shut ? 'mdi:window-shutter' : 'mdi:window-shutter-open');
+  }
   return ({ light: on ? "mdi:lightbulb" : "mdi:lightbulb-off", switch: on ? "mdi:toggle-switch-variant" : "mdi:toggle-switch-variant-off", media_player: s === "off" ? "mdi:cast-off" : "mdi:cast",
     lock: s === "locked" ? "mdi:lock" : s === "jammed" ? "mdi:lock-alert" : "mdi:lock-open-variant", climate: "mdi:thermostat", vacuum: "mdi:robot-vacuum", humidifier: on ? "mdi:air-humidifier" : "mdi:air-humidifier-off",
     alarm_control_panel: s === "disarmed" ? "mdi:shield-off" : s === "triggered" ? "mdi:shield-alert" : "mdi:shield-home", valve: "mdi:valve", plant: "mdi:flower", person: "mdi:account", weather: "mdi:weather-partly-cloudy",

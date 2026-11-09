@@ -3318,6 +3318,10 @@ export function mountTestFocus(root, { config, getHass }) {
 
   applyDensity();
   return {
+    // HomeCore demo: the site's rail opens Home and the Weather page, and its Devices page lists the same states
+    openArea, closeArea,
+    get page() { return areaPage; },
+    get model() { return model; },
     update(next) {
       if (!testFocus) return;
       const first = !Object.keys(states).length;
