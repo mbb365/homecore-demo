@@ -7,6 +7,7 @@
 import { icon, HA_LOGO } from './demo-icons.js';
 import { renderDevices } from './pages/devices.js';
 import { renderAccount } from './pages/account.js';
+import { renderActivity } from './pages/activity.js';
 import { openSearch } from './pages/search.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -24,8 +25,9 @@ function renderMap(page, ctx) {
   import('./pages/map.js').then((m) => { if (!gone) off = m.renderMap(page, now); });
   return () => { gone = true; off?.(); };
 }
-const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount };
-const HOMECORE_PAGES = new Set(['weather', 'activity']);
+const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity };
+// Activity is the demo's own page now (Home Assistant's logbook with its filters: Matt, 9 Nov)
+const HOMECORE_PAGES = new Set(['weather']);
 const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
 
 export function mountDemoShell(root, { getHass, homecore }) {

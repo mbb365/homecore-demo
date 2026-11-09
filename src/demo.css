@@ -313,3 +313,12 @@
 #app.tfEditing .hcTopRight{right:calc(360px + 22px)}
 #app.tfEditing .hcTitleFontPick{display:block;height:40px;min-width:200px}
 #app.hcTitleFont .tfDashTitle{font-family:var(--hc-title-font)!important;font-weight:var(--hc-title-weight)!important;letter-spacing:-.01em!important}
+
+/* ---------- Activity: Home Assistant's logbook in HomeCore's parts (Matt, 9 Nov) ---------- */
+.hcActivityBar .tfSeg{flex:0 0 auto}
+.hcActivityBar .tfSeg button{flex:0 0 auto;padding:0 14px}
+.hcActivityDays{display:grid;gap:16px;max-width:760px}
+.hcActivityCard{display:grid;gap:0}
+.hcActivityCard>.hcCardTitle{display:flex;align-items:center;min-height:28px;padding:4px 8px 10px;font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+#app .hcActivityRow{grid-template-columns:46px var(--chip-size) minmax(0,1fr)}
+.hcActivityTime{font:500 13px/1 var(--font-tile);color:var(--muted);font-variant-numeric:tabular-nums}
