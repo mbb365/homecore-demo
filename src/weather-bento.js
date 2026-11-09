@@ -922,26 +922,18 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const endOfDay=new Date();endOfDay.setHours(23,59,59,999);
     const peak=forecast('hourly').filter(e=>e.uv_index!=null&&new Date(e.datetime)>new Date()&&new Date(e.datetime)<=endOfDay)
       .reduce((best,e)=>!best||e.uv_index>best.uv?{uv:e.uv_index,time:new Date(e.datetime)}:best,undefined);
-    /* the sun's rays coming down (Matt, 9 Nov, sketch D): rays fan from the zone's top-left corner under a sun there,
-       more of them, longer and brighter as UV rises, in its level's colour; dashed, and the dashes drift down them while
-       the widget is hovered (sketch F). The number big in the bottom right, its level under it */
-    const k=Math.min(Math.max(v,0),12)/12,n=6+Math.round(k*14),len=90+k*190,colour=UV_COLORS[uvLevel(v)],O=-6;
-    const sunR=216*Math.min(1,Math.max(.08,.4+(v-4.5)*(.5/5.5)));
-    const rays='<svg class="wbUvRays" viewBox="0 0 216 198" preserveAspectRatio="xMinYMin slice" aria-hidden="true" style="color:'+colour+';--wb-ray-o:'+(.35+k*.6).toFixed(2)+';--wb-ray-dur:'+(1.6-k*.6).toFixed(2)+'s">'+
-      '<defs><radialGradient id="'+P+'uv-ray" gradientUnits="userSpaceOnUse" cx="'+O+'" cy="'+O+'" r="'+len+'">'+
-        '<stop offset="0" style="stop-color:var(--wb-ray-hi,#fff2c4)" stop-opacity=".95"></stop><stop offset=".35" style="stop-color:'+colour+'" stop-opacity=".75"></stop>'+
-        '<stop offset="1" style="stop-color:'+colour+'" stop-opacity="0"></stop></radialGradient></defs>'+
-      Array.from({length:n},(_,i)=>{const a=(8+i*(74/(n-1)))*Math.PI/180;
-        return '<line class="wbUvRay" x1="'+O+'" y1="'+O+'" x2="'+(O+Math.cos(a)*len).toFixed(1)+'" y2="'+(O+Math.sin(a)*len).toFixed(1)+'" stroke="url(#'+P+'uv-ray)" stroke-width="'+(2+k*3).toFixed(1)+'" style="animation-delay:-'+((i*.17)%1).toFixed(2)+'s"></line>'}).join('')+
-      // the sun in the corner, its size the intensity (Matt, 9 Nov): about 40% of the zone at 4-5, nearly 90% at 10; a
-      // toned gradient, light at its heart to the level's colour at its edge
-      '<radialGradient id="'+P+'uv-sun" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="'+sunR.toFixed(1)+'">'+
+    /* UV (Matt, 9 Nov): a sun in the zone's top-left corner whose size is the intensity, about 40% of the zone at 4-5 and
+       nearly 90% at 10; a toned gradient, light at its heart to the level's colour at its edge. The number big in the
+       bottom right, its level under it (the rays that fanned from the corner went the same day) */
+    const colour=UV_COLORS[uvLevel(v)],sunR=216*Math.min(1,Math.max(.08,.4+(v-4.5)*(.5/5.5)));
+    const art='<svg class="wbUvArt" viewBox="0 0 216 198" preserveAspectRatio="xMinYMin slice" aria-hidden="true">'+
+      '<defs><radialGradient id="'+P+'uv-sun" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="'+sunR.toFixed(1)+'">'+
         '<stop offset="0" style="stop-color:color-mix(in srgb, '+colour+' 28%, #fff6dd)"></stop><stop offset=".62" style="stop-color:color-mix(in srgb, '+colour+' 62%, #fff6dd)"></stop>'+
-        '<stop offset="1" style="stop-color:'+colour+'"></stop></radialGradient>'+
+        '<stop offset="1" style="stop-color:'+colour+'"></stop></radialGradient></defs>'+
       '<circle class="wbUvSun" cx="0" cy="0" r="'+sunR.toFixed(1)+'" fill="url(#'+P+'uv-sun)"></circle></svg>'+
       '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>';
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
-      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:rays,cls:'wbUv',
+      sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:art,cls:'wbUv',
       callouts:[[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
   }
   function renderCompared(h){
@@ -1082,12 +1074,26 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       zone:valueHtml(n?fmtNum(Math.round(v),h.locale):String(main.state),dc==='aqi'?'AQI':main.attributes.unit_of_measurement||''),
       callouts:air.slice(1,4).map(s=>[entityName(h,s),stateText(h,s)])});
   }
+  /* Pollen (Matt, 9 Nov): seeds, pollen grains and grass seed-heads floating across the gap between the head and the
+     level, more of them the higher it is; placed by a fixed pattern, so a redraw doesn't make them jump */
+  const POLLEN_GLYPHS=[
+    ['wbSeed','<svg viewBox="0 0 22 30" aria-hidden="true"><path d="M11 28V11" fill="none" stroke="currentColor" stroke-width="1"></path><path d="M11 11L3 6M11 11L5 2.5M11 11L8.5 1M11 11L13.5 1M11 11L17 2.5M11 11L19 6" fill="none" stroke="currentColor" stroke-width=".8" stroke-linecap="round"></path><circle cx="11" cy="28.5" r="1.4" fill="currentColor"></circle></svg>'],
+    ['wbGrain','<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.3" fill="currentColor"></circle><path d="M6 1.2v1.4M6 9.4v1.4M1.2 6h1.4M9.4 6h1.4M2.6 2.6l1 1M8.4 8.4l1 1M2.6 9.4l1-1M8.4 3.6l1-1" stroke="currentColor" stroke-width=".9" stroke-linecap="round"></path></svg>'],
+    ['wbStem','<svg viewBox="0 0 10 30" aria-hidden="true"><path d="M5 29Q3.6 18 5 8" fill="none" stroke="currentColor" stroke-width="1"></path><ellipse cx="5" cy="6" rx="2.3" ry="4.6" fill="currentColor"></ellipse></svg>'],
+  ];
+  const pollenAir=rank=>{
+    const n=[1,3,5,7,10,13][Math.max(0,Math.min(5,Number.isFinite(rank)?Math.round(rank):0))];
+    return '<div class="wbPollenAir" aria-hidden="true">'+Array.from({length:n},(_,i)=>{
+      const [cls,svg]=POLLEN_GLYPHS[i%3],dur=10+(i*7)%9,bob=2.6+(i*5)%4*.4;
+      return '<span class="wbFloat '+cls+'" style="top:'+(4+(i*37)%52)+'%;--x:'+((i*29)%90+4)+'%;--s:'+(.8+((i*13)%5)/10).toFixed(1)+';animation-duration:'+dur+'s;animation-delay:-'+((i*2.3)%dur).toFixed(1)+'s">'+
+        '<span class="wbBob" style="animation-duration:'+bob.toFixed(1)+'s;animation-delay:-'+((i*.7)%bob).toFixed(1)+'s">'+svg+'</span></span>'}).join('')+'</div>';
+  };
   function renderPollenTile(h){
     const all=anyPollen(h).sort((a,b)=>pollenRank(b)-pollenRank(a));
     if(!all.length)return tile({icon:I.flower,name:T.pollen,sub:T.noPollen,visual:valueHtml('–',''),cls:'wbBase'});
     const top=all[0],level=s=>num(s.state)?stateText(h,s):sayLevel(s.state);
-    return tile({icon:I.flower,name:T.pollen,sub:entityName(h,top)+' · '+level(top),cls:'wbBase',
-      zone:valueHtml(level(top),''),callouts:all.slice(0,3).map(s=>[entityName(h,s),level(s)])});
+    return tile({icon:I.flower,name:T.pollen,sub:entityName(h,top)+' · '+level(top),cls:'wbBase wbPollen',
+      zone:pollenAir(pollenRank(top))+valueHtml(level(top),''),callouts:all.slice(0,3).map(s=>[entityName(h,s),level(s)])});
   }
   function renderRadarTile(h){
     const now=Date.now(),hours=forecast('hourly').filter(e=>{const t=new Date(e.datetime).getTime();return t>now-HOUR&&t<now+12*HOUR});

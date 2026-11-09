@@ -433,16 +433,27 @@
 /* where the callouts show: XL on the Weather page; on the dashboard XL, and M (the reading and its parts, as before) */
 .wbItem[data-xl] .wbCallouts{display:flex}
 
-/* ---- UV index: the sun's rays coming down (Matt, 9 Nov) ---- */
+/* ---- UV index: a sun in the corner, its size the intensity (Matt, 9 Nov) ---- */
 .wbUv .wbZone{display:block}
-.wbUvRays{position:absolute;inset:0;width:100%;height:100%;display:block}
-.wbUvRay{opacity:var(--wb-ray-o);stroke-dasharray:14 6;stroke-linecap:butt}
-/* the dashes drift down the rays while the widget is hovered, faster as UV rises */
-.wbUv:hover .wbUvRay{animation:wbRayDrift var(--wb-ray-dur) linear infinite}
-@keyframes wbRayDrift{to{stroke-dashoffset:-20}}
-@media (prefers-reduced-motion:reduce){.wbUv:hover .wbUvRay{animation:none}}
-/* on a light card the rays start in their own colour (warm white doesn't show there) */
-#app.light .wbUvRays{--wb-ray-hi:currentColor}
+.wbUvArt{position:absolute;inset:0;width:100%;height:100%;display:block}
 .wbUvBig{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:flex-end}
 .wbUvNum{font:500 64px/.9 var(--font-tile);letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums}
 .wbUvWord{margin-top:6px;font:400 14px/20px var(--font);color:var(--muted)}
+
+/* ---- Pollen: seeds, grains and seed-heads floating across above the level (Matt, 9 Nov) ---- */
+.wbPollenAir{position:absolute;inset:0 0 62px 0;overflow:hidden;pointer-events:none}
+.wbFloat{position:absolute;left:-12%;animation:wbFloat linear infinite}
+.wbBob{display:block;animation:wbBob ease-in-out infinite alternate}
+@keyframes wbFloat{from{left:-12%}to{left:106%}}
+@keyframes wbBob{from{transform:translateY(-6px) rotate(-14deg)}to{transform:translateY(8px) rotate(16deg)}}
+.wbFloat svg{display:block}
+.wbSeed svg{width:calc(20px * var(--s));height:calc(28px * var(--s))}
+.wbGrain svg{width:calc(10px * var(--s));height:calc(10px * var(--s))}
+.wbStem svg{width:calc(9px * var(--s));height:calc(26px * var(--s))}
+.wbSeed{color:var(--text);opacity:.7}
+.wbGrain{color:#e9c46a;opacity:.85}
+.wbStem{color:#a3b18a;opacity:.75}
+#app.light .wbGrain{color:#c99a1e}
+#app.light .wbStem{color:#7d8c5f}
+/* with Reduce motion they rest, spread across the gap */
+@media (prefers-reduced-motion:reduce){.wbFloat,.wbBob{animation:none}.wbFloat{left:var(--x)}}
