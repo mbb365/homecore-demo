@@ -34,8 +34,8 @@ export function motionVars() {
 
 /* ---------- 1 · pivot: buttons and tappable tiles lean toward the pointer, with a shine; they lift, and press in ---------- */
 const PIVOT = ':is(button.primary,button.pill,.hcBtn,.wbRangeBtn,.activityRow.tap,.hcRow,a.hcRow)';
-/* ---------- 3 · icon buttons are CSS (motion.css); 11 · the outline light's cards ---------- */
-const OUTLINE = '#homeView :is(.tfCard,.tfDashCard,.tfAreaPanel,.tfAreas.card)';
+/* ---------- 3 · icon buttons are CSS (motion.css); 11 · the outline light: the area cards only (Matt, 10 Nov) ---------- */
+const OUTLINE = '#homeView .tfAreaPanel';
 
 export function installMotion(root, app) {
   app.style.cssText += ';' + motionVars();

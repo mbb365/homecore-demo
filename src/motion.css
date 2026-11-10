@@ -43,12 +43,11 @@
 /* 6 · graphs: a 1 line, its fill under it, three grid lines */
 #app .mvGrid{stroke:var(--divider,rgba(127,127,127,.25));stroke-width:1;vector-effect:non-scaling-stroke}
 
-/* 11 · the outline light: near a card's edge its border lights at 199° and a glow follows the pointer round it (the
+/* 11 · the outline light, on the area cards only (Matt, 10 Nov): near the card's edge its border lights at 199° and a glow follows the pointer round it (the
    Move Assistant accordion's, in one colour) */
 #app{--ol-l:68%;--mv-ok:#4cc38a}
 #app.light{--ol-l:48%;--mv-ok:#1f7a4d} /* the lab's --ok, dark and light */
-#app :is(.tfCard,.tfDashCard,.tfAreaPanel,.tfAreas.card):has(>.mvEdge){isolation:isolate}
-#app :is(.tfCard,.tfDashCard,.tfAreaPanel,.tfAreas.card):has(>.mvEdge):not(.tfBoardItem){position:relative}
+#app .tfAreaPanel:has(>.mvEdge){isolation:isolate;position:relative}
 #app .mvEdge,#app .mvEdgeFill{position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:opacity var(--ol-in) ease-out}
 #app .mvEdgeFill{z-index:-1;background:hsl(var(--ol-h) 97% var(--ol-l));mix-blend-mode:soft-light;
   opacity:clamp(0,calc(var(--ol-fill) * (var(--edge-proximity,0) - var(--ol-csens)) / (100 - var(--ol-csens))),var(--ol-fill));
