@@ -37,6 +37,13 @@ export function motionVars() {
 const PIVOT = ':is(button.primary,button.pill,.hcBtn,.wbRangeBtn,.activityRow.tap,.hcRow,a.hcRow)';
 /* ---------- 3 · icon buttons are CSS (motion.css); 11 · the outline light: the area cards only (Matt, 10 Nov) ---------- */
 const OUTLINE = '#homeView .tfAreaPanel';
+/* the pivot's drop-off (Matt, 10 Nov: wide tiles bent a lot): up to the lab's tile, 300 across, it moves as set; past
+   that the tilt, lift and press shrink by 300 ÷ its size and its perspective grows by its size ÷ 300 (a fixed 220
+   perspective bends a wide tile's far edges most), so its edges move as far as the lab's tile's do, however wide (and,
+   for the tilt up and down, however tall) it is */
+const PV_REF = 300;
+const pvFall = (px) => Math.min(1, PV_REF / Math.max(1, px));
+const pvScale = (el, pct) => 1 + (pct / 100 - 1) * pvFall(el.offsetWidth);
 
 export function installMotion(root, app) {
   app.style.cssText += ';' + motionVars();
@@ -50,20 +57,21 @@ export function installMotion(root, app) {
     if (!el || el.disabled) return;
     const p = M.pivot, r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height, s = p.dir === 'dips' ? 1 : -1;
     el.classList.add('mvPv', 'mvMoving', 'mvLit');
-    el.style.setProperty('--ry', (s * (x - 0.5) * 2 * p.tilt).toFixed(2) + 'deg');
-    el.style.setProperty('--rx', (s * -(y - 0.5) * 2 * p.tilt).toFixed(2) + 'deg');
+    el.style.setProperty('--pv-persp', p.persp / pvFall(Math.max(el.offsetWidth, el.offsetHeight)) + 'px');
+    el.style.setProperty('--ry', (s * (x - 0.5) * 2 * p.tilt * pvFall(el.offsetWidth)).toFixed(3) + 'deg');
+    el.style.setProperty('--rx', (s * -(y - 0.5) * 2 * p.tilt * pvFall(el.offsetHeight)).toFixed(3) + 'deg');
     el.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
     el.style.setProperty('--my', (y * 100).toFixed(1) + '%');
-    if (!el._down) el.style.setProperty('--sc', p.lift / 100);
+    if (!el._down) el.style.setProperty('--sc', pvScale(el, p.lift));
   }, { passive: true });
   root.addEventListener('pointerout', (e) => { if (pv && !pv.contains(e.relatedTarget)) { rest(pv); pv = null; } });
   root.addEventListener('pointerdown', (e) => {
     const el = reduced() ? null : e.target.closest?.(PIVOT);
-    if (el) { el._down = true; el.classList.add('mvPv'); el.classList.remove('mvMoving'); el.style.setProperty('--sc', M.pivot.press / 100); }
+    if (el) { el._down = true; el.classList.add('mvPv'); el.classList.remove('mvMoving'); el.style.setProperty('--sc', pvScale(el, M.pivot.press)); }
   });
   root.addEventListener('pointerup', (e) => {
     const el = e.target.closest?.(PIVOT);
-    if (el) { el._down = false; el.style.setProperty('--sc', e.pointerType === 'touch' ? 1 : M.pivot.lift / 100); }
+    if (el) { el._down = false; el.style.setProperty('--sc', e.pointerType === 'touch' ? 1 : pvScale(el, M.pivot.lift)); }
   });
 
   // 2 · the slider glow: on hover, and bigger and a touch taller while held
