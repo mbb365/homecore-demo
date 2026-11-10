@@ -2,6 +2,7 @@
 // activity. Changes are kept in this browser's localStorage.
 import "../homecore-app.js";
 import { HOUSE, houseService } from "./house-data.js";
+import { USER_DATA } from "./defaults.js";
 import { ICONS } from "./icons.js";
 import { DEMO_ICONS } from "../demo-icons.js";
 // the demo pages' icons too, for any the house's own list doesn't have
@@ -145,7 +146,8 @@ const hass = {
   entities: HOUSE.entities,
   devices: {},
   callWS: async (msg) => {
-    if (msg.type === "frontend/get_user_data") return { value: read(msg.key) };
+    // a first visit starts from the demo's defaults (defaults.js); after that, what the visitor saved
+    if (msg.type === "frontend/get_user_data") return { value: read(msg.key) ?? USER_DATA[msg.key] ?? null };
     if (msg.type === "frontend/set_user_data") {
       localStorage.setItem(slot(msg.key), JSON.stringify(msg.value));
       return null;

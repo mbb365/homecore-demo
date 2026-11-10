@@ -386,7 +386,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const only = (o, ok) => Object.fromEntries(Object.entries(o || {}).filter(([, x]) => ok.includes(x)));
     return { more: v.more === 'sheet' ? 'sheet' : 'popup', names: v.namesPicked && ['auto', 'cut', 'wrap', 'scroll'].includes(v.names) ? v.names : 'scroll', namesPicked: Boolean(v.namesPicked),
       hoursWindow: ['day', 'waking', 'all'].includes(v.hoursWindow) ? v.hoursWindow : 'day',
-      wxStyle: ['bitmap', 'onebit', 'smooth', 'line'].includes(v.wxStyle) ? v.wxStyle : 'bitmap', lights: v.lights === 'dac' ? 'dac' : 'tile', dacPad: v.dacPad === 'colour' ? 'colour' : 'temperature',
+      wxStyle: ['bitmap', 'onebit', 'smooth', 'line'].includes(v.wxStyle) ? v.wxStyle : 'smooth', // the demo starts smooth (Matt, 10 Nov) lights: v.lights === 'dac' ? 'dac' : 'tile', dacPad: v.dacPad === 'colour' ? 'colour' : 'temperature',
       lightStyles: only(v.lightStyles, ['tile', 'dac']), lightPads: only(v.lightPads, ['temperature', 'colour']) };
   })();
   const saveLook = () => local.set(LOOK_KEY, JSON.stringify(look));
