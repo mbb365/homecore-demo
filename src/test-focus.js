@@ -1972,7 +1972,13 @@ export function mountTestFocus(root, { config, getHass }) {
     if (['left', 'right', 'up', 'down'].includes(act)) drag = { key, col: cells[key].col, row: cells[key].row };
     saveCells(dash, cells);
     if (drag) { layoutBoard(); drag = null; saveCells(dashPrefs(), cellsNow()); }
-    closeBoardMenu();
+    // a size: the menu stays while its highlight stretches across to the new one (the Motion Lab's tabs), then goes
+    const tab = /^[hw]:/.test(act) && !reduced() && boardOpen?.menu.querySelector('[data-board-act="' + CSS.escape(act) + '"]');
+    if (tab) {
+      const open = boardOpen;
+      tab.parentElement.querySelectorAll('[aria-checked]').forEach((b) => b.setAttribute('aria-checked', String(b === tab)));
+      setTimeout(() => { if (boardOpen === open) closeBoardMenu(); }, M.tabs.dur);
+    } else closeBoardMenu();
     if (act === 'graph') { units.delete('dash:energy'); refresh(); }
     if (act.startsWith('h:') && key.includes('.')) refresh(); // a room's tile shows what fits by its height alone // a tile's controls change with its height
     layoutBoard();

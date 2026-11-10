@@ -221,32 +221,39 @@ export function stretchTo(ind, l0, w0, l1, w1) {
 }
 // a segmented choice has no highlight of its own: one is laid over it for the move, from the old choice to the new
 export function installSegments(root) {
-  const GROUP = ':is(.themeChoice,.wbSegments,.tfHeightTabs,.hcSeg)';
+  // every segmented choice in the demo: settings, weather, the board menu, the device popups' modes, Activity's When,
+  // Devices' Show as and the map's People, Devices and Zones
+  const GROUP = ':is(.themeChoice,.wbSegments,.tfHeightTabs,.hcSeg,.tfSeg)';
   const onOf = (g) => g.querySelector(':scope>[aria-pressed="true"],:scope>[aria-checked="true"],:scope>.active');
+  const indexOf = (g, b) => (b ? [...g.children].indexOf(b) : -1);
   root.addEventListener('click', (e) => {
     const btn = e.target.closest?.(GROUP + '>button');
     const g = btn?.parentElement;
-    if (!g || reduced()) return;
+    if (!g || reduced() || btn.disabled) return;
     const was = onOf(g);
     if (!was || was === btn) return;
-    const gr = g.getBoundingClientRect(), a = was.getBoundingClientRect(), cs = getComputedStyle(was);
-    const home = g.getRootNode(), top = anchorOf(g), key = top.dataset?.k, path = pathTo(g, top);
-    // after the choice is made (and the control drawn again), slide a copy of the highlight across
-    requestAnimationFrame(() => {
+    const from = indexOf(g, was), gr = g.getBoundingClientRect(), a = was.getBoundingClientRect(), radius = getComputedStyle(was).borderRadius;
+    const home = g.getRootNode(), top = anchorOf(g), key = top.dataset?.k, path = pathTo(g, top), t0 = performance.now();
+    // once the choice has changed (straight away, or when a device answers, about 120 later, and the control's been
+    // drawn again), slide a copy of the highlight across from the old choice to the new
+    const look = () => {
       const top2 = key && !top.isConnected ? home.querySelector?.('[data-k="' + CSS.escape(key) + '"]') : top;
       const g2 = top2 && follow(top2, path);
-      const now = g2 && onOf(g2);
-      if (!now || !g2.matches(GROUP)) return;
-      const r2 = g2.getBoundingClientRect(), b = now.getBoundingClientRect();
+      const now = g2?.matches?.(GROUP) ? onOf(g2) : null;
+      if (!now || indexOf(g2, now) === from) { if (performance.now() - t0 < 700) requestAnimationFrame(look); return; }
+      const r2 = g2.getBoundingClientRect(), b = now.getBoundingClientRect(), cs = getComputedStyle(now);
+      g2.querySelector(':scope>.mvSegInd')?.remove();
       const ind = document.createElement('span');
       ind.className = 'mvSegInd';
-      ind.style.cssText = 'top:' + (b.top - r2.top - g2.clientTop) + 'px;height:' + b.height + 'px;border-radius:' + cs.borderRadius + ';background:' + getComputedStyle(now).backgroundColor + ';box-shadow:' + getComputedStyle(now).boxShadow;
+      ind.style.cssText = 'top:' + (b.top - r2.top - g2.clientTop) + 'px;height:' + b.height + 'px;border-radius:' + radius + ';background:' + cs.backgroundColor + ';box-shadow:' + cs.boxShadow;
       if (getComputedStyle(g2).position === 'static') g2.style.position = 'relative';
       g2.prepend(ind);
       g2.classList.add('mvSegMoving');
       stretchTo(ind, a.left - gr.left - g2.clientLeft, a.width, b.left - r2.left - g2.clientLeft, b.width);
-      setTimeout(() => { ind.remove(); g2.classList.remove('mvSegMoving'); }, M.tabs.dur + 20);
-    });
+      clearTimeout(g2._seg);
+      g2._seg = setTimeout(() => { ind.remove(); g2.classList.remove('mvSegMoving'); }, M.tabs.dur + 20);
+    };
+    requestAnimationFrame(look);
   }, true);
 }
 
