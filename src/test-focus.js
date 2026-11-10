@@ -1866,6 +1866,22 @@ export function mountTestFocus(root, { config, getHass }) {
   // edit mode's tools: the grid of cells, each card's grip (top middle) and ⋯ (its own controls rest), where a dragged
   // card will land, and on the Favourites card a hide button for each favourite (hidden cards and favourites wait in the
   // edit tray); returns the board's height with them
+  /* edit mode's grid (Matt, 10 Nov; were solid cells): a field of dots and a crosshair wherever the gutters cross, all
+     from the grid the cards snap to. The crosshairs sit in the middle of the gutters, so a card's corners land just inside
+     four of them; the dots run through the same points, a quarter of a row apart down and about as far across (each
+     column step split evenly), so they line up with the cards too */
+  function gridMarks(n, rows, w) {
+    const P = w + PEG_GAP, W = n * w + (n - 1) * PEG_GAP, H = rows * ROW_PITCH - PEG_GAP, half = PEG_GAP / 2;
+    const dx = P / Math.max(1, Math.round(P / (ROW_PITCH / 4))), dy = ROW_PITCH / 4, arm = 6;
+    let x = '';
+    for (let i = 0; i <= n; i++) for (let j = 0; j <= rows; j++) {
+      const cx = i * P - half, cy = j * ROW_PITCH - half;
+      x += 'M' + (cx - arm) + ' ' + cy + 'H' + (cx + arm) + 'M' + cx + ' ' + (cy - arm) + 'V' + (cy + arm);
+    }
+    return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"><defs><pattern id="tfGridDots" patternUnits="userSpaceOnUse" x="' + (-half) + '" y="' + (-half) + '" width="' + dx.toFixed(3) + '" height="' + dy + '">' +
+      '<circle cx="0" cy="0" r="1.4"></circle><circle cx="' + dx.toFixed(3) + '" cy="0" r="1.4"></circle><circle cx="0" cy="' + dy + '" r="1.4"></circle><circle cx="' + dx.toFixed(3) + '" cy="' + dy + '" r="1.4"></circle></pattern></defs>' +
+      '<rect class="tfGridDots" x="' + (-half) + '" y="' + (-half) + '" width="' + (W + PEG_GAP) + '" height="' + (H + PEG_GAP) + '" fill="url(#tfGridDots)"></rect><path class="tfGridCross" d="' + x + '"></path></svg>';
+  }
   function editTools(on, shown = [], placed = new Map(), height = 0, n = 1, w = PEG) {
     grid.querySelectorAll('.tfEditChips').forEach((c) => { if (!on || !c.closest('.tfBoardItem')) c.remove(); });
     grid.querySelectorAll('.tfFavHides').forEach((c) => c.remove());
@@ -1878,8 +1894,7 @@ export function mountTestFocus(root, { config, getHass }) {
     cells.style.top = boardTop + 'px';
     if (cells.dataset.size !== n + 'x' + rows + 'x' + w) {
       cells.dataset.size = n + 'x' + rows + 'x' + w;
-      cells.style.gridTemplateColumns = 'repeat(' + n + ',' + w + 'px)';
-      cells.innerHTML = '<i></i>'.repeat(n * rows);
+      cells.innerHTML = gridMarks(n, rows, w);
     }
     height = Math.max(height, boardTop + rows * ROW_PITCH - PEG_GAP);
     shown.forEach((it) => {

@@ -568,8 +568,11 @@ button.tfAreaIcon{cursor:pointer}
 /* edit mode: the cells as a solid grid under the cards, each card outlined in the accent with its grip (top middle,
    80 × 40, across the card's top edge so it covers nothing in it) and ⋯ (top right); its own controls rest. Nothing
    shakes */
-.tfBoardCells{position:absolute;top:0;left:0;z-index:0;display:grid;grid-auto-rows:60px;gap:16px;pointer-events:none}
-.tfBoardCells i{border-radius:var(--r-inner);background:color-mix(in srgb,var(--text) 7%,transparent)}
+/* the grid: dots, and crosshairs where the gutters cross (Matt, 10 Nov; were solid cells) */
+.tfBoardCells{position:absolute;top:0;left:0;z-index:0;pointer-events:none;color:var(--text)}
+.tfBoardCells svg{display:block;overflow:visible}
+.tfBoardCells pattern circle{fill:currentColor;fill-opacity:.16}
+.tfBoardCells .tfGridCross{fill:none;stroke:currentColor;stroke-opacity:.45;stroke-width:1.5;stroke-linecap:round}
 #app.tfEditing .tfBoardItem:not(.tfDashTitle,.tfDashBarRow,.tfDashBento){outline:1.5px solid var(--primary);outline-offset:-1.5px;border-radius:var(--r-card)}
 #app.tfEditing .tfBoardItem:is(.tfAction,.tfDac){border-radius:28px}
 #app.tfEditing .tfAreas{border-radius:24px}
