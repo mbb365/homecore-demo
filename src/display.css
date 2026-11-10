@@ -822,8 +822,7 @@ button.tfAreaIcon{cursor:pointer}
 /* the open Settings tab in the bright fill, as a tile's picked choice */
 #housePane .rubberIndicator{background:var(--bright)}
 #housePane .tab.active{color:var(--on-bright)}
-/* light mode: a line in the text colour where a brightness bar's fill ends (amber on the light track is 1.4:1) */
-#app.light .tfBar i{box-shadow:inset -2px 0 0 var(--text)}
+/* (light mode's dark line where a brightness bar's fill ends went, Matt, 10 Nov; amber on the light track is 1.4:1) */
 /* fields: an edge in the muted text colour, and placeholders in it */
 #app.house :is(.settingsSelect,.addInput){border:1px solid var(--muted)}
 /* a list's arrow is ours, 16 in from its edge with the same room as its words have on the left (Matt, 8 Nov: the
