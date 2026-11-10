@@ -93,7 +93,7 @@ const T={
   rangeRow:'{day}: low {low}, high {high}',humidity:'Humidity',high:'High',low:'Low',
   modes:{temperature:'Temperature',precipitation:'Rain',wind:'Wind'},
   range:'H {high}   L {low}',highLow:'{high} / {low}',noHourly:'No hourly forecast for this day',noRain:'No rain expected',
-  sun:'Sun',daylightShort:'{hours}h {minutes}m daylight',
+  sun:'Sun',daylightShort:'{hours}h {minutes}m daylight',untilSunset:'until sunset',untilSunrise:'until sunrise',
   moon:'Moon',moonriseAt:'Moonrise {time}',moonsetAt:'Moonset {time}',lit:'{illumination} lit',
   phases:{new_moon:'New moon',waxing_crescent:'Waxing crescent',first_quarter:'First quarter',waxing_gibbous:'Waxing gibbous',full_moon:'Full moon',waning_gibbous:'Waning gibbous',last_quarter:'Last quarter',waning_crescent:'Waning crescent'},
   wind:'Wind',windFrom:'From {direction}',beaufort:'Bft',
@@ -841,33 +841,74 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   }
 
   /* ---- Sun: a glowing sun on a deep maroon sky, deep red at sunrise and sunset to warm gold at midday ---- */
+  /* Sun (Matt, 10 Nov): a sunset counter. The sky fills the zone and takes the time of day's colour; a band 22 wide is
+     the zone's own inner border (its outer corner the zone's 16, its inner 6) and the sun, a plain dot as wide as it,
+     travels in it: up the left side from sunrise, across the top, down the right to sunset, then back along the bottom
+     through the night. What it has crossed today is lit. The time until sunset (until sunrise at night) in the middle,
+     today's sunrise and sunset in the bottom corners; the band is drawn at the zone's real size (drawSunTracks) */
+  // the sky by time of day, in minutes from sunrise through the morning and from sunset through the evening
+  // (blue to gold goes by lavender, as a sky does; straight across it goes grey)
+  const SKY_MORNING=[[-120,'#0d1530'],[-60,'#1c2550'],[-15,'#c9707a'],[30,'#f2a46a'],[60,'#b49bc8'],[90,'#5aa5e6']],SKY_EVENING=[[-90,'#5aa5e6'],[-60,'#a99bd0'],[-30,'#f0a54a'],[15,'#c45a5a'],[60,'#3a2a5c'],[120,'#0d1530']];
+  const ramp=(stops,x)=>{
+    if(x<=stops[0][0])return stops[0][1];
+    for(let i=1;i<stops.length;i++)if(x<=stops[i][0]){const[a,ca]=stops[i-1],[b,cb]=stops[i];return rgbMix(ca,cb,(x-a)/(b-a))}
+    return stops[stops.length-1][1];
+  };
+  const skyColour=(now,rise,set)=>{
+    if(!rise||!set)return SKY_MORNING[5][1];
+    const toSet=(now.getTime()-set.getTime())/MINUTE;
+    return toSet>=-90?ramp(SKY_EVENING,toSet):ramp(SKY_MORNING,(now.getTime()-rise.getTime())/MINUTE);
+  };
+  const hm=mins=>(mins>=60?Math.floor(mins/60)+'h ':'')+(mins%60)+'m';
   function renderSun(h){
     const now=sunNow,{rise,set}=sunTimes(h,now);
     const daylight=rise&&set?Math.round((set.getTime()-rise.getTime())/MINUTE):0,hours=Math.floor(daylight/60),minutes=daylight%60;
-    // where the sun is on its path: 0 at sunrise, 1 at sunset
-    const progress=rise&&set?(now.getTime()-rise.getTime())/(set.getTime()-rise.getTime()):-1,up=progress>=0&&progress<=1;
-    const angle=Math.PI*(1-Math.min(1,Math.max(0,progress))),sunX=100+74*Math.cos(angle),sunY=100-74*Math.sin(angle);
-    // how high the sun is: 0 on the horizon, 1 at midday
-    const height=up?Math.sin(Math.PI*progress):0;
-    const top=up?rgbMix('#2e0a0d','#43180a',height):'#0e0507',bottom=up?rgbMix('#7a1d12','#8f400f',height):'#1c0709';
-    const core=rgbMix('#f60c08','#ff8f00',height),edge=rgbMix('#fd9b07','#ffd84a',height),line=up?rgbMix('#fd9b07','#ffd84a',height):'#6b3a2a';
     const time=d=>d?fmtTime(d,h):'–';
-    // solar noon, named above the top of the path
-    const noon=rise&&set?new Date((rise.getTime()+set.getTime())/2):null;
     // today's times are in the picture; the callouts are tomorrow's (Matt, 9 Nov)
     const next=new Date(now);next.setDate(next.getDate()+1);
     const t2=sunTimes(h,next),day2=t2.rise&&t2.set?Math.round((t2.set.getTime()-t2.rise.getTime())/MINUTE):0;
-    return tile({icon:I.sunny,name:T.sun,sub:daylight?fill(T.daylightShort,{hours,minutes}):undefined,
+    const prev=new Date(now);prev.setDate(prev.getDate()-1);
+    const up=!!(rise&&set&&now>=rise&&now<=set),before=!!(rise&&now<rise);
+    // along the day's part of the band, or along the night's (last sunset to the next sunrise)
+    const from=up?rise:before?sunTimes(h,prev).set:set,to=up?set:before?rise:t2.rise;
+    const f=from&&to?Math.min(1,Math.max(0,(now.getTime()-from.getTime())/(to.getTime()-from.getTime()))):0;
+    const left=to?Math.max(0,Math.round((to.getTime()-now.getTime())/MINUTE)):0,count=to?hm(left):'–',word=up?T.untilSunset:T.untilSunrise;
+    return tile({icon:I.sunny,name:T.sun,sub:daylight?fill(T.daylightShort,{hours,minutes}):undefined,cls:'wbSunTile',
       callouts:[[T.callout.riseTomorrow,time(t2.rise)],[T.callout.setTomorrow,time(t2.set)],...(day2?[[T.callout.dayTomorrow,Math.floor(day2/60)+'h '+(day2%60)+'m']]:[])],
-      zone:'<div class="wbSunSky" style="background:linear-gradient(180deg, '+top+', '+bottom+');--wb-sun-line:'+line+'"><svg viewBox="0 0 200 124" aria-hidden="true">'+
-        '<defs><radialGradient id="'+P+'sun-glow"><stop offset="0" stop-color="'+core+'"></stop><stop offset="0.45" stop-color="'+core+'"></stop><stop offset="1" stop-color="'+edge+'"></stop></radialGradient>'+
-        '<clipPath id="'+P+'above-horizon"><rect x="0" y="0" width="200" height="100"></rect></clipPath></defs>'+
-        '<path class="wbSunPath" d="M 26 100 A 74 74 0 0 1 174 100"></path><line class="wbHorizon" x1="0" x2="200" y1="100" y2="100"></line>'+
-        (up?'<circle cx="'+sunX+'" cy="'+sunY+'" r="14" fill="url(#'+P+'sun-glow)" clip-path="url(#'+P+'above-horizon)"></circle>':'')+
-        (noon?'<text class="wbSunTime wbNoon" x="100" y="1">'+esc(time(noon))+'</text>':'')+
-        '<text class="wbSunTime" x="26" y="117">'+esc(time(rise))+'</text><text class="wbSunTime" x="174" y="117">'+esc(time(set))+'</text></svg></div>'+
-        // at M, the next sunrise or sunset (Matt, 10 Nov)
-        zoneM(valueHtml(time(rise&&now<rise?rise:set&&now<set?set:t2.rise),''))});
+      zone:'<div class="wbSunZone" style="background:'+skyColour(now,rise,set)+'">'+
+        '<svg class="wbSunTrack" data-up="'+(up?1:0)+'" data-f="'+f.toFixed(4)+'" aria-hidden="true"></svg>'+
+        '<div class="wbSunCount"><span class="wbSunLeft">'+esc(count)+'</span><span class="wbSunWord">'+esc(word)+'</span></div>'+
+        '<span class="wbSunAt wbSunRise">'+esc(time(rise))+'</span><span class="wbSunAt wbSunSet">'+esc(time(set))+'</span></div>'+
+        // at M, the countdown alone (Matt, 10 Nov): M's zone has room for one line
+        zoneM(valueHtml(count,''))});
+  }
+  // the band at the zone's real size: drawn when the card renders and when it changes size
+  const SUN_BAND=22;
+  function drawSunTrack(svg){
+    const W=Math.round(svg.clientWidth),H=Math.round(svg.clientHeight),B=SUN_BAND,c=B/2,at=W+'x'+H+':'+svg.dataset.f+':'+svg.dataset.up;
+    if(W<B*3||H<B*3||svg.dataset.drawn===at)return;
+    svg.dataset.drawn=at;
+    const day='M'+c+' '+(H-B)+'V'+B+'A'+c+' '+c+' 0 0 1 '+B+' '+c+'H'+(W-B)+'A'+c+' '+c+' 0 0 1 '+(W-c)+' '+B+'V'+(H-B);
+    const night='M'+(W-c)+' '+(H-B)+'A'+c+' '+c+' 0 0 1 '+(W-B)+' '+(H-c)+'H'+B+'A'+c+' '+c+' 0 0 1 '+c+' '+(H-B);
+    const r=16,ir=6;
+    const band='M'+r+' 0H'+(W-r)+'A'+r+' '+r+' 0 0 1 '+W+' '+r+'V'+(H-r)+'A'+r+' '+r+' 0 0 1 '+(W-r)+' '+H+'H'+r+'A'+r+' '+r+' 0 0 1 0 '+(H-r)+'V'+r+'A'+r+' '+r+' 0 0 1 '+r+' 0Z'+
+      'M'+(B+ir)+' '+B+'A'+ir+' '+ir+' 0 0 0 '+B+' '+(B+ir)+'V'+(H-B-ir)+'A'+ir+' '+ir+' 0 0 0 '+(B+ir)+' '+(H-B)+'H'+(W-B-ir)+'A'+ir+' '+ir+' 0 0 0 '+(W-B)+' '+(H-B-ir)+'V'+(B+ir)+'A'+ir+' '+ir+' 0 0 0 '+(W-B-ir)+' '+B+'Z';
+    const up=svg.dataset.up==='1',f=Number(svg.dataset.f)||0,ns='http://www.w3.org/2000/svg';
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    // where the sun is: measured along its part of the band
+    const probe=document.createElementNS(ns,'path');probe.setAttribute('d',up?day:night);svg.replaceChildren(probe);
+    const len=probe.getTotalLength(),pt=probe.getPointAtLength(len*f),dayLen=up?len:0;
+    svg.innerHTML='<defs><mask id="'+P+'sun-day"><path d="'+day+'" fill="none" stroke="#fff" stroke-width="'+B*2+'"></path></mask>'+
+      '<mask id="'+P+'sun-done"><path d="'+day+'" fill="none" stroke="#fff" stroke-width="'+B*2+'" stroke-dasharray="'+(up?(dayLen*f).toFixed(1)+' '+(dayLen+1).toFixed(1):'0 99999')+'"></path></mask></defs>'+
+      '<path class="wbSunBand" fill-rule="evenodd" d="'+band+'"></path>'+
+      '<path class="wbSunBand wbSunDay" fill-rule="evenodd" d="'+band+'" mask="url(#'+P+'sun-day)"></path>'+
+      '<path class="wbSunBand wbSunDone" fill-rule="evenodd" d="'+band+'" mask="url(#'+P+'sun-done)"></path>'+
+      '<circle class="wbSunDot'+(up?'':' wbSunNight')+'" cx="'+pt.x.toFixed(1)+'" cy="'+pt.y.toFixed(1)+'" r="'+c+'"></circle>';
+  }
+  const sunRO=typeof ResizeObserver==='function'?new ResizeObserver(es=>es.forEach(e=>drawSunTrack(e.target))):null;
+  function drawSunTracks(){
+    sunRO?.disconnect();
+    root.querySelectorAll('svg.wbSunTrack').forEach(svg=>{drawSunTrack(svg);sunRO?.observe(svg)});
   }
 
   /* ---- Moon: phase, how much is lit and moonrise or moonset, worked out from the home location ---- */
@@ -1293,6 +1334,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       else if(sc?.dataset.start)sc.scrollTo({left:Number(sc.dataset.start)*sc.clientWidth/Number(sc.dataset.span)});
       if(focused&&!focusAfter)it.el.querySelector('[data-wb-focus="'+focused+'"]')?.focus();
     }
+    drawSunTracks();
     if(focusAfter){root.querySelector('[data-wb-focus="'+focusAfter+'"]')?.focus({preventScroll:true});focusAfter=null} // without scrolling the page (Matt, 9 Nov: no jump)
     // Matt's rows (9 Nov) start where he said, at the dashboard's own column widths (more columns leave space at the
     // end, fewer wrap): the first of Moon and what follows it starts row 2, and the first shorter card starts row 3
