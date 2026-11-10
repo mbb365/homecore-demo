@@ -1654,11 +1654,16 @@ export function mountTestFocus(root, { config, getHass }) {
     return { n, w: Math.max(1, Math.min(PEG_MAX, Math.floor((W - (n - 1) * PEG_GAP) / n))) };
   };
   // a card the page hasn't offered before starts off the board, waiting in the edit tray (known: the ones it has)
+  // a layout saved for this board's width (the demo's defaults have one for six columns) stands in for the main one
   const dashPrefs = () => {
-    const d = { cells: {}, spans: {}, hidden: [], opts: {}, ...(prefs.dash || {}) }, fresh = NEW_CARDS.filter((k) => !(d.known || []).includes(k) && !d.hidden.includes(k));
+    let d = { cells: {}, spans: {}, hidden: [], opts: {}, ...(prefs.dash || {}) };
+    const alt = d.byPegs?.[dashCols()];
+    if (alt) d = { ...d, cells: alt.cells || d.cells, spans: alt.spans || d.spans };
+    const fresh = NEW_CARDS.filter((k) => !(d.known || []).includes(k) && !d.hidden.includes(k));
     return fresh.length ? { ...d, hidden: [...d.hidden, ...fresh] } : d;
   };
-  function saveDash(next) { prefs = { ...prefs, dash: { ...next, known: NEW_CARDS } }; savePrefs(); }
+  // what's saved is the visitor's own layout from then on, at every width (the per-width defaults go)
+  function saveDash(next) { const { byPegs: _defaults, ...own } = next; prefs = { ...prefs, dash: { ...own, known: NEW_CARDS } }; savePrefs(); }
   // what's on the board: each card's key, its element, its width in pegs ('full' the whole width) and whether it's a tile
   function boardItems() {
     const q = (sel) => grid.querySelector(sel);

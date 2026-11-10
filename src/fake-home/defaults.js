@@ -4,7 +4,8 @@
 //   rows 4–7  Favourites, Activity and Energy today (2 wide each), Air quality, Pollen (the radar carries on beside)
 //   rows 8–9  eight tiles: Office Ceiling, Small sphere chappy, Paper sphere, the Thermostat, Green wavy light,
 //             Living room, Office and Fire place lamp
-// Compared to average waits in the edit tray. On a narrower screen the cards keep this order, top row first.
+// Compared to average waits in the edit tray. Six columns have a layout of their own (byPegs); on other widths the
+// cards keep this order, top row first. Once a visitor moves something, their own layout is used at every width.
 const TILES = ['media_player.doozer_speaker', 'light.office_ceiling', 'light.small_sphere_chappy', 'light.big_bedroom', 'climate.made_up_living_room',
   'light.green_wavy_light', 'light.living_room', 'light.office_2', 'light.fire_place_lamp'];
 const at = (col, row) => ({ col, row });
@@ -22,6 +23,19 @@ export const USER_DATA = {
         ...Object.fromEntries(TILES.slice(1).map((id, i) => [id, at(i, 8)])),
       },
       spans: { wx: 2, areas: 6 },
+      // on a board six columns wide (most laptops; Matt, 10 Nov): the same bands, Areas 4 wide; the weather tiles, the
+      // speaker over the Thermostat and four lights; the last three lights under them
+      byPegs: {
+        6: {
+          cells: {
+            wx: at(0, 0), areas: at(2, 0), favs: at(0, 4), act: at(2, 4), energy: at(4, 4),
+            aq: at(0, 8), pollen: at(1, 8), radar: at(2, 8), 'media_player.doozer_speaker': at(3, 8), 'climate.made_up_living_room': at(3, 10),
+            'light.office_ceiling': at(4, 8), 'light.small_sphere_chappy': at(5, 8), 'light.big_bedroom': at(4, 10), 'light.green_wavy_light': at(5, 10),
+            'light.living_room': at(0, 12), 'light.office_2': at(1, 12), 'light.fire_place_lamp': at(2, 12),
+          },
+          spans: { wx: 2, areas: 4 },
+        },
+      },
       opts: { wx: { h: 4 }, areas: { h: 4 }, favs: { h: 4 }, act: { h: 4 } },
       tiles: TILES,
       hidden: ['avg'],
