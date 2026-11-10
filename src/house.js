@@ -17,7 +17,7 @@ const MADE_UP = {
   bathroom: { temperature: 22.4, humidity: 62 },
 };
 // What a plant wants (as Home Assistant's plant integration checks it)
-const PLANT_RANGE = { moisture: [40, 70], light: [1500, 60000], temperature: [10, 32], fertility: [350, 2000] };
+export const PLANT_RANGE = { moisture: [40, 70], light: [1500, 60000], temperature: [10, 32], fertility: [350, 2000] };
 const PREFIX = 'made_up_';
 export const isMadeUp = (id) => String(id).split('.')[1]?.startsWith(PREFIX);
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_');

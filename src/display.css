@@ -873,3 +873,8 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-break]{grid-column-start:1}
 /* the Weather page uses the page's full width (its six columns are set in test-focus.js) */
 #app.hcDemo.tfWeatherOpen #homeView{max-width:none}
+
+/* a plant's problem graph (Matt, 10 Nov): its reading's last 24 hours, with a dashed line where the plant wants it */
+.tfGraph.tfPlantGraph{flex:none;height:120px;min-height:0;margin:0 10px}
+.tfGraph .tfGuide{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+.tfGraph .tfGuideWord{font-size:11px}

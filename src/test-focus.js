@@ -7,7 +7,7 @@
 //   Claude Design's "Covers design": four blocks, a tilt bar and Open/Stop/Close on the tile, and the cover drawn in
 //   its window in more-info. The normal Home never shows any of this.
 // - Show density: every display card's height, and how many readings fit on the screen.
-import { createHouse, isMadeUp, solarHistory } from './house.js';
+import { createHouse, isMadeUp, solarHistory, PLANT_RANGE } from './house.js';
 import { mountWeatherBento } from './weather-bento.js';
 import { createCoverArt, coverKind } from './cover-art.js';
 import { M, EASE, smoothD, gridLines, drawLine, stretchTo, expandOpen, expandClose, closeDialog, toastBody, toastIn, toaster, springStep, squash, reduced } from './motion.js';
@@ -2896,6 +2896,7 @@ export function mountTestFocus(root, { config, getHass }) {
     return [
       head(nameOf(id)),
       now(valueOf(id), st.last_changed && ago(Date.parse(st.last_changed))),
+      ...(d === 'plant' ? plantProblems(id) : []),
       more?.at && '<svg class="tfGraph tfDay" data-day="' + esc(id) + '" role="img" aria-label="' + esc(nameOf(id)) + ', last 24 hours"></svg>',
       d === 'cover' && '<div data-cover-art="' + esc(id) + '"></div>',
       ...s.sections.filter(Boolean),
@@ -2952,6 +2953,7 @@ export function mountTestFocus(root, { config, getHass }) {
       mountDacs(sheet);
       fillIcons(sheet);
       sheet.querySelectorAll('[data-day]').forEach((svg) => drawDay(svg.dataset.day, svg, more.at));
+      drawPlantGraphs(sheet);
       if (keep) sheet.querySelector('.tfMore').scrollTop = keep;
       refocus(sheet, was);
       if (!sheet.contains(root.activeElement)) sheet.querySelector('[data-more-close]')?.focus({ preventScroll: true });
@@ -2964,6 +2966,7 @@ export function mountTestFocus(root, { config, getHass }) {
         t.innerHTML = p;
         const next = swapIn(box.children[i], t.firstElementChild);
         fillIcons(next);
+        drawPlantGraphs(next);
         mountDacs(next);
       });
       if (side !== moreSide) { const body = sheet.querySelector('.tfMoreSideBody'); if (body) body.innerHTML = side; moreSide = side; }
@@ -3014,8 +3017,23 @@ export function mountTestFocus(root, { config, getHass }) {
   }
 
   /* graphs: the last 24 hours of an open reading, and the balcony's solar */
+  /* a plant's problems (Matt, 10 Nov: Maintenance's Monstera and Basil): each reading it's unhappy about (its state
+     above says which, so the graph is headed with the reading's name), its last 24 hours, with a dashed line where the
+     plant wants it (Home Assistant's plant ranges, as the made-up home checks them) */
+  const PLANT_KEYS = { moisture: 'moisture', light: 'light', brightness: 'light', temperature: 'temperature', fertility: 'fertility', conductivity: 'fertility' };
+  function plantProblems(id) {
+    const said = String(attr(id).problem || ''), base = 'sensor.' + id.split('.')[1] + '_';
+    return said === 'none' ? [] : said.split(',').map((x) => x.trim().split(' ')).map(([k, way]) => {
+      const key = PLANT_KEYS[k], sid = base + key;
+      if (!key || !states[sid] || !PLANT_RANGE[key]) return '';
+      const unit = attr(sid).unit_of_measurement || '', [lo, hi] = PLANT_RANGE[key], low = way === 'low';
+      return '<div class="tfMoreGroup tfPlantProblem"><div class="tfMoreGroupName">' + esc(nameOf(sid)) + '</div>' +
+        '<svg class="tfGraph tfPlantGraph" data-plant-graph="' + esc(sid) + '" data-guide="' + (low ? lo : hi) + '" data-guide-word="' + esc('Wants ' + (low ? '' : 'up to ') + (low ? lo : hi).toLocaleString() + (unit === '%' ? '%' : unit ? ' ' + unit : '') + (low ? ' or more' : '')) + '" role="img" aria-label="' + esc(nameOf(sid)) + ', last 24 hours"></svg></div>';
+    }).filter(Boolean);
+  }
+  const drawPlantGraphs = (scope) => scope.querySelectorAll('[data-plant-graph]').forEach((svg) => drawHistory(svg.dataset.plantGraph, svg, { guide: Number(svg.dataset.guide), guideWord: svg.dataset.guideWord }).then(() => drawIn(svg)));
   function plot(svg, pts, label, opts = {}) {
-    const vals = pts.map((p) => p[1]), min = opts.zero ? 0 : Math.min(...vals), max = Math.max(...vals);
+    const vals = pts.map((p) => p[1]).concat(opts.guide != null ? [opts.guide] : []), min = opts.zero ? 0 : Math.min(...vals), max = Math.max(...vals);
     const W = Math.max(120, svg.clientWidth || 260), H = Math.max(60, svg.clientHeight || 130), top = 8, bottom = H - 20;
     const t0 = Date.now() - 24 * 3600 * 1000, span = 24 * 3600 * 1000;
     const x = (t) => Math.max(0, Math.min(W, ((t - t0) / span) * W));
@@ -3027,7 +3045,9 @@ export function mountTestFocus(root, { config, getHass }) {
     svg.setAttribute('aria-label', label);
     svg.innerHTML = gridLines(W, top, bottom) + '<path d="' + d + 'V' + bottom + 'H' + x(pts[0][0]).toFixed(1) + 'Z" fill="' + (opts.colour || 'var(--primary)') + '" fill-opacity="' + (M.graphs.fill ? '.14' : '0') + '"/>' +
       '<path d="' + d + '" fill="none" stroke="' + (opts.colour || 'var(--primary)') + '" stroke-width="' + M.graphs.weight + '" stroke-linejoin="round" stroke-linecap="round"/>' +
-      '<text x="0" y="' + (H - 4) + '">24 h ago</text><text x="' + W + '" y="' + (H - 4) + '" text-anchor="end">Now</text>';
+      '<text x="0" y="' + (H - 4) + '">24 h ago</text><text x="' + W + '" y="' + (H - 4) + '" text-anchor="end">Now</text>' +
+      (opts.guide != null ? '<line class="tfGuide" x1="0" x2="' + W + '" y1="' + y(opts.guide).toFixed(1) + '" y2="' + y(opts.guide).toFixed(1) + '"/>' +
+        '<text class="tfGuideWord" x="' + W + '" y="' + (y(opts.guide) < 20 ? y(opts.guide) + 14 : y(opts.guide) - 5).toFixed(1) + '" text-anchor="end">' + esc(opts.guideWord || '') + '</text>' : '');
   }
   /* a device's day, opened from Activity (Matt, 29 Oct; the motion lab's "On and off through the day"): one track 26
      tall across the last 24 hours, corner 8, in the text colour at 10%; each time it was on (open, wet, unlocked…) a span
@@ -3108,9 +3128,17 @@ export function mountTestFocus(root, { config, getHass }) {
       const midnight = new Date().setHours(0, 0, 0, 0), span = Math.max(1, now - midnight);
       return [...Array(49)].map((_, i) => midnight + (span * i) / 48).map((t) => [t, Math.round(v * Math.pow((t - midnight) / span, 1.3) * 100) / 100]);
     }
+    // a plant's soil dries through the day (watered a day ago, 22 points wetter), and its light follows the sun, at its
+    // brightest around midday, ending at now's reading (so a dry Monstera and a dim Basil show how they got there)
+    if (isMadeUp(id) && id.endsWith('_moisture')) return [...Array(48)].map((_, i) => [now - (48 - i) * 30 * 60 * 1000, Math.round((v + 22 * Math.pow(1 - i / 48, 1.2)) * 10) / 10]);
+    if (isMadeUp(id) && id.endsWith('_light')) {
+      const sun = (t) => { const h = new Date(t).getHours() + new Date(t).getMinutes() / 60; return Math.max(0, Math.sin(((h - 6) / 14) * Math.PI)); };
+      const k = (t) => 0.8 + 0.2 * sun(t);
+      return [...Array(48)].map((_, i) => now - (48 - i) * 30 * 60 * 1000).map((t) => [t, Math.round((v * k(t)) / k(now))]);
+    }
     return [...Array(48)].map((_, i) => [now - (48 - i) * 30 * 60 * 1000, Math.round(v * (0.96 + 0.04 * Math.sin(i / 6)) * 10) / 10]);
   }
-  async function drawHistory(id, into) {
+  async function drawHistory(id, into, extra = {}) {
     let h = history.get(id);
     if (id.endsWith('_solar_power')) h = { at: Date.now(), points: solarHistory() };
     else if (isMadeUp(id)) h = { at: Date.now(), points: madeUpHistory(id) };
@@ -3133,7 +3161,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const vals = pts.map((p) => p[1]), min = Math.min(...vals), max = Math.max(...vals);
     const f = (v) => v.toLocaleString(undefined, { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 1 });
     const growing = st?.attributes?.state_class === 'total_increasing';
-    plot(svg, pts, nameOf(id) + ', last 24 hours: ' + (growing ? '+' + f(vals[vals.length - 1] - vals[0]) : (min === max ? f(min) : f(min) + ' to ' + f(max))) + (unit ? ' ' + unit : ''), { smooth: id.endsWith('_solar_power'), zero: id.endsWith('_solar_power') });
+    plot(svg, pts, nameOf(id) + ', last 24 hours: ' + (growing ? '+' + f(vals[vals.length - 1] - vals[0]) : (min === max ? f(min) : f(min) + ' to ' + f(max))) + (unit ? ' ' + unit : ''), { smooth: id.endsWith('_solar_power'), zero: id.endsWith('_solar_power') , ...extra });
   }
   function drawSolar() {
     const svg = grid?.querySelector('[data-solar]');
