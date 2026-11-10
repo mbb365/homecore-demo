@@ -341,6 +341,9 @@ const tile=({icon,name,sub,visual,double,backdrop,cls,zone,callouts})=>'<div cla
   (sub?'<span class="wbSub">'+esc(sub)+'</span>':'')+'</div></div>'+
   (zone!=null?'<div class="wbZone">'+zone+'</div>'+(callouts?.length?'<div class="wbCallouts">'+callouts.slice(0,3).map(c=>Array.isArray(c)?'<span class="wbCallout"><span>'+esc(c[0])+'</span><span>'+esc(c[1])+'</span></span>':'<span class="wbCallout wbAdvice"><span>'+esc(c)+'</span></span>').join('')+'</div>':'')
     :'<div class="wbVisual">'+visual+'</div>')+'</div>';
+/* at M a widget's illustration goes (Matt, 10 Nov: squashing it is silly); its zone shows just the reading, as Pollen's
+   does. What goes in its place, shown only at M (display.css) */
+const zoneM=html=>'<div class="wbZoneM">'+html+'</div>';
 const valueHtml=(n,unit)=>'<div class="wbValue"><span class="wbNum">'+esc(n)+'</span>'+(unit?'<span class="wbUnitV">'+esc(unit)+'</span>':'')+'</div>';
 
 // One day from midnight to midnight: night shaded, sunrise and sunset along the top, the hours along the bottom,
@@ -948,7 +951,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
         '<stop offset="0" style="stop-color:color-mix(in srgb, '+colour+' 28%, #fff6dd)"></stop><stop offset=".62" style="stop-color:color-mix(in srgb, '+colour+' 62%, #fff6dd)"></stop>'+
         '<stop offset="1" style="stop-color:'+colour+'"></stop></radialGradient></defs>'+
       '<circle class="wbUvSun" cx="0" cy="0" r="'+sunR.toFixed(1)+'" fill="url(#'+P+'uv-sun)"></circle></svg>'+
-      '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>';
+      '<div class="wbUvBig"><span class="wbUvNum">'+esc(fmtNum(Math.round(v),h.locale))+'</span><span class="wbUvWord">'+esc(levelName)+'</span></div>'+
+      zoneM(valueHtml(fmtNum(Math.round(v),h.locale),''));
     return tile({icon:I.sunnyAlert,name:T.metrics.uv_index,
       sub:peak&&peak.uv>v?fill(T.uvPeak,{level:levelName,uv_index:fmtNum(Math.round(peak.uv),h.locale),time:fmtTime(peak.time,h)}):levelName,zone:art,cls:'wbUv',
       callouts:[uvAdvice(v,h),[T.callout.now,fmtNum(Math.round(v),h.locale)+' · '+levelName],[T.callout.peak,peak&&peak.uv>v?fmtNum(Math.round(peak.uv),h.locale)+' at '+fmtTime(peak.time,h):T.callout.now]]});
@@ -1121,7 +1125,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const stage=n&&dc==='aqi'?aqiStage(v):n&&dc==='pm25'?pm25Level(v):null;
     if(stage)return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbAqSmile',
       zone:'<div class="wbAqFill" style="background:'+AQ_COLORS[stage]+'">'+aqFace(stage)+
-        '<div class="wbAqBig"><span class="wbAqNum">'+esc(shown)+'</span>'+(unit?'<span class="wbAqUnit">'+esc(unit)+'</span>':'')+'</div></div>',
+        '<div class="wbAqBig"><span class="wbAqNum">'+esc(shown)+'</span>'+(unit?'<span class="wbAqUnit">'+esc(unit)+'</span>':'')+'</div></div>'+zoneM(valueHtml(shown,unit)),
       callouts:[aqAdvice(dc,v,n),...air.slice(1,3).map(s=>[entityName(h,s),stateText(h,s)])]});
     return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbBase',
       zone:valueHtml(shown,unit),

@@ -867,6 +867,11 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]) .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
 #app.tfBoard .tfDashBento[data-rows="3"] .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
 #app.tfBoard .tfDashBento[data-rows="1"] :is(.wbZone,.wbCallouts){display:none}
+/* at M the illustration goes and just the reading shows, as Pollen's does (Matt, 10 Nov: squashing it is silly) */
+#app .wbZoneM{display:none}
+:is(#app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]),#app.tfWeatherOpen .tfBento.tfPhonePegs) .wbZone:has(>.wbZoneM){display:flex;align-items:flex-start;justify-content:flex-start}
+:is(#app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]),#app.tfWeatherOpen .tfBento.tfPhonePegs) .wbZone:has(>.wbZoneM)>:not(.wbZoneM){display:none}
+:is(#app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]),#app.tfWeatherOpen .tfBento.tfPhonePegs) .wbZoneM{display:flex}
 /* the Weather page in rows by height (Matt, 9 Nov): no packing of later cards into earlier gaps, and the first 4-row card
    starts a new row, so the 5-row cards share rows and the 4-row cards share rows */
 #app.tfWeatherOpen .tfBento.tfPegs .wbBento{grid-auto-flow:row}
