@@ -1,0 +1,78 @@
+/* HomeCore's micro-interactions (Matt, 10 Nov): the HomeCore Motion Lab's eleven, with his values (motion.js sets
+   them on #app as custom properties). Reduce motion turns every one off */
+
+/* 1 · pivot: buttons and tappable tiles lean toward the pointer, with a soft shine where it is; they lift, and press in */
+#app .mvPv{position:relative;transform:perspective(var(--pv-persp)) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--sc,1));transition:transform var(--pv-ret) var(--pv-ease)}
+#app .mvPv.mvMoving{transition:transform 70ms linear}
+#app .mvPv::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;mix-blend-mode:soft-light;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,var(--pv-shine)),transparent var(--pv-size));transition:opacity var(--pv-ret) ease}
+#app .mvPv.mvLit::after{opacity:1}
+
+/* 2 · the slider glow: in the light's own colour (the accent for the rest), bigger and a touch taller while held */
+#app .tfBar{--mv-c:var(--light-soft,var(--primary));transform-origin:center;transition:box-shadow var(--ab-out) var(--ab-ease),transform var(--ab-out) var(--ab-ease)}
+#app .tfBar.mvHover{box-shadow:0 0 var(--ab-blur) var(--ab-spread) color-mix(in srgb,var(--mv-c) var(--ab-str),transparent);transition-duration:var(--ab-in)}
+#app .tfBar.mvHold{box-shadow:0 0 var(--ab-blur2) var(--ab-spread2) color-mix(in srgb,var(--mv-c) var(--ab-str2),transparent);transform:var(--ab-grow);transition-duration:var(--ab-in)}
+
+/* 3 · icon buttons: the glyph grows a little on hover and pushes in on press, with a tint in its room */
+#app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"])>:is(svg,ha-icon,ha-state-icon,span){transition:scale var(--ih-dur) var(--ih-ease)}
+@media (hover:hover){
+  #app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"]):hover>:is(svg,ha-icon,ha-state-icon,span){scale:var(--ih-s)}
+  #app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"]):hover::before{opacity:1}
+}
+/* the tint is a layer over the room, so the chip's own fill and its glass shading stay */
+:where(#app button.tfIcon,#app .tfBack,#app .tfEditChip,#app .tfTrayBtn,#app [data-wb="graph-close"]){position:relative}
+#app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"])::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:color-mix(in srgb,currentColor var(--ih-tint),transparent);opacity:0;transition:opacity var(--ih-dur) var(--ih-ease)}
+#app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"]):active>:is(svg,ha-icon,ha-state-icon,span){scale:var(--ih-p)}
+
+/* 4 · on/off: the chip's colour changes over cdur, from cdelay (the pinch is in motion.js) */
+
+/* 7 · tabs: the highlight laid over a segmented choice while it moves; the choices' own fills wait under it */
+#app .mvSegInd{position:absolute;z-index:0;pointer-events:none}
+#app .mvSegMoving>button{position:relative;z-index:1;background-color:transparent!important;box-shadow:none!important;transition:none!important}
+
+/* 8 · dialogs: the dim (45%, as it was) with a 12 blur behind it */
+#app .tfMoreBackdrop{-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+
+/* 9 · confirmations: the toast's message at 18, a tick in a green 40 room at its start */
+#app .toast.tfToast{min-height:58px;box-sizing:border-box;padding:9px 18px 9px 9px;gap:14px;border-radius:29px;font-size:18px;line-height:1.2}
+#app .toast .mvTick{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:var(--r-inner);background:var(--mv-ok);color:#fff}
+#app .toast .mvTick svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#app .toast .mvToastText{font-weight:600}
+#app .toast .toastAction{font-size:16px;margin-left:2px}
+
+/* 6 · graphs: a 1 line, its fill under it, three grid lines */
+#app .mvGrid{stroke:var(--divider,rgba(127,127,127,.25));stroke-width:1;vector-effect:non-scaling-stroke}
+
+/* 11 · the outline light: near a card's edge its border lights at 199° and a glow follows the pointer round it (the
+   Move Assistant accordion's, in one colour) */
+#app{--ol-l:68%;--mv-ok:#4cc38a}
+#app.light{--ol-l:48%;--mv-ok:#1f7a4d} /* the lab's --ok, dark and light */
+#app :is(.tfCard,.tfDashCard,.tfAreaPanel,.tfAreas.card):has(>.mvEdge){isolation:isolate}
+#app :is(.tfCard,.tfDashCard,.tfAreaPanel,.tfAreas.card):has(>.mvEdge):not(.tfBoardItem){position:relative}
+#app .mvEdge,#app .mvEdgeFill{position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:opacity var(--ol-in) ease-out}
+#app .mvEdgeFill{z-index:-1;background:hsl(var(--ol-h) 97% var(--ol-l));mix-blend-mode:soft-light;
+  opacity:clamp(0,calc(var(--ol-fill) * (var(--edge-proximity,0) - var(--ol-csens)) / (100 - var(--ol-csens))),var(--ol-fill));
+  -webkit-mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,transparent 5%,black 15%,black 85%,transparent 95%);mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,transparent 5%,black 15%,black 85%,transparent 95%)}
+#app .mvEdge{z-index:5}
+#app .mvEdge::before{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 .8px hsl(var(--ol-h) 97% var(--ol-l));
+  opacity:clamp(0,calc(var(--ol-border) * (var(--edge-proximity,0) - var(--ol-csens)) / (100 - var(--ol-csens))),var(--ol-border));
+  -webkit-mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,black calc(var(--ol-cone) * 1%),transparent calc((var(--ol-cone) + 15) * 1%),transparent calc((100 - var(--ol-cone) - 15) * 1%),black calc((100 - var(--ol-cone)) * 1%));
+  mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,black calc(var(--ol-cone) * 1%),transparent calc((var(--ol-cone) + 15) * 1%),transparent calc((100 - var(--ol-cone) - 15) * 1%),black calc((100 - var(--ol-cone)) * 1%))}
+#app .mvEdge>i{position:absolute;inset:-19.2px;border-radius:inherit;mix-blend-mode:plus-lighter;
+  opacity:clamp(0,calc(var(--ol-glow) * (var(--edge-proximity,0) - var(--ol-esens)) / (100 - var(--ol-esens))),var(--ol-glow));
+  -webkit-mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,black 2.5%,transparent 10%,transparent 90%,black 97.5%);mask-image:conic-gradient(from var(--cursor-angle,45deg) at center,black 2.5%,transparent 10%,transparent 90%,black 97.5%)}
+#app .mvEdge>i::before{content:"";position:absolute;inset:19.2px;border-radius:inherit;--s:var(--ol-size);
+  box-shadow:inset 0 0 0 .8px hsl(var(--ol-h) 97% var(--ol-l) / 60%),inset 0 0 calc(2.4px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 40%),inset 0 0 calc(6.4px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 30%),inset 0 0 calc(12.8px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 20%),
+    0 0 calc(2.4px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 40%),0 0 calc(6.4px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 30%),0 0 calc(12.8px*var(--s)) 0 hsl(var(--ol-h) 97% var(--ol-l) / 20%),0 0 calc(22.4px*var(--s)) calc(1.6px*var(--s)) hsl(var(--ol-h) 97% var(--ol-l) / 10%)}
+#app :not(.mvLitEdge)>:is(.mvEdge,.mvEdgeFill){opacity:0;transition:opacity var(--ol-out) ease-out}
+
+@media (prefers-reduced-motion:reduce){
+  #app .mvPv{transform:none!important}
+  #app .mvPv::after{display:none}
+  #app .tfBar.mvHold{transform:none}
+  #app :is(button.tfIcon,.tfBack,.tfEditChip,.tfTrayBtn,[data-wb="graph-close"])>*{scale:none!important}
+}
+
+/* 10 · drag: the spring's lift is in the card's transform, so its own lift goes; the other cards make room over 420 */
+#app .tfBoardItem.mvDrag{scale:none}
+#app.tfEditing.tfBoardReady .tfBoardItem:not(.tfDragging){transition:left 420ms cubic-bezier(.34,1.46,.64,1),top 420ms cubic-bezier(.34,1.46,.64,1),height 420ms cubic-bezier(.34,1.46,.64,1)}

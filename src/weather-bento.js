@@ -16,6 +16,7 @@
 import {WX_PALETTE,wxKey,wxPose,wxBitmap} from './weather-art.js';
 import {wbStripBitmap,wbStripSmooth,wbSmoothIcon} from './weather-bento-art.js';
 import {visibilityBitmap,nearestLandmarks,visibilityToKm,visibilityLevel} from './visibility-art.js';
+import {M,smoothD,gridLines,drawLine,revealParts} from './motion.js';
 
 const MINUTE=6e4,HOUR=36e5,DAY=864e5,DAY_MINUTES=1440;
 // The weather card: six days. Today's readings for the opened day are fetched again after ten minutes.
@@ -368,10 +369,12 @@ function dayChartHtml(o){
 // A line over time, filling the graph space, with labels at both ends
 function lineChartHtml(points,format,H=120,W=300){
   const top=18,bottom=18,values=points.map(p=>p.value),min=Math.min(...values),max=Math.max(...values),span=max-min||1;
-  const x=i=>(i/(points.length-1))*W,y=v=>top+(1-(v-min)/span)*(H-top-bottom),line=points.map((p,i)=>x(i)+','+y(p.value)).join(' ');
+  const x=i=>(i/(points.length-1))*W,y=v=>top+(1-(v-min)/span)*(H-top-bottom),xy=points.map((p,i)=>[x(i),y(p.value)]);
+  // the Motion Lab's graph: a smooth 1 line, its fill under it, three grid lines (it draws in once it's shown)
+  const d=M.graphs.curve==='smooth'&&xy.length>2?smoothD(xy):'M'+xy.map(q=>q[0].toFixed(1)+' '+q[1].toFixed(1)).join('L');
   const maxI=values.indexOf(max),minI=values.indexOf(min),anchor=i=>i===0?'start':i===points.length-1?'end':'middle';
-  return '<svg class="wbChart" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><polygon class="wbArea" points="0,'+(H-bottom)+' '+line+' '+W+','+(H-bottom)+'"></polygon>'+
-    '<polyline class="wbLine" points="'+line+'" vector-effect="non-scaling-stroke"></polyline>'+
+  return '<svg class="wbChart" viewBox="0 0 '+W+' '+H+'" aria-hidden="true">'+gridLines(W,top,H-bottom)+(M.graphs.fill?'<path class="wbArea" d="'+d+'L'+W+' '+(H-bottom)+'L0 '+(H-bottom)+'Z"></path>':'')+
+    '<path class="wbLine" d="'+d+'" vector-effect="non-scaling-stroke"></path>'+
     '<text x="'+x(maxI)+'" y="'+(y(max)-6)+'" text-anchor="'+anchor(maxI)+'">'+esc(format(max))+'</text>'+
     '<text x="'+x(minI)+'" y="'+(y(min)+14)+'" text-anchor="'+anchor(minI)+'">'+esc(format(min))+'</text>'+
     '<text x="0" y="'+H+'" text-anchor="start">'+esc(points[0].label)+'</text><text x="'+W+'" y="'+H+'" text-anchor="end">'+esc(points[points.length-1].label)+'</text></svg>';
@@ -1206,6 +1209,7 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       fmt:(_h,_s,v)=>sayLevel(POLLEN_RANK[Math.round(v)]||''),now:h=>{const p=topPollen(h);return p?sayLevel(p.state):''}},
   };
   const graphData={};
+  let revealNext=null;
   async function loadGraph(name){
     const h=getHass?.();if(!h||!GRAPHS[name])return;
     const key=name+'|'+rangeKey(),[a,b]=span();
@@ -1213,6 +1217,9 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     graphData[key]={at:Date.now(),points:null};
     try{graphData[key].points=await GRAPHS[name].load(h,sources(h),a,b)}catch(_e){graphData[key].points=[]}
     render(true);
+    if(revealNext===name&&ui.graph===name){revealNext=null;revealParts(items[name].el.querySelector('.wbGraphCard'))}
+    const svg=ui.graph===name&&items[name]?.el.querySelector('.wbGraph .wbChart');
+    if(svg)drawLine(svg,svg.querySelector('.wbLine'),svg.querySelectorAll('.wbArea'));
   }
   // the picker: a popover under its button (over the cards round it), the three ranges, or From and To (today at the latest)
   function rangePicker(h,right){
@@ -1355,7 +1362,11 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
       // hold it, and not the dashboard's weather card, which opens the Weather page
       const item=ev.target.closest?.('.wbItem'),name=item?.dataset.card;
       if(!item||!root.contains(item)||!GRAPHS[name]||ui.graph===name||root.closest('.tfEditing')||item.offsetHeight<200||(name==='current'&&onOpen))return;
-      ui.graph=name;focusAfter='graph-close';render(true);loadGraph(name);
+      ui.graph=name;focusAfter='graph-close';render(true);
+      // the Motion Lab's tile opening: the head stays where it is (no jump), the picker and graph come in after it
+      // (once its points are in, if they're still coming, so the graph's arrival doesn't cut it short)
+      if(graphData[name+'|'+rangeKey()]?.points)revealParts(items[name].el.querySelector('.wbGraphCard'));else revealNext=name;
+      loadGraph(name);
       return;
     }
     switch(el.dataset.wb){

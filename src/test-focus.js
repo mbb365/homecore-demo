@@ -10,6 +10,7 @@
 import { createHouse, isMadeUp, solarHistory } from './house.js';
 import { mountWeatherBento } from './weather-bento.js';
 import { createCoverArt, coverKind } from './cover-art.js';
+import { M, EASE, smoothD, gridLines, drawLine, stretchTo, expandOpen, expandClose, closeDialog, toastBody, toastIn, toaster, springStep, squash, reduced } from './motion.js';
 
 const DENSITY_KEY = 'move-assistant-density';
 
@@ -175,10 +176,10 @@ export function mountTestFocus(root, { config, getHass }) {
     // the sliding mark under the open tab, as on Move Assistant's settings; placed again whenever the bar shows or resizes
     const placeMark = (animate) => {
       const on = bar.querySelector('.tab.active');
-      mark.style.transition = animate ? '' : 'none';
-      mark.style.left = on.offsetLeft + 'px';
-      mark.style.width = on.offsetWidth + 'px';
-      if (animate) { mark.style.transform = 'scaleX(1.08)'; setTimeout(() => (mark.style.transform = ''), 180); }
+      mark.style.transition = 'none';
+      // the Motion Lab's tabs: the mark stretches across to the new tab
+      if (animate) stretchTo(mark, mark.offsetLeft, mark.offsetWidth, on.offsetLeft, on.offsetWidth);
+      else { mark.style.left = on.offsetLeft + 'px'; mark.style.width = on.offsetWidth + 'px'; }
     };
     new ResizeObserver(() => placeMark(false)).observe(bar);
     pane.addEventListener('click', (ev) => {
@@ -648,7 +649,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const cs = getComputedStyle(chip), now = { backgroundColor: cs.backgroundColor, color: cs.color }, was = chipWas.get(key);
     chipWas.set(key, now);
     if (!was || (was.backgroundColor === now.backgroundColor && was.color === now.color) || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    chip.animate([was, now], { duration: 180, easing: 'ease' });
+    chip.animate([was, now], { duration: M.warp.cdur, delay: M.warp.cdelay, easing: EASE[M.warp.ease], fill: 'backwards' }); // the Motion Lab's on/off colour
   }
   /* icon fit (Matt, 31 Oct: one size for every icon): Material Design Icons draw at different sizes in their 24 grid
      (curtains 22 across, a water drop 12), so in one box they look different sizes. Once drawn, each glyph is sized so
@@ -1556,10 +1557,7 @@ export function mountTestFocus(root, { config, getHass }) {
   function drawIn(svg) {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const [area, line] = svg.querySelectorAll('path');
-    if (!line?.getTotalLength) return;
-    const len = line.getTotalLength();
-    line.animate([{ strokeDasharray: len, strokeDashoffset: len }, { strokeDasharray: len, strokeDashoffset: 0 }], { duration: 700, easing: 'cubic-bezier(.2,.7,.3,1)' });
-    area?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 200, easing: 'ease-out', fill: 'backwards' });
+    drawLine(svg, line, [area].filter(Boolean)); // the Motion Lab's: over 1 s, the fill following
   }
   // the dashboard's tiles: yours once you've added or removed one in edit mode (Matt, 29 Oct), any device with controls
   // from any room. Until then, the bottom row: the lights of the living room, bedroom and office (on first, then the
@@ -2006,10 +2004,11 @@ export function mountTestFocus(root, { config, getHass }) {
      bar: what an edit did, with Undo for 5 s after a remove or a hide. Done says Changes saved when the edits changed
      anything; they save as they're made */
   let toastTimer = 0;
+  toaster.show = (message) => toast(message); // the shell's messages (Add to the list) use it too
   function toast(message, undo = null) {
     const el = $('toast');
     if (!el) return;
-    el.replaceChildren(Object.assign(document.createElement('span'), { textContent: message }));
+    toastBody(el, message); // the Motion Lab's confirmation: a tick, the message at 18
     if (undo) {
       const b = Object.assign(document.createElement('button'), { type: 'button', className: 'toastAction', textContent: 'Undo' });
       b.addEventListener('click', () => { clearTimeout(toastTimer); el.classList.remove('show', 'withAction'); undo(); });
@@ -2021,8 +2020,9 @@ export function mountTestFocus(root, { config, getHass }) {
     el.style.bottom = (bar?.height ? window.innerHeight - bar.top + 12 : 26) + 'px';
     el.classList.add('tfToast', 'show');
     el.classList.toggle('withAction', Boolean(undo));
+    toastIn(el);
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show', 'withAction'), undo ? 5000 : 2200);
+    toastTimer = setTimeout(() => el.classList.remove('show', 'withAction'), undo ? 5000 : M.confirm.stay);
   }
   /* ---------- tooltips (Matt, 29 Oct: a HomeCore rule) ----------
      Text cut short with "…" shows all of it in a tooltip, by the mouse or keyboard focus (not touch): the first after
@@ -2488,10 +2488,24 @@ export function mountTestFocus(root, { config, getHass }) {
     closeBoardMenu();
     const x0 = ev.clientX, y0 = ev.clientY;
     let started = false, raf = 0;
+    /* the Motion Lab's drag: the card resists until it's pulled 44 (stretching toward the pointer), then follows on a
+       spring (pull, keep), tilting with its speed and lifted 3.5%; let go, it springs to its place and squashes as it
+       lands. Where it'll go follows the pointer, not the spring */
+    const D = M.drag, still = reduced();
+    let dx = 0, dy = 0, x = 0, y = 0, vx = 0, vy = 0, free = still || D.stick === 0, spring = 0;
+    const paint = (tilt, a, s1, s2) => { el.style.transform = 'translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px) rotate(' + tilt.toFixed(2) + 'deg) rotate(' + a + 'rad) scale(' + s1.toFixed(4) + ',' + s2.toFixed(4) + ') rotate(' + -a + 'rad)'; };
+    const frame = () => {
+      spring = requestAnimationFrame(frame);
+      if (still) { x = dx; y = dy; paint(0, 0, 1, 1); return; }
+      if (!free) { const t = Math.min(Math.hypot(dx, dy) / Math.max(1, D.stick), 1); x = dx * 0.35; y = dy * 0.35; paint(0, Math.atan2(dy, dx), 1 + 0.155 * t, 1 - 0.1 * t); return; }
+      vx = springStep(vx, dx - x, D.pull / 100, D.keep / 100); vy = springStep(vy, dy - y, D.pull / 100, D.keep / 100); x += vx; y += vy;
+      const sp = Math.hypot(vx, vy), st = Math.min(sp / 48, 1), tilt = Math.max(-D.tilt, Math.min(D.tilt, vx * 0.32)), lift = 1 + D.lift / 100;
+      paint(tilt, Math.atan2(vy, vx), lift * (1 + 0.1 * st), lift * (1 - 0.063 * st));
+    };
     const move = (e) => {
-      const dx = e.clientX - x0, dy = e.clientY - y0;
-      if (!started) { if (Math.hypot(dx, dy) < 4) return; started = true; drag = { key: it.key, col: p.col, row: p.row }; el.classList.add('tfDragging'); }
-      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      dx = e.clientX - x0; dy = e.clientY - y0;
+      if (!started) { if (Math.hypot(dx, dy) < 4) return; started = true; drag = { key: it.key, col: p.col, row: p.row }; el.classList.add('tfDragging', 'mvDrag'); spring = requestAnimationFrame(frame); }
+      if (!free && Math.hypot(dx, dy) > D.stick) { free = true; vx = dx * 0.085; vy = dy * 0.085; }
       drag.col = Math.round((p.x + dx) / (w + PEG_GAP));
       drag.row = Math.round((p.y + dy - boardTop) / ROW_PITCH);
       if (!raf) raf = requestAnimationFrame(() => { raf = 0; layoutBoard(); });
@@ -2502,13 +2516,26 @@ export function mountTestFocus(root, { config, getHass }) {
       window.removeEventListener('pointercancel', up);
       if (!started) return;
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(spring);
+      // where it is on screen now, to slide from once it's in its place
+      const was = el.getBoundingClientRect(), key = it.key;
+      el.style.transition = 'none'; // it slides from where it was dropped (below), not from its old place as well
       layoutBoard();
-      el.classList.remove('tfDragging');
+      el.classList.remove('tfDragging', 'mvDrag');
       el.style.transform = '';
       drag = null;
       saveCells(dashPrefs(), cellsNow());
       layoutBoard();
       refresh();
+      const now = boardItems().find((x2) => x2.key === key)?.el;
+      requestAnimationFrame(() => { el.style.transition = ''; if (now) now.style.transition = ''; });
+      if (!now || still) return;
+      now.style.transition = 'none';
+      const r = now.getBoundingClientRect();
+      const fx = was.left + was.width / 2 - (r.left + r.width / 2), fy = was.top + was.height / 2 - (r.top + r.height / 2);
+      now.style.zIndex = '20';
+      const a = now.animate([{ transform: 'translate(' + fx + 'px,' + fy + 'px) scale(' + (1 + D.lift / 100) + ')' }, { transform: 'none' }], { duration: D.slide, easing: EASE.land });
+      a.finished.then(() => { now.style.zIndex = ''; squash(now); }, () => { now.style.zIndex = ''; });
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -2960,6 +2987,12 @@ export function mountTestFocus(root, { config, getHass }) {
     turning = false;
   }
   function closeMore() {
+    if (!more) return;
+    // the Motion Lab's dialog close: the dim goes and it shrinks back, then it's taken away
+    const was = more;
+    closeDialog(sheet, () => { if (more === was) closeMoreNow(); });
+  }
+  function closeMoreNow() {
     const opener = more?.opener;
     more = null;
     arts.forEach((art, k) => { if (sheet.contains(art.el)) { art.destroy(); arts.delete(k); } });
@@ -2982,11 +3015,12 @@ export function mountTestFocus(root, { config, getHass }) {
     const x = (t) => Math.max(0, Math.min(W, ((t - t0) / span) * W));
     const y = (v) => (max === min ? (top + bottom) / 2 : bottom - ((v - min) / (max - min)) * (bottom - top));
     let d = 'M' + x(pts[0][0]).toFixed(1) + ' ' + y(pts[0][1]).toFixed(1);
-    for (let i = 1; i < pts.length; i++) d += opts.smooth ? 'L' + x(pts[i][0]).toFixed(1) + ' ' + y(pts[i][1]).toFixed(1) : 'H' + x(pts[i][0]).toFixed(1) + 'V' + y(pts[i][1]).toFixed(1);
+    if (M.graphs.curve === 'smooth' && pts.length > 2) d = smoothD(pts.map((p) => [x(p[0]), y(p[1])])); // every graph: the Motion Lab's smooth line
+    else for (let i = 1; i < pts.length; i++) d += opts.smooth ? 'L' + x(pts[i][0]).toFixed(1) + ' ' + y(pts[i][1]).toFixed(1) : 'H' + x(pts[i][0]).toFixed(1) + 'V' + y(pts[i][1]).toFixed(1);
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.setAttribute('aria-label', label);
-    svg.innerHTML = '<path d="' + d + 'V' + bottom + 'H' + x(pts[0][0]).toFixed(1) + 'Z" fill="' + (opts.colour || 'var(--primary)') + '" fill-opacity=".14"/>' +
-      '<path d="' + d + '" fill="none" stroke="' + (opts.colour || 'var(--primary)') + '" stroke-width="2" stroke-linejoin="round"/>' +
+    svg.innerHTML = gridLines(W, top, bottom) + '<path d="' + d + 'V' + bottom + 'H' + x(pts[0][0]).toFixed(1) + 'Z" fill="' + (opts.colour || 'var(--primary)') + '" fill-opacity="' + (M.graphs.fill ? '.14' : '0') + '"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + (opts.colour || 'var(--primary)') + '" stroke-width="' + M.graphs.weight + '" stroke-linejoin="round" stroke-linecap="round"/>' +
       '<text x="0" y="' + (H - 4) + '">24 h ago</text><text x="' + W + '" y="' + (H - 4) + '" text-anchor="end">Now</text>';
   }
   /* a device's day, opened from Activity (Matt, 29 Oct; the motion lab's "On and off through the day"): one track 26
@@ -3184,10 +3218,14 @@ export function mountTestFocus(root, { config, getHass }) {
   }
   function openReading(el) {
     const [key, id] = el.dataset.open.split('|');
-    const c = el.closest('.tfCard');
-    open = { key, id, h: c ? Math.round(c.getBoundingClientRect().height) : 0 };
+    const c = el.closest('.tfCard'), from = el.getBoundingClientRect(), chip = el.querySelector('.tfIcon')?.getBoundingClientRect();
+    open = { key, id, h: c ? Math.round(c.getBoundingClientRect().height) : 0, from, chip };
     units.delete(key);
     refresh();
+    // the Motion Lab's tile opening: it grows from the reading, its head slides up from the reading's, the graph after
+    const det = grid.querySelector('.tfOpen');
+    if (det) open.rel = from.top - det.getBoundingClientRect().top;
+    expandOpen(det, from, chip);
     grid.querySelector('.tfOpen [data-close]')?.focus({ preventScroll: true });
   }
   function pickArea(panel) {
@@ -3255,7 +3293,12 @@ export function mountTestFocus(root, { config, getHass }) {
       else if (t.dataset.go) openArea('room:' + t.dataset.go);
       else if (t.hasAttribute('data-area-back')) closeArea();
       else if (t.dataset.open) openReading(t);
-      else if (t.hasAttribute('data-close')) { const was = open; open = null; units.delete(was.key); refresh(); grid.querySelector('[data-open="' + CSS.escape(was.key + '|' + was.id) + '"]')?.focus({ preventScroll: true }); }
+      else if (t.hasAttribute('data-close')) {
+        const was = open, det = t.closest('.tfOpen'), top = det?.getBoundingClientRect().top;
+        // back into the reading it came from (where it is now, if the page moved)
+        const from = was.from && top != null ? new DOMRect(was.from.left, top + (was.rel || 0), was.from.width, was.from.height) : was.from;
+        expandClose(det, from, () => { if (open !== was) return; open = null; units.delete(was.key); refresh(); grid.querySelector('[data-open="' + CSS.escape(was.key + '|' + was.id) + '"]')?.focus({ preventScroll: true }); });
+      }
       else if (t.classList.contains('tfAreaPanel') && !t.classList.contains('active')) pickArea(t);
     });
     el.addEventListener('keydown', (ev) => {

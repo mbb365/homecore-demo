@@ -5,10 +5,12 @@ import css from "./styles.css?inline";
 import displayCss from "./display.css?inline";
 import bentoCss from "./weather-bento.css?inline";
 import demoCss from "./demo.css?inline";
+import motionCss from "./motion.css?inline";
 import template from "./template.html?raw";
 import { mountMoveAssistant } from "./app.js";
 import { mountTestFocus } from "./test-focus.js";
 import { mountDemoShell } from "./demo-shell.js";
+import { installMotion, installSegments } from "./motion.js";
 
 // The saved-data key app.js reads and writes. Kept as it was so HomeCore's own keys stay unchanged.
 const STORAGE_KEY = "move_assistant";
@@ -56,7 +58,7 @@ class HomeCoreApp extends HTMLElement {
   async _init() {
     loadFonts();
     const root = this.shadowRoot || this.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>${css}${displayCss}${bentoCss}${demoCss}</style>${template}`;
+    root.innerHTML = `<style>${css}${displayCss}${bentoCss}${demoCss}${motionCss}</style>${template}`;
     const app = root.getElementById("app");
     app.style.opacity = "0";
 
@@ -88,6 +90,8 @@ class HomeCoreApp extends HTMLElement {
     this._test = mountTestFocus(root, { config: this._config, getHass: () => this._hass });
     this._test.update(this._hass.states);
     this._shell = mountDemoShell(root, { getHass: () => this._hass, homecore: this._test });
+    installMotion(root, app);
+    installSegments(root);
     if (!this.isConnected) { this._app.suspend(); this._test.suspend(); }
     app.style.transition = "opacity .2s ease";
     app.style.opacity = "";

@@ -11,6 +11,7 @@ import { renderActivity } from './pages/activity.js';
 import { openSearch } from './pages/search.js';
 import { renderConfig, renderAbout } from './pages/ha-settings.js';
 import { mountLook } from './look.js';
+import { closeDialog, toaster } from './motion.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -270,7 +271,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     }
   })();
   // Appearance: the cards, the background and the stroke (Matt, 9 Nov)
-  mountLook(root, { toast: (msg) => { const t = $('toast'); if (t) { t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } } });
+  mountLook(root, { toast: (msg) => toaster.show?.(msg) });
   /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov; its illustration from Figma "Popup · Oops"): HomeCore's popup, Close
      or Add to the list (which says thanks in HomeCore's toast) */
   function oops() {
@@ -280,16 +281,12 @@ export function mountDemoShell(root, { getHass, homecore }) {
       '<div class="hcArt hcArtOops"><img alt="" src="' + new URL('art/oops-trees.jpg', document.baseURI).href + '"></div>' +
       '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><button class="primary" type="button" data-oops-add>Add to the list</button></div></div></div>');
     const pop = app.querySelector('.hcOops'), was = root.activeElement;
-    const close = () => { pop.remove(); root.removeEventListener('keydown', onKey, true); was?.focus?.(); };
+    const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
     const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); } };
     root.addEventListener('keydown', onKey, true);
     pop.addEventListener('click', (ev) => {
       if (ev.target === pop || ev.target.closest('[data-oops-close]')) close();
-      else if (ev.target.closest('[data-oops-add]')) {
-        close();
-        const toast = $('toast');
-        if (toast) { toast.textContent = 'Added to the list'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2600); }
-      }
+      else if (ev.target.closest('[data-oops-add]')) { close(); toaster.show?.('Added to the list'); }
     });
     pop.querySelector('[data-oops-add]').focus();
   }
