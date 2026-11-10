@@ -292,7 +292,9 @@ export function mountDemoShell(root, { getHass, homecore }) {
     pop.querySelector('[data-oops-add]').focus();
   }
   ctx.oops = oops;
-  root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
+  /* one level down only (Matt, 10 Nov): a popup's own tiles (Maintenance's Monstera, a summary's devices) don't open
+     another page in it; they say it isn't designed yet */
+  root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops], .tfMoreBackdrop:not(.hcOops) [data-more]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
   const topRight = shell.querySelector('.hcTopRight');
   /* the edit tick lives in the edit tray's head while editing (Matt, 9 Nov: the tray covered it), in place of Done */
   const trayHead = root.querySelector('.tfTrayHead');
