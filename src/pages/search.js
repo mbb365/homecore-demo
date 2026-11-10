@@ -1,6 +1,6 @@
 // Search: Matt's popup (Figma "Popup · Search", 9 Nov): a greeting, a line, an illustration and a closing line. Search
 // itself isn't designed yet, so there's no box or results; clicking outside it or Escape closes it.
-const ART = 'art/search-cave.jpg';
+const ART = 'art/search-cave.webp';
 
 export function openSearch({ root }) {
   const app = root.getElementById('app');

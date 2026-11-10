@@ -47,7 +47,9 @@ export function renderAccount(page, { esc, icon, go, root, glyph, paint, head })
           '<div class="hcField"><span class="hcFieldName">Home Assistant user since</span><span class="hcSince">14 March 2023</span></div></section>' +
       '</div>' +
       others.map(([k, name]) => '<div class="hcPanel" data-panel="' + k + '" hidden>' + panelHead(name) +
-        '<section class="card hcFields hcSoon"><div class="hcCardTitle">' + esc(name) + '</div><p>Oops! We haven\'t designed this yet. Let\'s add it to the list :)</p></section></div>').join('') +
+        '<section class="card hcFields hcSoon"><div class="hcCardTitle">' + esc(name) + '</div><p>Oops! We haven\'t designed this yet. Let\'s add it to the list :)</p>' +
+        // the Oops popup's picture, wherever an Oops shows (Matt, 10 Nov)
+        '<div class="hcArt hcArtOops"><img alt="" src="' + new URL('art/oops-trees.jpg', document.baseURI).href + '"></div></section></div>').join('') +
     '</div>';
   const wrap = page.querySelector('.hcAccount');
   paint(page);
