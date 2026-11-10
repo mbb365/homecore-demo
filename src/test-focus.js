@@ -492,12 +492,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const num = (v, d = 1) => Number(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
   const brightnessOf = (st) => (st?.state === 'on' ? (st.attributes.brightness != null ? Math.max(1, Math.round(st.attributes.brightness / 2.55)) : 100) : 0);
   const modesOf = (id) => attr(id).supported_color_modes || [];
-  // a light's colour while it's on, as Home Assistant's tiles show it: its rgb, else its hue, else its warm to cool,
-  // else amber
-  const kelvinRgb = (k) => {
-    const t = k / 100;
-    return [t <= 66 ? 255 : 329.7 * Math.pow(t - 60, -0.1332), t <= 66 ? 99.47 * Math.log(t) - 161.12 : 288.12 * Math.pow(t - 60, -0.0755), t >= 66 ? 255 : t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04];
-  };
+  // a light's colour while it's on: its rgb or hue when it's set to a colour, else amber (lightRgb)
   const hueRgb = (h, sat) => [5, 3, 1].map((n) => { const k = (n + h / 60) % 6; return 255 * (1 - (sat / 100) * Math.max(0, Math.min(k, 4 - k, 1))); });
   // a lit light's glyph is its own colour, deepened (or, where white would contrast more, paled) only as far as 3.5:1
   // on it (Matt, 1 Nov: black on orange was harsh; 29 Oct: white on amber was 2:1)
@@ -509,9 +504,12 @@ export function mountTestFocus(root, { config, getHass }) {
      light as it can be while it still reads on the chip (3:1). A light is its own colour; the rest are Home Assistant's
      state colours */
   const SOFTEN = 0.55;
+  // a white light (warm to cool, or brightness only) is the brightness bar's amber, not its kelvin's peach (Matt, 10 Nov:
+  // they clashed); a light set to a colour is that colour
+  const COLOUR_MODES = ['hs', 'xy', 'rgb', 'rgbw', 'rgbww'];
   const lightRgb = (id) => {
-    const a = attr(id);
-    return (a.rgb_color || (a.hs_color && a.color_mode !== 'color_temp' ? hueRgb(...a.hs_color) : a.color_temp_kelvin ? kelvinRgb(a.color_temp_kelvin) : [255, 170, 0])).map((v) => Math.round(Math.max(0, Math.min(255, v))));
+    const a = attr(id), coloured = COLOUR_MODES.includes(a.color_mode);
+    return (coloured && a.rgb_color ? a.rgb_color : coloured && a.hs_color ? hueRgb(...a.hs_color) : [255, 170, 0]).map((v) => Math.round(Math.max(0, Math.min(255, v))));
   };
   const CLIMATE_RGB = { heat: [255, 111, 34], cool: [33, 150, 243], heat_cool: [255, 193, 7], auto: [76, 175, 80], dry: [255, 152, 0], fan_only: [0, 188, 212] };
   // the colour a device has while it's on, or null while it's off (a triggered alarm stays solid red)
