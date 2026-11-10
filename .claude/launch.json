@@ -25,6 +25,20 @@
         "/homecore-demo/"
       ],
       "port": 5196
+    },
+    {
+      "name": "ha-today",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--outDir",
+        "/Users/MattOpenHomeFoundation/Desktop/ha-today/demo/dist",
+        "--port",
+        "5197",
+        "--strictPort"
+      ],
+      "port": 5197
     }
   ]
 }
