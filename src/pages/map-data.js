@@ -1,5 +1,6 @@
 // The map's people, devices and zones, from Matt's Figma frame 981:9937 (names, photos, lines and the activity as drawn).
 // Places are in Amsterdam: home in the Jordaan, AH a short walk away.
+import { IMG } from '../images.js';
 const HOME = [52.37395, 4.88342];
 export const ZONES = [
   { id: 'home', name: 'Fraggle rock', icon: 'mdi:home', colour: '#ff7043', at: HOME, radius: 90, sub: '3 fraggles' },
@@ -7,9 +8,9 @@ export const ZONES = [
 ];
 const near = ([lat, lng], dLat, dLng) => [lat + dLat, lng + dLng];
 export const PEOPLE = [
-  { id: 'wembely', name: 'Wembely', photo: 'people/wembely.png', at: near(HOME, 0.00012, -0.00025) },
-  { id: 'red', name: 'Red', photo: 'people/red.png', at: near(HOME, -0.0001, 0.0002) },
-  { id: 'gobo', name: 'Gobo', photo: 'people/gobo.png', at: near(HOME, 0.00025, 0.00018) },
+  { id: 'wembely', name: 'Wembely', photo: IMG.people.wembely, at: near(HOME, 0.00012, -0.00025) },
+  { id: 'red', name: 'Red', photo: IMG.people.red, at: near(HOME, -0.0001, 0.0002) },
+  { id: 'gobo', name: 'Gobo', photo: IMG.people.gobo, at: near(HOME, 0.00025, 0.00018) },
 ];
 export const TRACKERS = [
   { id: 'big_mac', name: 'Big Mac', icon: 'mdi:television', at: HOME },

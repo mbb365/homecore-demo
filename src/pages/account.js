@@ -2,6 +2,7 @@
 // cards, each with its icon chip), and the profile as cards of fields with their labels above. Wide: the list beside the
 // page; narrow: the list, then the page with a back arrow. Appearance opens HomeCore's Settings; the other rows open
 // a page that says it isn't designed yet. What's typed is kept in this browser only.
+import { IMG } from '../images.js';
 const GROUPS = [
   [['profile', 'My profile', 'mdi:account-circle-outline', '#2a5fc1']],
   [['location', 'Location', 'mdi:map-marker', '#3e7b4f'], ['health', 'Health', 'mdi:heart-pulse', '#b33a2c'], ['calendar', 'Calendar', 'mdi:calendar', '#b07a2c'], ['voice', 'Voice', 'mdi:microphone', '']],
@@ -17,7 +18,7 @@ const local = {
 
 export function renderAccount(page, { esc, icon, go, root, glyph, paint, head }) {
   const me = { ...FIELDS, ...local.get() };
-  const photo = new URL('people/wembely.png', document.baseURI).href;
+  const photo = IMG.people.wembely;
   let showing = null; // narrow only: the profile instead of the list
   const row = ([k, name, ic, colour]) => '<button class="hcRow' + (k === 'profile' ? ' active' : '') + '" type="button" data-acc="' + k + '">' +
     glyph(ic, colour) +
@@ -49,7 +50,7 @@ export function renderAccount(page, { esc, icon, go, root, glyph, paint, head })
       others.map(([k, name]) => '<div class="hcPanel" data-panel="' + k + '" hidden>' + panelHead(name) +
         '<section class="card hcFields hcSoon"><div class="hcCardTitle">' + esc(name) + '</div><p>Oops! We haven\'t designed this yet. Let\'s add it to the list :)</p>' +
         // the Oops popup's picture, wherever an Oops shows (Matt, 10 Nov)
-        '<div class="hcArt hcArtOops"><img alt="" src="' + new URL('art/oops-trees.jpg', document.baseURI).href + '"></div></section></div>').join('') +
+        '<div class="hcArt hcArtOops"><img alt="" src="' + IMG.oopsTrees + '"></div></section></div>').join('') +
     '</div>';
   const wrap = page.querySelector('.hcAccount');
   paint(page);

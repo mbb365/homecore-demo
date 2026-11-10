@@ -12,6 +12,7 @@ import { openSearch } from './pages/search.js';
 import { renderConfig, renderAbout } from './pages/ha-settings.js';
 import { mountLook } from './look.js';
 import { closeDialog, toaster } from './motion.js';
+import { IMG } from './images.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -38,7 +39,7 @@ const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PA
 export function mountDemoShell(root, { getHass, homecore }) {
   const $ = (id) => root.getElementById(id);
   const app = $('app'), shell = root.querySelector('.shell'), homeView = $('homeView'), settingsView = $('settingsView');
-  const avatar = new URL('people/wembely.png', document.baseURI).href; // you are Wembely (Matt, 9 Nov)
+  const avatar = IMG.people.wembely; // you are Wembely (Matt, 9 Nov)
   app.classList.add('hcDemo');
 
   // the rail: icons only, each named in a tooltip (Matt, 9 Nov: not the chips the pages use)
@@ -135,7 +136,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     glyph: (name, hex) => ctx.chip(icon(name), hex),
     named: (name) => '<span class="tfIcon hcChip" data-icon-for="" data-icon-name="' + esc(name) + '"></span>',
     device: (id) => '<span class="tfIcon hcChip"' + homecore.chip(id) + '></span>',
-    photo: (src) => ctx.chip('<img src="' + new URL(src, document.baseURI).href + '" alt="">'),
+    photo: (src) => ctx.chip('<img src="' + src + '" alt="">'),
     paint: (scope) => homecore.paint(scope),
   });
 
@@ -278,7 +279,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     app.querySelector('.hcOops')?.remove();
     app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcOops"><div class="tfMore hcOopsCard" role="dialog" aria-modal="true" aria-labelledby="hcOopsTitle">' +
       '<div class="hcOopsTitle" id="hcOopsTitle">Oops!</div><p class="hcOopsLine">We haven\'t designed this yet. Let\'s add it to the list :)</p>' +
-      '<div class="hcArt hcArtOops"><img alt="" src="' + new URL('art/oops-trees.jpg', document.baseURI).href + '"></div>' +
+      '<div class="hcArt hcArtOops"><img alt="" src="' + IMG.oopsTrees + '"></div>' +
       '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><button class="primary" type="button" data-oops-add>Add to the list</button></div></div></div>');
     const pop = app.querySelector('.hcOops'), was = root.activeElement;
     const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
