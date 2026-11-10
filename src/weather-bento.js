@@ -865,7 +865,9 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
         '<path class="wbSunPath" d="M 26 100 A 74 74 0 0 1 174 100"></path><line class="wbHorizon" x1="0" x2="200" y1="100" y2="100"></line>'+
         (up?'<circle cx="'+sunX+'" cy="'+sunY+'" r="14" fill="url(#'+P+'sun-glow)" clip-path="url(#'+P+'above-horizon)"></circle>':'')+
         (noon?'<text class="wbSunTime wbNoon" x="100" y="1">'+esc(time(noon))+'</text>':'')+
-        '<text class="wbSunTime" x="26" y="117">'+esc(time(rise))+'</text><text class="wbSunTime" x="174" y="117">'+esc(time(set))+'</text></svg></div>'});
+        '<text class="wbSunTime" x="26" y="117">'+esc(time(rise))+'</text><text class="wbSunTime" x="174" y="117">'+esc(time(set))+'</text></svg></div>'+
+        // at M, the next sunrise or sunset (Matt, 10 Nov)
+        zoneM(valueHtml(time(rise&&now<rise?rise:set&&now<set?set:t2.rise),''))});
   }
 
   /* ---- Moon: phase, how much is lit and moonrise or moonset, worked out from the home location ---- */
@@ -903,7 +905,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const lit=fmtNum(Math.round(ill.fraction*100),h.locale)+'%',riseOrSet=rise??set,time=riseOrSet?fmtTime(riseOrSet,h):undefined;
     return tile({icon:I.night,name:T.moon,sub:T.phases[phase],
       callouts:[...(rise?[[T.callout.moonrise,fmtTime(rise,h)]]:[]),...(set?[[T.callout.moonset,fmtTime(set,h)]]:[]),[T.callout.lit,lit]],
-      zone:'<div class="wbMoonBox">'+moonSvg(ill.fraction,litOnLeft,lat<0)+'</div>'});
+      // at M, how much of it is lit (Matt, 10 Nov)
+      zone:'<div class="wbMoonBox">'+moonSvg(ill.fraction,litOnLeft,lat<0)+'</div>'+zoneM(valueHtml(fmtNum(Math.round(ill.fraction*100),h.locale),'%'))});
   }
 
   /* ---- Wind: speed, direction and Beaufort on a round compass ---- */
