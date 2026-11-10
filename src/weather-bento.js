@@ -1103,13 +1103,28 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     const level=!n?null:dc==='aqi'?(v<=50?'good':v<=100?'moderate':'poor'):dc==='pm25'?pm25Level(v):null;
     return level==='good'||level==='fair'?T.advice.window:level==='moderate'||level===null?T.advice.fine:T.advice.closed;
   };
+  /* the face (Matt, 10 Nov): a child's drawing of a smiley on the stage's solid colour, which fills the zone; from a
+     big smile at Good to X eyes and a wavy mouth at Extremely poor. The AQI's six stages take the six faces in order */
+  const AQ_ORDER=['good','fair','moderate','poor','very_poor','extremely_poor'];
+  const aqiStage=v=>AQ_ORDER[v<=50?0:v<=100?1:v<=150?2:v<=200?3:v<=300?4:5];
+  const DOTS='M43 43q1 8 0 10M77 42q1 8 -1 10';
+  const AQ_FACE={good:[DOTS,'M34 69Q61 98 86 67'],fair:[DOTS,'M40 74Q61 89 81 72'],moderate:[DOTS,'M41 79Q60 76 80 81'],poor:[DOTS,'M41 85Q60 73 80 86'],
+    very_poor:['M36 38l13 5M84 37l-13 5M43 48q1 7 0 9M77 47q1 7 -1 9','M37 90Q60 64 84 89'],extremely_poor:['M37 41l12 11M49 41l-12 11M71 40l12 11M83 40l-12 11','M36 84q6 -8 12 0t12 0t12 0t12 0']};
+  const aqFace=k=>'<svg class="wbAqFace" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 9C89 8 112 32 110 61C109 90 87 112 58 111C30 110 9 88 10 59C11 31 33 10 63 12"></path>'+
+    '<path class="wbAqEyes" d="'+AQ_FACE[k][0]+'"></path><path d="'+AQ_FACE[k][1]+'"></path></svg>';
   function renderAqTile(h){
     const air=anyAir(h),main=air[0];
     if(!main)return tile({icon:I.airFilter,name:T.airQuality,sub:T.noAir,visual:valueHtml('–',''),cls:'wbBase'});
     const dc=main.attributes.device_class,v=Number(main.state),n=num(main.state);
     const sub=dc==='aqi'&&n?aqiWord(v):dc==='pm25'&&n?AQ_WORDS[pm25Level(v)]:stateText(h,main);
+    const shown=n?fmtNum(Math.round(v),h.locale):String(main.state),unit=dc==='aqi'?'AQI':main.attributes.unit_of_measurement||'';
+    const stage=n&&dc==='aqi'?aqiStage(v):n&&dc==='pm25'?pm25Level(v):null;
+    if(stage)return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbAqSmile',
+      zone:'<div class="wbAqFill" style="background:'+AQ_COLORS[stage]+'">'+aqFace(stage)+
+        '<div class="wbAqBig"><span class="wbAqNum">'+esc(shown)+'</span>'+(unit?'<span class="wbAqUnit">'+esc(unit)+'</span>':'')+'</div></div>',
+      callouts:[aqAdvice(dc,v,n),...air.slice(1,3).map(s=>[entityName(h,s),stateText(h,s)])]});
     return tile({icon:I.airFilter,name:T.airQuality,sub,cls:'wbBase',
-      zone:valueHtml(n?fmtNum(Math.round(v),h.locale):String(main.state),dc==='aqi'?'AQI':main.attributes.unit_of_measurement||''),
+      zone:valueHtml(shown,unit),
       callouts:[aqAdvice(dc,v,n),...air.slice(1,3).map(s=>[entityName(h,s),stateText(h,s)])]});
   }
   /* Pollen (Matt, 9 Nov): seeds, pollen grains and grass seed-heads floating across the gap between the head and the
