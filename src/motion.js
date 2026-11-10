@@ -3,7 +3,7 @@
 export const M = {
   pivot: { tilt: 2, dir: 'dips', persp: 220, lift: 103, press: 98, shine: 10, size: 80, ret: 210, ease: 'soft' },
   slider: { glow: 6, spread: 1, strength: 14, hold: 5, holdStrength: 42, grow: 101, axis: 'height', colour: 'light', ein: 140, eout: 520, ease: 'soft' },
-  iconbtn: { scale: 128, // 107 in the lab, 20% bigger (Matt, 10 Nov)
+  iconbtn: { scale: 108.4, // 107 in the lab, its growth 20% bigger (Matt, 10 Nov)
     press: 90, dur: 160, ease: 'soft', tint: 1 },
   warp: { style: 'pinch', amount: 60, win: 120, cdelay: 0, cdur: 500, wout: 340, ease: 'soft' },
   expand: { style: 'grow', dur: 660, ease: 'standard', blur: 14, delay: 140, stagger: 145, back: 105 },
