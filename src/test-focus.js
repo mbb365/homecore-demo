@@ -553,7 +553,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const climateVars = () => [0, 1, 2].map((i) => '--g' + i + '-d:' + CLIMATE_STOPS.d[i] + ';--g' + i + '-l:' + CLIMATE_STOPS.l[i]).join(';');
   const CLIMATE_DEFS = '<svg class="tfGradDefs" aria-hidden="true" focusable="false"><defs><linearGradient id="hcClimateGrad" x1="0" y1="0" x2="0" y2="1">' +
     [0.15, 0.5, 0.85].map((o, i) => '<stop offset="' + o + '" style="stop-color:var(--g' + i + ')"/>').join('') + '</linearGradient></defs></svg>';
-  const colourVars = (rgb) => { const soft = rgb.map((v) => Math.round(v + (255 - v) * SOFTEN)); return '--light-soft:rgb(' + soft.join(',') + ');--light-ink:' + richInk(rgb, soft) + ';--light-rgb:rgb(' + rgb.join(',') + ')'; };
+  const colourVars = (rgb) => { const soft = rgb.map((v) => Math.round(v + (255 - v) * SOFTEN)); return '--light-soft:rgb(' + soft.join(',') + ');--light-ink:' + richInk(rgb, soft); };
   const lightVars = (id) => colourVars(lightRgb(id));
   // the marker and colours on a device's tile while it's on (data-light: lights first, now every kind)
   const lightAttrs = (id) => { const c = kindRgb(id); return c ? ' data-light style="' + colourVars(c) + '"' : ''; };
