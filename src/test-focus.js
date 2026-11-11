@@ -1715,10 +1715,12 @@ export function mountTestFocus(root, { config, getHass }) {
   // a card's width in pegs on a board n pegs wide, each w: 'full' the whole width, the areas as wide as they're drawn
   const colsOf = (it, n, w) => {
     if (it.span === 'full') return n;
-    // the areas: as wide as you picked in its ⋯ (Matt, 6 Nov: a lot of rooms), else as wide as its rooms; the rest scroll
-    const picked = it.span === 'areas' && dashPrefs().spans.areas;
-    if (picked) return picked === 'full' ? n : Math.min(n, Math.max(2, picked));
-    if (it.span === 'areas') return Math.min(n, Math.ceil((AREA_OPEN + Math.max(0, areaRooms.length - 1) * (AREA_FOLDED + PEG_GAP) + PEG_GAP) / (w + PEG_GAP)));
+    // the areas: as wide as they need (Matt, 11 Nov: no width of their own to pick), so as wide as their rooms, up to the
+    // board's edge from where they sit; the rooms that don't fit scroll
+    if (it.span === 'areas') {
+      const need = Math.ceil((AREA_OPEN + Math.max(0, areaRooms.length - 1) * (AREA_FOLDED + PEG_GAP) + PEG_GAP) / (w + PEG_GAP));
+      return Math.max(Math.min(n, 2), Math.min(need, n - (dashPrefs().cells.areas?.col || 0)));
+    }
     return Math.min(n, dashPrefs().spans[it.key] ?? it.span);
   };
   // a card's rows: its height's
@@ -1989,13 +1991,9 @@ export function mountTestFocus(root, { config, getHass }) {
       SIZE_NAMES.map((name, i) => '<button type="button" role="menuitemradio" aria-checked="' + (i + 1 === now) + '" aria-label="' + name + ', ' + (i + 1) + (i ? ' rows' : ' row') + '" data-board-act="h:' + (i + 1) + '"' + (i < most ? '' : ' disabled') + '>' + name + '</button>').join('') + '</div></div>';
     // then its width, for the cards that have one: narrow (a column), wide (two) or really wide (three), one the board
     // hasn't the columns for greyed out (Matt, 6 Nov: not "Card size" / "Tile size")
-    // the areas: wide (two), really wide (three) or the full width, never narrow (an open room is 409); until one's
-    // picked it's as wide as its rooms, which may be none of these
-    const AREA_WIDTHS = [['Wide', 2, n >= 2], ['Really wide', 3, n >= 3], ['Full width', 'full', n >= 4]];
-    const width = key === 'areas' ? '<div class="tfHeight tfWidth" role="group" aria-label="Width"><span class="tfHeightLabel" aria-hidden="true">Width</span><div class="tfHeightTabs">' +
-      AREA_WIDTHS.map(([name, v, ok]) => '<button type="button" role="menuitemradio" aria-checked="' + (ok && (v === 'full' ? p.cols === n : p.cols === v && !(v === n && dash.spans.areas === 'full'))) + '" aria-label="' + name + (v === 'full' ? '' : ', ' + v + ' columns') + '" data-board-act="w:' + v + '"' + (ok ? '' : ' disabled') + '>' + name + '</button>').join('') + '</div></div>'
-      // a room's tile too (Matt, 6 Nov): narrow, wide or really wide, like the cards
-      : RESIZABLE.includes(key) || isRoomKey(key) ? '<div class="tfHeight tfWidth" role="group" aria-label="Width"><span class="tfHeightLabel" aria-hidden="true">Width</span><div class="tfHeightTabs">' +
+    // the areas have none (Matt, 11 Nov): they're as wide as they need
+    // a room's tile too (Matt, 6 Nov): narrow, wide or really wide, like the cards
+    const width = RESIZABLE.includes(key) || isRoomKey(key) ? '<div class="tfHeight tfWidth" role="group" aria-label="Width"><span class="tfHeightLabel" aria-hidden="true">Width</span><div class="tfHeightTabs">' +
       WIDTH_NAMES.map((name, i) => '<button type="button" role="menuitemradio" aria-checked="' + (i + 1 === Math.min(span, n)) + '" aria-label="' + name + ', ' + (i + 1) + (i ? ' columns' : ' column') + '" data-board-act="w:' + (i + 1) + '"' + (i < n ? '' : ' disabled') + '>' + name + '</button>').join('') + '</div></div>' : '';
     menu.innerHTML = height + width +
       (key === 'energy' ? item('graph', (dash.opts.energy?.graph || 'above') === 'above' ? 'Graph below' : 'Graph above') : '') +
