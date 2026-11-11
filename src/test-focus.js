@@ -151,13 +151,15 @@ export function mountTestFocus(root, { config, getHass }) {
     const view = $('settingsView');
     view.querySelector('.settingsTitle').textContent = 'HomeCore settings'; // (Matt, 9 Nov)
     // one tab each (Matt, 27 Oct); the tab names the section, so the sections have no heading of their own
-    const tabs = [['look', 'Appearance'], ['lights', 'Lights'], ['sources', 'Sources'], ['sums', 'Summaries']];
+    const tabs = [['look', 'Appearance'], ['style', 'Style'], ['lights', 'Lights'], ['sources', 'Sources'], ['sums', 'Summaries']];
     const tabPane = (k, html) => '<div class="houseTab' + (k === 'look' ? ' active' : '') + '" data-house-pane="' + k + '"><section class="card">' + html + '</section></div>';
     view.querySelector('.rubberTabs').insertAdjacentHTML('afterend', '<div class="settingsPane active" id="housePane">' +
       '<div class="tabs rubberTabs houseTabs"><div class="rubberIndicator" aria-hidden="true"></div>' +
         tabs.map(([k, t]) => '<button class="tab segBtn' + (k === 'look' ? ' active' : '') + '" type="button" data-house-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
       // Appearance in groups, each named above its card (Matt, 8 Nov)
       tabPane('look', LOOK_GROUPS.map(([k, t]) => '<div class="tfSetGroup"><div class="sectionLabel">' + t + '</div><div class="toggleList" data-look-group="' + k + '"></div></div>').join('')) +
+      // Style: the cards' look, filled in by the demo's Appearance controls (look.js), with a preview (Matt, 11 Nov)
+      tabPane('style', '') +
       tabPane('lights', '<p class="note tfTableNote">This is an example of a table. It is not how to control features in lights.</p>' +
         '<div class="metaTableWrap"><table class="metaTable tfLightTable"><thead><tr><th>Light</th><th>Room</th><th>Now</th><th class="metaSwitchCol">Favourite</th><th>Tile</th><th>Pad</th></tr></thead>' +
         '<tbody id="lightRows"></tbody></table></div><div class="tfLightCards" id="lightCards"></div>') +

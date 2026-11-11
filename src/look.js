@@ -24,6 +24,8 @@ const SURFACES = [
 // and what's painted in the page colour though it sits in or over cards: the wide popups and the floating phone's
 // screen; their text follows the page. (#hcPageInk.hcA.hcB matches nothing: it only lifts the rule
 // to the same weight as the cards' one, which has an id and two classes in it, so this one, coming after, wins)
+// the settings page keeps the theme's cards, so its controls always read (Matt, 11 Nov); the Style tab's preview doesn't
+const SCOPE = ':where(:not(#settingsView *),.hcLookPreview *)';
 const ON_PAGE = ['#hcPageInk.hcA.hcB', '.tfMore.wide', '.tfMorePair.over .tfMore.wide+.tfMoreSide .tfMoreSideInner', '.tfPhoneScreen'].join(',');
 
 const read = (k, fallback) => { try { return localStorage.getItem(k) ?? fallback; } catch (_e) { return fallback; } };
@@ -73,11 +75,17 @@ export function mountLook(root, { toast }) {
         (s.bg !== 'theme' ? '--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) + ';--text:' + pageText + ';--muted:' + pageMuted + ';--tile:' + pageTile + ';color:var(--text);' : '') + '}' +
       (s.bg === 'image' && img ? '#app.hcDemo.hcLook .shell{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' +
         '#app.hcDemo.hcLook .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
-      '#app.hcDemo.hcLook :is(' + SURFACES + '){--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
+      '#app.hcDemo.hcLook :is(' + SURFACES + ')' + SCOPE + '{--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
       '#app.hcDemo.hcLook :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
-      (a < 1 ? '#app.hcDemo.hcLook :is(' + SURFACES + '){-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
+      // frosted while there's any card at all; at 0% it's clear
+      (a < 1 && a > 0 ? '#app.hcDemo.hcLook :is(' + SURFACES + ')' + SCOPE + '{-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
+      // the settings page: the theme's card, line and text; the preview: the look again
+      '#app.hcDemo.hcLook #settingsView{--card:var(--color-bg-card);--group-bg:var(--color-bg-card);--line:var(--color-line);--lineb:var(--color-line)}' +
+      '#app.hcDemo.hcLook #settingsView :is(.toggleList,.integrationList,.helpSteps){--text:var(--color-text-primary);--muted:var(--color-text-muted);--tile:var(--color-bg-tile);color:var(--text)}' +
+      '#app.hcDemo.hcLook #settingsView .hcLookPreview{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + '}' +
+      (s.bg === 'image' && img ? '#app.hcDemo.hcLook .hcLookPreview{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' : '') +
       // every card's own line, drawn over whatever the system gives it; edit mode's outline and a focus ring come first
-      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing) :is(' + SURFACES + '):not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
+      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing) :is(' + SURFACES + ')' + SCOPE + ':not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
     draw();
   }
   // Style: grey all over (the whole page, photos and art too), square corners and pixel icons
@@ -86,7 +94,8 @@ export function mountLook(root, { toast }) {
   document.head.appendChild(docStyle);
   // square: no rounding anywhere, whatever a rule asks for (three #app's outweigh every rule that sets a radius)
   const squareStyle = document.createElement('style');
-  squareStyle.textContent = ['', ' *', ' *::before', ' *::after'].map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}';
+  squareStyle.textContent = ['', ' :not(#settingsView *)', ' .hcLookPreview *'].flatMap((x) => (x ? [x, x + '::before', x + '::after'] : [x]))
+    .map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}';
   root.appendChild(squareStyle);
   let wasSquare = null;
   function style2() {
@@ -100,15 +109,16 @@ export function mountLook(root, { toast }) {
   const save = () => { write(KEY, JSON.stringify(s)); apply(); };
 
   // the controls, as a group in Appearance
-  const look = root.querySelector('[data-house-pane="look"] > .card');
+  const look = root.querySelector('[data-house-pane="style"] > .card');
   if (look) {
     const row = (title, status, control, attr = '') => '<div class="toggleRow"' + attr + '><div><strong>' + title + '</strong>' + (status ? '<div class="status">' + status + '</div>' : '') + '</div>' + control + '</div>';
     const swatch = (k, label) => '<label class="hcSwatch"><input type="color" data-look="' + k + '" aria-label="' + label + '"></label>';
     const choice = (k, label, opts) => '<div class="themeChoice" role="group" aria-label="' + label + '">' + opts.map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-pick-' + k.toLowerCase() + '="' + v + '">' + t + '</button>').join('') + '</div>';
     const range = (k, label, min) => '<span class="hcRangeWrap"><input class="hcRange" type="range" min="' + min + '" max="100" step="1" data-look="' + k + '" aria-label="' + label + '"><span class="hcRangeValue" data-look-value="' + k + '"></span></span>';
-    look.insertAdjacentHTML('beforeend', '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Cards and background</div>' +
+    look.insertAdjacentHTML('beforeend', '<div class="hcLookPreview" aria-label="Preview" inert></div>' +
+    '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Cards and background</div>' +
       row('Card colour', 'Text in the cards turns light or dark to suit.', swatch('card', 'Card colour')) +
-      row('Card opacity', 'Lower lets the background show through.', range('opacity', 'Card opacity', 20)) +
+      row('Card opacity', 'Lower lets the background show through.', range('opacity', 'Card opacity', 0)) +
       row('Background', '', '<div class="themeChoice" role="group" aria-label="Background">' + [['theme', 'Theme'], ['colour', 'Colour'], ['image', 'Image']].map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-bg="' + v + '">' + t + '</button>').join('') + '</div>') +
       row('Background colour', '', swatch('bgColour', 'Background colour'), ' data-look-row="colour"') +
       row('Background image', 'A photo or picture of your own, kept in this browser.', '<span class="hcLookImg"><button class="hcBtn" type="button" data-look-pick>Choose image</button><input type="file" accept="image/*" hidden data-look-file></span>', ' data-look-row="image"') +
@@ -124,7 +134,7 @@ export function mountLook(root, { toast }) {
       row('Back to the theme', 'Cards, background, strokes and style.', '<button class="pill" type="button" data-look-reset>Reset</button>') +
     '</div></div>');
   }
-  const list = root.querySelector('[data-house-pane="look"] > .card');
+  const list = look;
   const CHOICES = ['strokes', 'strokeWidth', 'mono', 'icons', 'corners'];
   function draw() {
     if (!list?.querySelector('.hcLookList')) return;
@@ -193,6 +203,26 @@ export function mountLook(root, { toast }) {
       pic.src = url;
     });
   }
+  /* the Style tab's preview (Matt, 11 Nov): copies of three of the house page's own cards (the Office light, the
+     Thermostat and Air quality, or others like them if those are gone), taken each time the tab opens, sized as at M;
+     they can't be used. It stays at the top as the controls scroll under it */
+  const preview = look?.querySelector('.hcLookPreview'), stylePane = root.querySelector('[data-house-pane="style"]'), settings = root.getElementById('settingsView');
+  const PICKS = [['[data-k="light.office_2"]', '.tfAction[data-k^="light."]'], ['[data-k="climate.made_up_living_room"]', '.tfAction[data-k^="climate."]'], ['.tfDash-aq', '.tfDash-pollen', '.tfDash-wx']];
+  function fillPreview() {
+    const home = root.getElementById('homeView');
+    if (!preview || !home || !stylePane?.classList.contains('active') || !settings?.classList.contains('active')) return;
+    const cards = PICKS.map((qs) => qs.map((q) => home.querySelector(q)).find(Boolean)).filter(Boolean);
+    preview.replaceChildren(...cards.map((el) => {
+      const c = el.cloneNode(true), rows = Number(el.dataset.rows) || Math.round((parseFloat(el.style.height) + 16) / 76) || 2;
+      c.removeAttribute('id');
+      c.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+      c.classList.remove('tfDragging', 'mvDrag');
+      Object.assign(c.style, { position: 'relative', left: '', top: '', transform: '', width: '216px', height: rows * 76 - 16 + 'px' });
+      return c;
+    }));
+  }
+  if (preview) new MutationObserver(fillPreview).observe(settings, { attributes: true, attributeFilter: ['class'] });
+  if (stylePane) new MutationObserver(fillPreview).observe(stylePane, { attributes: true, attributeFilter: ['class'] });
   // the light or dark theme changing: the theme's colours change under the settings
   let wasLight = app.classList.contains('light');
   new MutationObserver(() => { const l = app.classList.contains('light'); if (l !== wasLight) { wasLight = l; apply(); } }).observe(app, { attributes: true, attributeFilter: ['class'] });

@@ -369,6 +369,9 @@
 .hcRangeValue{min-width:40px;text-align:right;font:400 14px/20px var(--font);color:var(--text);font-variant-numeric:tabular-nums}
 .hcRange{width:160px;height:32px;margin:0;accent-color:var(--ha-blue);background:transparent;cursor:pointer}
 .hcLookList .toggleRow[hidden]{display:none}
+/* the Style tab's preview: three of the house page's cards on the background, kept at the top as the controls scroll */
+.hcLookPreview{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;padding:16px 0 24px;background:var(--page)}
+.hcLookPreview>*{flex:none;pointer-events:none}
 @media(max-width:620px){.hcRange{width:110px}}
 #app .hcLookImg .hcBtn{height:32px;min-height:32px;padding:0 14px}
 /* a Settings row's line wraps rather than cutting off, as Home Assistant's do */
