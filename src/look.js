@@ -9,7 +9,7 @@ import { pixelIcons } from './pixel-icons.js';
 
 const KEY = 'homecore-demo-look', IMG_KEY = 'homecore-demo-look-image';
 const BLANK = { card: null, opacity: 100, bg: 'theme', bgColour: null, stroke: null, strokeOpacity: null, imgLum: null,
-  strokes: 'system', strokeWidth: 1, mono: false, icons: 'standard', iconMono: false, corners: 'round' };
+  strokes: 'system', strokeWidth: 1, mono: false, icons: 'standard', iconMono: false, corners: 'round', dashOnly: false };
 // a setting saved before 11 Nov: transparency, turned round
 const migrate = (v) => { if (v.strokeClear != null && v.strokeOpacity == null) v.strokeOpacity = 100 - v.strokeClear; delete v.strokeClear; return v; };
 const INK = { dark: ['#26221e', '#6a625a'], light: ['#d9d9d9', '#969696'] };
@@ -70,41 +70,54 @@ export function mountLook(root, { toast }) {
     const pageTile = s.bg === 'image' ? (pageText === INK.dark[0] ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.35)') : rgbHex(mix(ground, hexRgb(pageText), 0.07));
     const line = s.stroke ? hexRgb(s.stroke) : t.line.slice(0, 3), lineA = s.strokeOpacity != null ? s.strokeOpacity / 100 : t.line[3];
     const rgba = (c, al) => 'rgba(' + c.map(Math.round).join(',') + ',' + +al.toFixed(3) + ')';
+    // the look's rules hold on every page, or (Dashboards only) on the house page and area pages; the preview always
+    const ON = '#app.hcDemo.hcLook:not(.hcLookOff)', PV = '#app.hcDemo.hcLook .hcLookPreview';
+    const both = (sel) => ON + ' ' + sel + SCOPE + ',' + PV + ' ' + sel;
     style.textContent =
-      '#app.hcDemo.hcLook{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + ';' +
+      ON + '{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + ';' +
         (s.bg !== 'theme' ? '--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) + ';--text:' + pageText + ';--muted:' + pageMuted + ';--tile:' + pageTile + ';color:var(--text);' : '') + '}' +
-      (s.bg === 'image' && img ? '#app.hcDemo.hcLook .shell{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' +
-        '#app.hcDemo.hcLook .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
-      '#app.hcDemo.hcLook :is(' + SURFACES + ')' + SCOPE + '{--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
-      '#app.hcDemo.hcLook :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
+      (s.bg === 'image' && img ? ON + ' .shell{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' +
+        ON + ' .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
+      both(':is(' + SURFACES + ')') + '{--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
+      ON + ' :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
       // frosted while there's any card at all; at 0% it's clear
-      (a < 1 && a > 0 ? '#app.hcDemo.hcLook :is(' + SURFACES + ')' + SCOPE + '{-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
+      (a < 1 && a > 0 ? both(':is(' + SURFACES + ')') + '{-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
       // the settings page: the theme's card, line and text; the preview: the look again
       '#app.hcDemo.hcLook #settingsView{--card:var(--color-bg-card);--group-bg:var(--color-bg-card);--line:var(--color-line);--lineb:var(--color-line)}' +
       '#app.hcDemo.hcLook #settingsView :is(.toggleList,.integrationList,.helpSteps){--text:var(--color-text-primary);--muted:var(--color-text-muted);--tile:var(--color-bg-tile);color:var(--text)}' +
-      '#app.hcDemo.hcLook #settingsView .hcLookPreview{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + '}' +
+      '#app.hcDemo.hcLook #settingsView .hcLookPreview{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) +
+        (s.bg !== 'theme' ? ';--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) : '') + '}' +
       (s.bg === 'image' && img ? '#app.hcDemo.hcLook .hcLookPreview{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' : '') +
       // every card's own line, drawn over whatever the system gives it; edit mode's outline and a focus ring come first
-      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing) :is(' + SURFACES + ')' + SCOPE + ':not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
+      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing):not(.hcLookOff) :is(' + SURFACES + ')' + SCOPE + ':not(:focus-visible),' + PV + ' :is(' + SURFACES + '):not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
     draw();
   }
   // Style: grey all over (the whole page, photos and art too), square corners and pixel icons
   const docStyle = document.createElement('style');
   docStyle.textContent = 'html.hcMono{filter:grayscale(1)}';
+  // off a dashboard with Dashboards only, monochrome greys just the preview
   document.head.appendChild(docStyle);
   // square: no rounding anywhere, whatever a rule asks for (three #app's outweigh every rule that sets a radius)
   const squareStyle = document.createElement('style');
-  squareStyle.textContent = ['', ' :not(#settingsView *)', ' .hcLookPreview *'].flatMap((x) => (x ? [x, x + '::before', x + '::after'] : [x]))
-    .map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}';
-  // the icons grey, on their own (the settings page's own keep their colour; the preview's follow)
-  squareStyle.textContent += '#app.hcIconMono .tfIcon' + SCOPE + '{filter:grayscale(1)}';
+  squareStyle.textContent = [':not(.hcLookOff)', ':not(.hcLookOff) :not(#settingsView *)', ' .hcLookPreview *'].flatMap((x) => (x.includes(' ') ? [x, x + '::before', x + '::after'] : [x]))
+    .map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}' +
+    // the icons grey, on their own (the settings page's own keep their colour; the preview's follow)
+    '#app.hcIconMono:not(.hcLookOff) .tfIcon' + SCOPE + ',#app.hcIconMono .hcLookPreview .tfIcon{filter:grayscale(1)}' +
+    '#app.hcMonoPreview .hcLookPreview{filter:grayscale(1)}';
   root.appendChild(squareStyle);
   let wasSquare = null;
+  // a dashboard: the house page or an area page (not the weather page, a page like Map or Devices, or settings)
+  const onDashboard = () => Boolean(root.getElementById('homeView')?.classList.contains('active')) && !root.getElementById('settingsView')?.classList.contains('active') &&
+    !app.classList.contains('hcOnPage') && !app.classList.contains('tfWeatherOpen');
+  const lookOff = () => s.dashOnly && !onDashboard();
   function style2() {
-    document.documentElement.classList.toggle('hcMono', s.mono);
+    const off = lookOff();
+    app.classList.toggle('hcLookOff', off);
+    document.documentElement.classList.toggle('hcMono', s.mono && !off);
+    app.classList.toggle('hcMonoPreview', s.mono && off);
     app.classList.toggle('hcSquare', s.corners === 'square');
     app.classList.toggle('hcIconMono', s.iconMono);
-    pixelIcons(root, s.icons === 'pixel');
+    pixelIcons(root, s.icons === 'pixel', off ? '.hcLookPreview' : '');
     // the sun's band follows the corners
     if (wasSquare !== null && wasSquare !== (s.corners === 'square')) dispatchEvent(new Event('hc-look-corners'));
     wasSquare = s.corners === 'square';
@@ -137,6 +150,7 @@ export function mountLook(root, { toast }) {
       row('Icons', 'Pixel redraws every icon on a 16 square grid.', choice('icons', 'Icons', [['standard', 'Standard'], ['pixel', 'Pixel']])) +
       row('Icon colour', 'Monochrome turns the icons grey and leaves the rest.', choice('iconMono', 'Icon colour', [['false', 'Full'], ['true', 'Monochrome']])) +
       row('Corners', '', choice('corners', 'Corners', [['round', 'Round'], ['square', 'Square']])) +
+      row('Dashboards only', 'The style shows on the house page and the area pages. Everywhere else keeps the theme.', '<button class="switch" type="button" role="switch" data-look-switch="dashOnly" aria-label="Dashboards only"></button>') +
       row('Back to the theme', 'Cards, background, strokes and style.', '<button class="pill" type="button" data-look-reset>Reset</button>') +
     '</div></div>');
   }
@@ -152,6 +166,7 @@ export function mountLook(root, { toast }) {
     list.querySelectorAll('[data-look-bg]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lookBg === s.bg)));
     CHOICES.forEach((k) => list.querySelectorAll('[data-look-pick-' + k.toLowerCase() + ']').forEach((b) => b.setAttribute('aria-pressed', String(b.getAttribute('data-look-pick-' + k.toLowerCase()) === String(s[k])))));
     list.querySelector('[data-look-row="width"]').hidden = s.strokes !== 'all';
+    list.querySelectorAll('[data-look-switch]').forEach((b) => { const on = Boolean(s[b.dataset.lookSwitch]); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
     list.querySelectorAll('[data-look-show]').forEach((el) => { el.hidden = el.dataset.lookShow !== s.bg; });
     list.querySelector('[data-look-pick]').textContent = img ? 'Change image' : 'Choose image';
   }
@@ -197,6 +212,8 @@ export function mountLook(root, { toast }) {
         return;
       }
       if (ev.target.closest('[data-look-pick]')) { file.click(); return; }
+      const sw = ev.target.closest('[data-look-switch]');
+      if (sw) { s[sw.dataset.lookSwitch] = !s[sw.dataset.lookSwitch]; save(); return; }
       for (const k of CHOICES) {
         const attr = 'data-look-pick-' + k.toLowerCase(), b = ev.target.closest('[' + attr + ']');
         if (!b) continue;
@@ -241,8 +258,9 @@ export function mountLook(root, { toast }) {
   function fillPreview() {
     const home = root.getElementById('homeView');
     if (!preview || !home || !stylePane?.classList.contains('active') || !settings?.classList.contains('active')) return;
+    // the house page not drawn just now (settings opened from an area page): the copies already there stay
+    if (preview.children.length && (app.classList.contains('tfAreaOpen') || app.classList.contains('hcOnPage'))) return;
     const cards = PICKS.map((qs) => qs.map((q) => home.querySelector(q)).find(Boolean)).filter(Boolean);
-    // the house page not drawn just now: the copies already there stay
     if (!cards.length) return;
     preview.replaceChildren(...cards.map((el) => {
       const c = el.cloneNode(true), rows = Number(el.dataset.rows) || Math.round((parseFloat(el.style.height) + 16) / 76) || 2;
@@ -255,6 +273,9 @@ export function mountLook(root, { toast }) {
   }
   if (preview) new MutationObserver(fillPreview).observe(settings, { attributes: true, attributeFilter: ['class'] });
   if (stylePane) new MutationObserver(fillPreview).observe(stylePane, { attributes: true, attributeFilter: ['class'] });
+  // moving between pages: with Dashboards only, the look comes and goes
+  const pageWatch = new MutationObserver(() => { if (lookOff() !== app.classList.contains('hcLookOff')) style2(); });
+  [app, root.getElementById('homeView'), root.getElementById('settingsView')].forEach((el) => el && pageWatch.observe(el, { attributes: true, attributeFilter: ['class'] }));
   // the light or dark theme changing: the theme's colours change under the settings
   let wasLight = app.classList.contains('light');
   new MutationObserver(() => { const l = app.classList.contains('light'); if (l !== wasLight) { wasLight = l; apply(); } }).observe(app, { attributes: true, attributeFilter: ['class'] });

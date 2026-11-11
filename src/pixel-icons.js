@@ -7,7 +7,9 @@ const TARGET = '.tfIcon svg, .hcRailBtn svg.hcI, .hcNavIcon svg.hcI, .navBtn svg
 const NS = 'http://www.w3.org/2000/svg';
 const STYLE = ['fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'display', 'visibility'];
 const made = new Map(), waiting = new Set(), original = new WeakMap();
-const roots = new Map();
+// each root watched, and where in it: everywhere, or only inside the Style tab's preview (Dashboards only, off a dashboard)
+const roots = new Map(), where = new Map();
+const targets = (root) => (where.get(root) ? TARGET.split(', ').map((t) => where.get(root) + ' ' + t).join(', ') : TARGET);
 
 const keyOf = (svg) => (svg.getAttribute('viewBox') || '') + '|' + svg.innerHTML;
 
@@ -66,7 +68,7 @@ function restore(svg) {
 }
 
 function scan(root) {
-  root.querySelectorAll(TARGET).forEach((svg) => {
+  root.querySelectorAll(targets(root)).forEach((svg) => {
     if ('px' in svg.dataset || !svg.isConnected || svg.closest('.hcLogo,.hcLogoMark')) return;
     const key = keyOf(svg);
     if (made.has(key)) { swap(svg, made.get(key)); return; }
@@ -79,7 +81,14 @@ function scan(root) {
   });
 }
 
-export function pixelIcons(root, on) {
+export function pixelIcons(root, on, only = '') {
+  if (on && roots.has(root) && where.get(root) !== only) {
+    where.set(root, only);
+    // narrowed: the icons outside it go back
+    if (only) root.querySelectorAll('svg[data-px]').forEach((svg) => { if (!svg.closest(only)) restore(svg); });
+    scan(root);
+  }
+  if (on) where.set(root, only);
   if (on && !roots.has(root)) {
     const watch = new MutationObserver(() => scan(root));
     watch.observe(root, { childList: true, subtree: true });
@@ -88,6 +97,7 @@ export function pixelIcons(root, on) {
   } else if (!on && roots.has(root)) {
     roots.get(root).disconnect();
     roots.delete(root);
+    where.delete(root);
     root.querySelectorAll('svg[data-px]').forEach(restore);
   }
 }
