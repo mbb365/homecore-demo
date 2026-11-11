@@ -895,3 +895,6 @@ button.tfAreaIcon{cursor:pointer}
 /* popups' stroke (Matt, 10 Nov: they got lost on the fade): the cards' own stroke colour (set in HomeCore settings), at
    1 so it holds against the dim and blur behind them */
 #app .tfMoreBackdrop :is(.tfMore,.tfMoreSideInner){box-shadow:inset 0 0 0 1px var(--line)}
+/* a room's page: two columns that stack on their own (rows 1 px, each item spans its height; test-focus.js stack()) */
+#homeView .grid.tfStack{grid-auto-rows:1px;row-gap:0}
+#homeView .grid.tfStack>*{align-self:start}

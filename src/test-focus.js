@@ -353,6 +353,44 @@ export function mountTestFocus(root, { config, getHass }) {
 
   /* ---------- the house ---------- */
   const grid = root.querySelector('#homeView .grid');
+  /* a room's page (Matt, 11 Nov): each column stacks on its own, so a card that opens (a reading's last 24 hours)
+     pushes down only what's under it, never what's beside it. The grid's rows are 1 px; each item spans its own
+     height plus the gap, written into a sheet of its own so a redraw of the item doesn't wipe it */
+  const stackSheet = document.createElement('style');
+  root.appendChild(stackSheet);
+  const stackSeen = new ResizeObserver(() => stack()), seen = new Set();
+  // its height to the fraction (offsetHeight rounds), unless it's mid-animation and scaled
+  const heightOf = (el) => { const h = el.getBoundingClientRect().height; return Math.abs(h - el.offsetHeight) < 1 ? h : el.offsetHeight; };
+  function stack() {
+    const on = app.classList.contains('tfAreaOpen') && !app.classList.contains('tfWeatherOpen');
+    grid.classList.toggle('tfStack', on);
+    seen.forEach((el) => { if (!on || !el.isConnected) { stackSeen.unobserve(el); seen.delete(el); } });
+    if (!on) { stackSheet.textContent = ''; return; }
+    const cs = getComputedStyle(grid), gap = parseFloat(cs.columnGap) || 0;
+    const n = cs.gridTemplateColumns.split(' ').length;
+    const items = [...grid.children].filter((el) => el.dataset.k && el.offsetParent);
+    // each one's own width in columns, as the page's styles give it (span 6, the full row, or one column on a phone)
+    stackSheet.disabled = true;
+    const spans = items.map((el) => {
+      const s = getComputedStyle(el), m = /span (\d+)/.exec(s.gridColumnStart + ' ' + s.gridColumnEnd);
+      return Math.min(n, m ? +m[1] : s.gridColumnEnd === '-1' ? n : 1);
+    });
+    stackSheet.disabled = false;
+    // each keeps the column the plain grid gives it (side by side in pairs), whatever the heights, so nothing jumps
+    // across when a card opens; only the rows are its own
+    let col = 0;
+    const css = items.map((el, i) => {
+      if (!seen.has(el)) { seen.add(el); stackSeen.observe(el); }
+      const span = spans[i];
+      if (col + span > n) col = 0;
+      const start = col + 1;
+      col = (col + span) % n;
+      return '#homeView .grid.tfStack>[data-k="' + CSS.escape(el.dataset.k) + '"]{grid-column:' + start + ' / span ' + span + ';grid-row-end:span ' + Math.max(1, Math.ceil(heightOf(el) + gap)) + '}';
+    }).join('\n');
+    if (stackSheet.textContent !== css) stackSheet.textContent = css;
+  }
+  new MutationObserver(stack).observe(grid, { childList: true });
+  new MutationObserver(stack).observe(app, { attributes: true, attributeFilter: ['class'] });
   let open = null; // { key of its card, entity id, card height before it opened }
   let activeArea = null; // the area card that's open in the accordion
   let areaPage = null; // the section whose own page is open (a room's, from its card's Go, or the weather's), or null for the house
