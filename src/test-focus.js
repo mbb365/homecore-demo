@@ -1620,7 +1620,9 @@ export function mountTestFocus(root, { config, getHass }) {
      draws the cells: drag a card by its grip (or anywhere on it), or use its ⋯ to size, move or hide it, and Energy
      today's graph above or below. Where everything is goes with the page's settings in Home Assistant (prefs.dash:
      cells, sizes, what's hidden, options). Phones keep one column */
-  const PEG = 252, PEG_GAP = 16, PEG_MIN = 200, PEG_MAX = Math.round(PEG * 1.25), ROW = 60, ROW_PITCH = ROW + PEG_GAP, EXTRA_ROWS = 3;
+  // "Home Assistant today" (the switch top right) lays the board on the sections view's grid: rows 56, gaps 8
+  const HA_TODAY = local.get('homecore-demo-ha-today') === '1';
+  const PEG = 252, PEG_GAP = HA_TODAY ? 8 : 16, PEG_MIN = 200, PEG_MAX = Math.round(PEG * 1.25), ROW = HA_TODAY ? 56 : 60, ROW_PITCH = ROW + PEG_GAP, EXTRA_ROWS = 3;
   const BOARD_NAMES = { title: 'The name', sums: 'Summaries', wx: 'Weather', areas: 'Areas', favs: 'Favourites', act: 'Activity', energy: 'Energy today', avg: 'Compared to average', aq: 'Air quality', pollen: 'Pollen', radar: 'Rain radar' };
   // the new cards are two columns, as Compared to average (Matt, 1 Nov: one was too narrow), a tile in their ⋯
   const RESIZABLE = ['wx', 'favs', 'act', 'energy', 'avg'];
@@ -1682,7 +1684,11 @@ export function mountTestFocus(root, { config, getHass }) {
     return Math.min(n, dashPrefs().spans[it.key] ?? it.span);
   };
   // a card's rows: its height's
-  const rowsOf = (it) => sizeOf(it.key);
+  // (on Home Assistant's tighter grid the big cards keep at least their HomeCore height: only the tiles are compared)
+  const rowsOf = (it) => {
+    const r = sizeOf(it.key);
+    return HA_TODAY && !it.tile ? Math.ceil((r * 60 + (r - 1) * 16 + PEG_GAP) / ROW_PITCH) : r;
+  };
   // each card's cell on a board n pegs wide (the cards know their cols and rows): a dragged card where it would land;
   // then the cards with a saved cell, top to bottom (one in the way goes down to the next free cell); then the rest in
   // the page's order, each in the first cell from the top left it fits.

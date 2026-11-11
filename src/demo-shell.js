@@ -58,6 +58,20 @@ export function mountDemoShell(root, { getHass, homecore }) {
   // HomeCore's edit pencil goes top right of Home, where Home Assistant's dashboard edit is (it hides itself off Home)
   const pen = $('dashEditNav');
   if (pen) shell.querySelector('.hcTopRight').appendChild(pen);
+  /* the switch (Matt, 10 Nov): HomeCore's tiles, or the same tiles as Home Assistant draws them today (ha-today.css);
+     the board's grid changes with it, so it reloads */
+  const HA_KEY = 'homecore-demo-ha-today';
+  let haToday = false;
+  try { haToday = localStorage.getItem(HA_KEY) === '1'; } catch (_e) { /* HomeCore */ }
+  app.classList.toggle('haToday', haToday);
+  shell.querySelector('.hcTopRight').insertAdjacentHTML('afterbegin', '<div class="hcHaToggle"><div role="group" aria-label="Tiles">' +
+    [['0', 'HomeCore'], ['1', 'Home Assistant today']].map(([v, word]) => '<button type="button" data-ha-today="' + v + '" aria-pressed="' + (haToday === (v === '1')) + '">' + word + '</button>').join('') + '</div></div>');
+  shell.querySelector('.hcHaToggle').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-ha-today]');
+    if (!b || (b.dataset.haToday === '1') === haToday) return;
+    try { localStorage.setItem(HA_KEY, b.dataset.haToday); } catch (_e) { return; }
+    location.reload();
+  });
   // phones: HomeCore's bottom bar holds the menu, which opens the rail as a list
   root.querySelector('.bottomNav')?.insertAdjacentHTML('afterbegin', '<button class="navBtn" id="hcMenuNav" type="button" title="Menu" aria-label="Menu" aria-expanded="false">' + icon('mdi:menu') + '</button>');
   // the phone's menu and ⋯: plain icons beside their names, as the rail
