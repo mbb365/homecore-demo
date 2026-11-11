@@ -885,12 +885,13 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
   // the band at the zone's real size: drawn when the card renders and when it changes size
   const SUN_BAND=22;
   function drawSunTrack(svg){
-    const W=Math.round(svg.clientWidth),H=Math.round(svg.clientHeight),B=SUN_BAND,c=B/2,at=W+'x'+H+':'+svg.dataset.f+':'+svg.dataset.up;
+    // the band's outer corner is the zone's (16, or none with square corners in Style)
+    const zr=parseFloat(getComputedStyle(svg.closest('.wbZone')||svg).borderTopLeftRadius),r=Number.isFinite(zr)?zr:16,ir=r?6:0;
+    const W=Math.round(svg.clientWidth),H=Math.round(svg.clientHeight),B=SUN_BAND,c=B/2,at=W+'x'+H+':'+svg.dataset.f+':'+svg.dataset.up+':'+r;
     if(W<B*3||H<B*3||svg.dataset.drawn===at)return;
     svg.dataset.drawn=at;
     const day='M'+c+' '+(H-B)+'V'+B+'A'+c+' '+c+' 0 0 1 '+B+' '+c+'H'+(W-B)+'A'+c+' '+c+' 0 0 1 '+(W-c)+' '+B+'V'+(H-B);
     const night='M'+(W-c)+' '+(H-B)+'A'+c+' '+c+' 0 0 1 '+(W-B)+' '+(H-c)+'H'+B+'A'+c+' '+c+' 0 0 1 '+c+' '+(H-B);
-    const r=16,ir=6;
     const band='M'+r+' 0H'+(W-r)+'A'+r+' '+r+' 0 0 1 '+W+' '+r+'V'+(H-r)+'A'+r+' '+r+' 0 0 1 '+(W-r)+' '+H+'H'+r+'A'+r+' '+r+' 0 0 1 0 '+(H-r)+'V'+r+'A'+r+' '+r+' 0 0 1 '+r+' 0Z'+
       'M'+(B+ir)+' '+B+'A'+ir+' '+ir+' 0 0 0 '+B+' '+(B+ir)+'V'+(H-B-ir)+'A'+ir+' '+ir+' 0 0 0 '+(B+ir)+' '+(H-B)+'H'+(W-B-ir)+'A'+ir+' '+ir+' 0 0 0 '+(W-B)+' '+(H-B-ir)+'V'+(B+ir)+'A'+ir+' '+ir+' 0 0 0 '+(W-B-ir)+' '+B+'Z';
     const up=svg.dataset.up==='1',f=Number(svg.dataset.f)||0,ns='http://www.w3.org/2000/svg';
@@ -910,6 +911,8 @@ export function mountWeatherBento(container,{getHass,entityId,style='bitmap',mot
     sunRO?.disconnect();
     root.querySelectorAll('svg.wbSunTrack').forEach(svg=>{drawSunTrack(svg);sunRO?.observe(svg)});
   }
+  // corners changed in Appearance → Style: the band is drawn again to match
+  addEventListener('hc-look-corners',drawSunTracks);
 
   /* ---- Moon: phase, how much is lit and moonrise or moonset, worked out from the home location ---- */
   function moonSvg(fraction,litOnLeft,south){

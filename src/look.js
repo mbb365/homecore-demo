@@ -1,10 +1,17 @@
 // HomeCore settings → Appearance → Cards and background (Matt, 9 Nov): the cards' colour and opacity, the background
-// (the theme's, a colour, or an image of your own) and the stroke's colour and transparency. Text follows by itself:
+// (the theme's, a colour, or an image of your own) and the stroke: the system's or round every card, its width, colour
+// and opacity (Matt, 11 Nov: 100% fully seen, card opacity never touches it). Then Style: monochrome, pixel icons and
+// square corners. Text follows by itself:
 // in the cards it turns light or dark for what's under it (the card's colour, over the background when the card lets it
 // through); on the background it does the same for the background's colour or the image's brightness.
 // Kept in this browser (the floating phone follows straight away); Reset goes back to the theme.
+import { pixelIcons } from './pixel-icons.js';
+
 const KEY = 'homecore-demo-look', IMG_KEY = 'homecore-demo-look-image';
-const BLANK = { card: null, opacity: 100, bg: 'theme', bgColour: null, stroke: null, strokeClear: null, imgLum: null };
+const BLANK = { card: null, opacity: 100, bg: 'theme', bgColour: null, stroke: null, strokeOpacity: null, imgLum: null,
+  strokes: 'system', strokeWidth: 1, mono: false, icons: 'standard', corners: 'round' };
+// a setting saved before 11 Nov: transparency, turned round
+const migrate = (v) => { if (v.strokeClear != null && v.strokeOpacity == null) v.strokeOpacity = 100 - v.strokeClear; delete v.strokeClear; return v; };
 const INK = { dark: ['#26221e', '#6a625a'], light: ['#d9d9d9', '#969696'] };
 // everything painted in the card colour (every rule with background: var(--card), --card2, --modal or --group-bg), so
 // the text in any of them follows the card; Settings' .card is only a wrapper on the background, so it doesn't count
@@ -32,7 +39,7 @@ const inkFor = (l) => ((l + 0.05) / (lum(hexRgb(INK.dark[0])) + 0.05) > (lum(hex
 export function mountLook(root, { toast }) {
   const app = root.getElementById('app');
   let s = { ...BLANK }, img = null;
-  try { s = { ...BLANK, ...JSON.parse(read(KEY, '{}')) }; } catch (_e) { /* the theme */ }
+  try { s = migrate({ ...BLANK, ...JSON.parse(read(KEY, '{}')) }); } catch (_e) { /* the theme */ }
   img = read(IMG_KEY, null);
   if (s.bg === 'image' && !img) s.bg = 'theme';
   const style = document.createElement('style');
@@ -43,11 +50,12 @@ export function mountLook(root, { toast }) {
     const cs = getComputedStyle(app);
     return { card: parseColour(cs.getPropertyValue('--color-bg-card')), ground: parseColour(cs.getPropertyValue('--color-bg-ground')), line: parseColour(cs.getPropertyValue('--color-line')) };
   };
-  const changed = () => s.card || s.opacity < 100 || s.bg !== 'theme' || s.stroke || s.strokeClear != null;
+  const changed = () => s.card || s.opacity < 100 || s.bg !== 'theme' || s.stroke || s.strokeOpacity != null || s.strokes === 'all';
 
   function apply() {
     const t = theme(), on = changed();
     app.classList.toggle('hcLook', Boolean(on));
+    style2();
     if (!on) { style.textContent = ''; draw(); return; }
     const card = s.card ? hexRgb(s.card) : t.card.slice(0, 3), a = s.opacity / 100;
     const ground = s.bg === 'colour' && s.bgColour ? hexRgb(s.bgColour) : t.ground.slice(0, 3);
@@ -58,7 +66,7 @@ export function mountLook(root, { toast }) {
     const tile = mix(card, hexRgb(text), 0.07);
     // tiles on the page itself (a page's search and buttons): from the background, or see-through over an image
     const pageTile = s.bg === 'image' ? (pageText === INK.dark[0] ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.35)') : rgbHex(mix(ground, hexRgb(pageText), 0.07));
-    const line = s.stroke ? hexRgb(s.stroke) : t.line.slice(0, 3), lineA = s.strokeClear != null ? 1 - s.strokeClear / 100 : t.line[3];
+    const line = s.stroke ? hexRgb(s.stroke) : t.line.slice(0, 3), lineA = s.strokeOpacity != null ? s.strokeOpacity / 100 : t.line[3];
     const rgba = (c, al) => 'rgba(' + c.map(Math.round).join(',') + ',' + +al.toFixed(3) + ')';
     style.textContent =
       '#app.hcDemo.hcLook{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + ';' +
@@ -67,8 +75,27 @@ export function mountLook(root, { toast }) {
         '#app.hcDemo.hcLook .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
       '#app.hcDemo.hcLook :is(' + SURFACES + '){--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
       '#app.hcDemo.hcLook :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
-      (a < 1 ? '#app.hcDemo.hcLook :is(' + SURFACES + '){-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '');
+      (a < 1 ? '#app.hcDemo.hcLook :is(' + SURFACES + '){-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
+      // every card's own line, drawn over whatever the system gives it; edit mode's outline and a focus ring come first
+      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing) :is(' + SURFACES + '):not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
     draw();
+  }
+  // Style: grey all over (the whole page, photos and art too), square corners and pixel icons
+  const docStyle = document.createElement('style');
+  docStyle.textContent = 'html.hcMono{filter:grayscale(1)}';
+  document.head.appendChild(docStyle);
+  // square: no rounding anywhere, whatever a rule asks for (three #app's outweigh every rule that sets a radius)
+  const squareStyle = document.createElement('style');
+  squareStyle.textContent = ['', ' *', ' *::before', ' *::after'].map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}';
+  root.appendChild(squareStyle);
+  let wasSquare = null;
+  function style2() {
+    document.documentElement.classList.toggle('hcMono', s.mono);
+    app.classList.toggle('hcSquare', s.corners === 'square');
+    pixelIcons(root, s.icons === 'pixel');
+    // the sun's band follows the corners
+    if (wasSquare !== null && wasSquare !== (s.corners === 'square')) dispatchEvent(new Event('hc-look-corners'));
+    wasSquare = s.corners === 'square';
   }
   const save = () => { write(KEY, JSON.stringify(s)); apply(); };
 
@@ -77,6 +104,7 @@ export function mountLook(root, { toast }) {
   if (look) {
     const row = (title, status, control, attr = '') => '<div class="toggleRow"' + attr + '><div><strong>' + title + '</strong>' + (status ? '<div class="status">' + status + '</div>' : '') + '</div>' + control + '</div>';
     const swatch = (k, label) => '<label class="hcSwatch"><input type="color" data-look="' + k + '" aria-label="' + label + '"></label>';
+    const choice = (k, label, opts) => '<div class="themeChoice" role="group" aria-label="' + label + '">' + opts.map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-pick-' + k.toLowerCase() + '="' + v + '">' + t + '</button>').join('') + '</div>';
     const range = (k, label, min) => '<span class="hcRangeWrap"><input class="hcRange" type="range" min="' + min + '" max="100" step="1" data-look="' + k + '" aria-label="' + label + '"><span class="hcRangeValue" data-look-value="' + k + '"></span></span>';
     look.insertAdjacentHTML('beforeend', '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Cards and background</div>' +
       row('Card colour', 'Text in the cards turns light or dark to suit.', swatch('card', 'Card colour')) +
@@ -84,19 +112,29 @@ export function mountLook(root, { toast }) {
       row('Background', '', '<div class="themeChoice" role="group" aria-label="Background">' + [['theme', 'Theme'], ['colour', 'Colour'], ['image', 'Image']].map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-bg="' + v + '">' + t + '</button>').join('') + '</div>') +
       row('Background colour', '', swatch('bgColour', 'Background colour'), ' data-look-row="colour"') +
       row('Background image', 'A photo or picture of your own, kept in this browser.', '<span class="hcLookImg"><button class="hcBtn" type="button" data-look-pick>Choose image</button><input type="file" accept="image/*" hidden data-look-file></span>', ' data-look-row="image"') +
-      row('Stroke colour', 'The fine line round cards and tiles.', swatch('stroke', 'Stroke colour')) +
-      row('Stroke transparency', '', range('strokeClear', 'Stroke transparency', 0)) +
-      row('Back to the theme', '', '<button class="pill" type="button" data-look-reset>Reset</button>') +
+      row('Strokes', 'System is the fine line the design gives some cards. All cards puts a line round every one.', choice('strokes', 'Strokes', [['system', 'System'], ['all', 'All cards']])) +
+      row('Stroke width', '', choice('strokeWidth', 'Stroke width', [['1', '1 px'], ['2', '2 px'], ['3', '3 px']]), ' data-look-row="width"') +
+      row('Stroke colour', '', swatch('stroke', 'Stroke colour')) +
+      row('Stroke opacity', 'At 100% the line is fully seen.', range('strokeOpacity', 'Stroke opacity', 0)) +
+    '</div></div>' +
+    '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Style</div>' +
+      row('Colour', 'Monochrome turns everything grey, photos and art too.', choice('mono', 'Colour', [['false', 'Full'], ['true', 'Monochrome']])) +
+      row('Icons', 'Pixel redraws every icon on a 16 square grid.', choice('icons', 'Icons', [['standard', 'Standard'], ['pixel', 'Pixel']])) +
+      row('Corners', '', choice('corners', 'Corners', [['round', 'Round'], ['square', 'Square']])) +
+      row('Back to the theme', 'Cards, background, strokes and style.', '<button class="pill" type="button" data-look-reset>Reset</button>') +
     '</div></div>');
   }
-  const list = root.querySelector('.hcLookList');
+  const list = root.querySelector('[data-house-pane="look"] > .card');
+  const CHOICES = ['strokes', 'strokeWidth', 'mono', 'icons', 'corners'];
   function draw() {
-    if (!list) return;
+    if (!list?.querySelector('.hcLookList')) return;
     const t = theme();
-    const val = { card: s.card || rgbHex(t.card), opacity: s.opacity, bgColour: s.bgColour || rgbHex(t.ground), stroke: s.stroke || rgbHex(t.line), strokeClear: s.strokeClear ?? Math.round((1 - t.line[3]) * 100) };
+    const val = { card: s.card || rgbHex(t.card), opacity: s.opacity, bgColour: s.bgColour || rgbHex(t.ground), stroke: s.stroke || rgbHex(t.line), strokeOpacity: s.strokeOpacity ?? Math.round(t.line[3] * 100) };
     list.querySelectorAll('[data-look]').forEach((el) => { if (root.activeElement !== el) el.value = val[el.dataset.look]; });
     list.querySelectorAll('[data-look-value]').forEach((el) => { el.textContent = val[el.dataset.lookValue] + '%'; });
     list.querySelectorAll('[data-look-bg]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lookBg === s.bg)));
+    CHOICES.forEach((k) => list.querySelectorAll('[data-look-pick-' + k.toLowerCase() + ']').forEach((b) => b.setAttribute('aria-pressed', String(b.getAttribute('data-look-pick-' + k.toLowerCase()) === String(s[k])))));
+    list.querySelector('[data-look-row="width"]').hidden = s.strokes !== 'all';
     list.querySelector('[data-look-row="colour"]').hidden = s.bg !== 'colour';
     list.querySelector('[data-look-row="image"]').hidden = s.bg !== 'image';
     list.querySelector('[data-look-pick]').textContent = img ? 'Change image' : 'Choose image';
@@ -119,6 +157,14 @@ export function mountLook(root, { toast }) {
         return;
       }
       if (ev.target.closest('[data-look-pick]')) { file.click(); return; }
+      for (const k of CHOICES) {
+        const attr = 'data-look-pick-' + k.toLowerCase(), b = ev.target.closest('[' + attr + ']');
+        if (!b) continue;
+        const v = b.getAttribute(attr);
+        s[k] = k === 'strokeWidth' ? Number(v) : k === 'mono' ? v === 'true' : v;
+        save();
+        return;
+      }
       if (ev.target.closest('[data-look-reset]')) { s = { ...BLANK }; img = null; write(IMG_KEY, null); save(); }
     });
     // an image: made no bigger than 2400 across, its brightness measured for the text on it
@@ -153,7 +199,7 @@ export function mountLook(root, { toast }) {
   // another window of the demo (the floating phone) changing them
   addEventListener('storage', (ev) => {
     if (ev.key !== KEY && ev.key !== IMG_KEY) return;
-    try { s = { ...BLANK, ...JSON.parse(read(KEY, '{}')) }; } catch (_e) { s = { ...BLANK }; }
+    try { s = migrate({ ...BLANK, ...JSON.parse(read(KEY, '{}')) }); } catch (_e) { s = { ...BLANK }; }
     img = read(IMG_KEY, null);
     apply();
   });
