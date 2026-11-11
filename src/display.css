@@ -628,6 +628,9 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfBoard .tfRoomTile:is([data-rows="4"],[data-rows="5"]) .tfRoomSub{display:block}
 #app.tfBoard .tfRoomTile[data-rows="4"] .tfRoomBig{font-size:52px;line-height:52px;letter-spacing:-1.92px}
 #app.tfBoard .tfRoomTile[data-rows="5"] .tfRoomBig{font-size:64px;line-height:64px;letter-spacing:-1.92px}
+/* narrow (one column; Matt, 11 Nov): M its first two devices, L and XL all four, two by two, under the reading */
+#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="3"] .tfRoomDevices>:nth-child(n+3){display:none}
+#app.tfBoard .tfRoomTile[data-cols="1"]:is([data-rows="4"],[data-rows="5"]) .tfRoomDevices{display:grid;grid-template-columns:repeat(2,max-content)}
 /* a room's tile wide (2 columns) or really wide (3+; Matt, 6 Nov; Figma 954:6297): its devices as heads (icon, name,
    state) in place of buttons, wide two by two, really wide in one row. XS the buttons on the right of the head; wide S
    (its first two) and M, and really wide S, have the reading in the head */

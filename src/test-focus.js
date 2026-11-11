@@ -2540,6 +2540,10 @@ export function mountTestFocus(root, { config, getHass }) {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       if (!started) return;
+      // the click that ends a drag doesn't open the card's page or popup too (Matt, 11 Nov)
+      const eat = (e) => { e.preventDefault(); e.stopImmediatePropagation(); };
+      window.addEventListener('click', eat, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', eat, { capture: true }), 300);
       cancelAnimationFrame(raf);
       cancelAnimationFrame(spring);
       // where it is on screen now, to slide from once it's in its place
