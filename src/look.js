@@ -9,7 +9,7 @@ import { pixelIcons } from './pixel-icons.js';
 
 const KEY = 'homecore-demo-look', IMG_KEY = 'homecore-demo-look-image';
 const BLANK = { card: null, opacity: 100, bg: 'theme', bgColour: null, stroke: null, strokeOpacity: null, imgLum: null,
-  strokes: 'system', strokeWidth: 1, mono: false, icons: 'standard', corners: 'round' };
+  strokes: 'system', strokeWidth: 1, mono: false, icons: 'standard', iconMono: false, corners: 'round' };
 // a setting saved before 11 Nov: transparency, turned round
 const migrate = (v) => { if (v.strokeClear != null && v.strokeOpacity == null) v.strokeOpacity = 100 - v.strokeClear; delete v.strokeClear; return v; };
 const INK = { dark: ['#26221e', '#6a625a'], light: ['#d9d9d9', '#969696'] };
@@ -96,11 +96,14 @@ export function mountLook(root, { toast }) {
   const squareStyle = document.createElement('style');
   squareStyle.textContent = ['', ' :not(#settingsView *)', ' .hcLookPreview *'].flatMap((x) => (x ? [x, x + '::before', x + '::after'] : [x]))
     .map((x) => '#app#app#app.hcSquare' + x).join(',') + '{border-radius:0!important}';
+  // the icons grey, on their own (the settings page's own keep their colour; the preview's follow)
+  squareStyle.textContent += '#app.hcIconMono .tfIcon' + SCOPE + '{filter:grayscale(1)}';
   root.appendChild(squareStyle);
   let wasSquare = null;
   function style2() {
     document.documentElement.classList.toggle('hcMono', s.mono);
     app.classList.toggle('hcSquare', s.corners === 'square');
+    app.classList.toggle('hcIconMono', s.iconMono);
     pixelIcons(root, s.icons === 'pixel');
     // the sun's band follows the corners
     if (wasSquare !== null && wasSquare !== (s.corners === 'square')) dispatchEvent(new Event('hc-look-corners'));
@@ -114,48 +117,75 @@ export function mountLook(root, { toast }) {
     const row = (title, status, control, attr = '') => '<div class="toggleRow"' + attr + '><div><strong>' + title + '</strong>' + (status ? '<div class="status">' + status + '</div>' : '') + '</div>' + control + '</div>';
     const swatch = (k, label) => '<label class="hcSwatch"><input type="color" data-look="' + k + '" aria-label="' + label + '"></label>';
     const choice = (k, label, opts) => '<div class="themeChoice" role="group" aria-label="' + label + '">' + opts.map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-pick-' + k.toLowerCase() + '="' + v + '">' + t + '</button>').join('') + '</div>';
-    const range = (k, label, min) => '<span class="hcRangeWrap"><input class="hcRange" type="range" min="' + min + '" max="100" step="1" data-look="' + k + '" aria-label="' + label + '"><span class="hcRangeValue" data-look-value="' + k + '"></span></span>';
+    // HomeCore's slider (the light tile's bar, Matt, 11 Nov), its value on the left
+    const range = (k, label) => '<span class="hcRangeWrap"><span class="hcRangeValue" data-look-value="' + k + '"></span>' +
+      '<span class="tfBar pos hcLookBar" role="slider" tabindex="0" aria-label="' + label + '" aria-valuemin="0" aria-valuemax="100" data-look-bar="' + k + '"><i></i></span></span>';
+    // a row's controls side by side under its name: a choice and the colour that goes with it
+    const pair = (...parts) => '<span class="hcRowControls">' + parts.join('') + '</span>';
     look.insertAdjacentHTML('beforeend', '<div class="hcLookPreview" aria-label="Preview" inert></div>' +
     '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Cards and background</div>' +
-      row('Card colour', 'Text in the cards turns light or dark to suit.', swatch('card', 'Card colour')) +
-      row('Card opacity', 'Lower lets the background show through.', range('opacity', 'Card opacity', 0)) +
-      row('Background', '', '<div class="themeChoice" role="group" aria-label="Background">' + [['theme', 'Theme'], ['colour', 'Colour'], ['image', 'Image']].map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-bg="' + v + '">' + t + '</button>').join('') + '</div>') +
-      row('Background colour', '', swatch('bgColour', 'Background colour'), ' data-look-row="colour"') +
-      row('Background image', 'A photo or picture of your own, kept in this browser.', '<span class="hcLookImg"><button class="hcBtn" type="button" data-look-pick>Choose image</button><input type="file" accept="image/*" hidden data-look-file></span>', ' data-look-row="image"') +
-      row('Strokes', 'System is the fine line the design gives some cards. All cards puts a line round every one.', choice('strokes', 'Strokes', [['system', 'System'], ['all', 'All cards']])) +
+      row('Cards', 'Their colour, and how much of the background shows through. Text turns light or dark to suit.', pair(swatch('card', 'Card colour'), range('opacity', 'Card opacity'))) +
+      row('Background', 'A colour, or a photo or picture of your own, kept in this browser.', pair('<div class="themeChoice" role="group" aria-label="Background">' + [['theme', 'Theme'], ['colour', 'Colour'], ['image', 'Image']].map(([v, t]) => '<button class="wxLayoutBtn" type="button" data-look-bg="' + v + '">' + t + '</button>').join('') + '</div>',
+        '<span data-look-show="colour">' + swatch('bgColour', 'Background colour') + '</span>',
+        '<span class="hcLookImg" data-look-show="image"><button class="hcBtn" type="button" data-look-pick>Choose image</button><input type="file" accept="image/*" hidden data-look-file></span>')) +
+      row('Strokes', 'System is the fine line the design gives some cards. All cards puts a line round every one.', pair(choice('strokes', 'Strokes', [['system', 'System'], ['all', 'All cards']]), swatch('stroke', 'Stroke colour'))) +
       row('Stroke width', '', choice('strokeWidth', 'Stroke width', [['1', '1 px'], ['2', '2 px'], ['3', '3 px']]), ' data-look-row="width"') +
-      row('Stroke colour', '', swatch('stroke', 'Stroke colour')) +
-      row('Stroke opacity', 'At 100% the line is fully seen.', range('strokeOpacity', 'Stroke opacity', 0)) +
+      row('Stroke opacity', 'At 100% the line is fully seen.', range('strokeOpacity', 'Stroke opacity')) +
     '</div></div>' +
     '<div class="tfSetGroup"><div class="toggleList hcLookList"><div class="hcCardTitle">Style</div>' +
       row('Colour', 'Monochrome turns everything grey, photos and art too.', choice('mono', 'Colour', [['false', 'Full'], ['true', 'Monochrome']])) +
       row('Icons', 'Pixel redraws every icon on a 16 square grid.', choice('icons', 'Icons', [['standard', 'Standard'], ['pixel', 'Pixel']])) +
+      row('Icon colour', 'Monochrome turns the icons grey and leaves the rest.', choice('iconMono', 'Icon colour', [['false', 'Full'], ['true', 'Monochrome']])) +
       row('Corners', '', choice('corners', 'Corners', [['round', 'Round'], ['square', 'Square']])) +
       row('Back to the theme', 'Cards, background, strokes and style.', '<button class="pill" type="button" data-look-reset>Reset</button>') +
     '</div></div>');
   }
   const list = look;
-  const CHOICES = ['strokes', 'strokeWidth', 'mono', 'icons', 'corners'];
+  const CHOICES = ['strokes', 'strokeWidth', 'mono', 'icons', 'iconMono', 'corners'];
   function draw() {
     if (!list?.querySelector('.hcLookList')) return;
     const t = theme();
     const val = { card: s.card || rgbHex(t.card), opacity: s.opacity, bgColour: s.bgColour || rgbHex(t.ground), stroke: s.stroke || rgbHex(t.line), strokeOpacity: s.strokeOpacity ?? Math.round(t.line[3] * 100) };
     list.querySelectorAll('[data-look]').forEach((el) => { if (root.activeElement !== el) el.value = val[el.dataset.look]; });
+    list.querySelectorAll('[data-look-bar]').forEach((el) => { const v = val[el.dataset.lookBar]; el.querySelector('i').style.width = v + '%'; el.setAttribute('aria-valuenow', v); el.setAttribute('aria-valuetext', v + '%'); });
     list.querySelectorAll('[data-look-value]').forEach((el) => { el.textContent = val[el.dataset.lookValue] + '%'; });
     list.querySelectorAll('[data-look-bg]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lookBg === s.bg)));
     CHOICES.forEach((k) => list.querySelectorAll('[data-look-pick-' + k.toLowerCase() + ']').forEach((b) => b.setAttribute('aria-pressed', String(b.getAttribute('data-look-pick-' + k.toLowerCase()) === String(s[k])))));
     list.querySelector('[data-look-row="width"]').hidden = s.strokes !== 'all';
-    list.querySelector('[data-look-row="colour"]').hidden = s.bg !== 'colour';
-    list.querySelector('[data-look-row="image"]').hidden = s.bg !== 'image';
+    list.querySelectorAll('[data-look-show]').forEach((el) => { el.hidden = el.dataset.lookShow !== s.bg; });
     list.querySelector('[data-look-pick]').textContent = img ? 'Change image' : 'Choose image';
   }
   if (list) {
     list.addEventListener('input', (ev) => {
       const k = ev.target.dataset.look;
       if (!k) return;
-      s[k] = ev.target.type === 'range' ? Number(ev.target.value) : ev.target.value;
+      s[k] = ev.target.value;
       if (k === 'bgColour') s.bg = 'colour';
       save();
+    });
+    // the sliders: dragged anywhere along them, or the arrow keys (Shift for tens), Home and End
+    const setBar = (bar, v) => { s[bar.dataset.lookBar] = Math.max(0, Math.min(100, Math.round(v))); save(); };
+    list.addEventListener('pointerdown', (ev) => {
+      const bar = ev.target.closest('[data-look-bar]');
+      if (!bar || ev.button > 0) return;
+      ev.preventDefault();
+      bar.focus({ preventScroll: true });
+      bar.setPointerCapture(ev.pointerId);
+      const at = (e) => { const r = bar.getBoundingClientRect(); setBar(bar, ((e.clientX - r.left) / r.width) * 100); };
+      at(ev);
+      const end = () => { bar.removeEventListener('pointermove', at); bar.removeEventListener('pointerup', end); bar.removeEventListener('pointercancel', end); };
+      bar.addEventListener('pointermove', at);
+      bar.addEventListener('pointerup', end);
+      bar.addEventListener('pointercancel', end);
+    });
+    list.addEventListener('keydown', (ev) => {
+      const bar = ev.target.closest?.('[data-look-bar]');
+      if (!bar) return;
+      const now = s[bar.dataset.lookBar] ?? Number(bar.getAttribute('aria-valuenow')), step = ev.shiftKey ? 10 : 1;
+      const next = { ArrowRight: now + step, ArrowUp: now + step, ArrowLeft: now - step, ArrowDown: now - step, Home: 0, End: 100 }[ev.key];
+      if (next == null) return;
+      ev.preventDefault();
+      setBar(bar, next);
     });
     const file = list.querySelector('[data-look-file]');
     list.addEventListener('click', (ev) => {
@@ -171,7 +201,7 @@ export function mountLook(root, { toast }) {
         const attr = 'data-look-pick-' + k.toLowerCase(), b = ev.target.closest('[' + attr + ']');
         if (!b) continue;
         const v = b.getAttribute(attr);
-        s[k] = k === 'strokeWidth' ? Number(v) : k === 'mono' ? v === 'true' : v;
+        s[k] = k === 'strokeWidth' ? Number(v) : k === 'mono' || k === 'iconMono' ? v === 'true' : v;
         save();
         return;
       }
@@ -212,6 +242,8 @@ export function mountLook(root, { toast }) {
     const home = root.getElementById('homeView');
     if (!preview || !home || !stylePane?.classList.contains('active') || !settings?.classList.contains('active')) return;
     const cards = PICKS.map((qs) => qs.map((q) => home.querySelector(q)).find(Boolean)).filter(Boolean);
+    // the house page not drawn just now: the copies already there stay
+    if (!cards.length) return;
     preview.replaceChildren(...cards.map((el) => {
       const c = el.cloneNode(true), rows = Number(el.dataset.rows) || Math.round((parseFloat(el.style.height) + 16) / 76) || 2;
       c.removeAttribute('id');

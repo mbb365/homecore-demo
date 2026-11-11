@@ -363,16 +363,23 @@
 .hcAboutOhf svg .secondary{fill:var(--text)}
 
 /* ---------- HomeCore settings → Cards and background (Matt, 9 Nov): swatches and sliders 32 tall, as the dropdowns ---------- */
-.hcSwatch{position:relative;display:block;flex:none;width:56px;height:32px;border-radius:12px;overflow:hidden;box-shadow:var(--hc-hair-all);cursor:pointer}
+.hcSwatch{position:relative;display:block;flex:none;width:56px;height:32px;border-radius:12px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--color-line),0 0 0 1px var(--color-line);cursor:pointer}
 .hcSwatch input{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);padding:0;border:0;background:none;cursor:pointer}
 .hcRangeWrap{display:flex;align-items:center;gap:10px;flex:none}
-.hcRangeValue{min-width:40px;text-align:right;font:400 14px/20px var(--font);color:var(--text);font-variant-numeric:tabular-nums}
-.hcRange{width:160px;height:32px;margin:0;accent-color:var(--ha-blue);background:transparent;cursor:pointer}
-.hcLookList .toggleRow[hidden]{display:none}
+.hcRangeValue{min-width:44px;text-align:right;font:400 14px/20px var(--font);color:var(--text);font-variant-numeric:tabular-nums}
+.hcLookList :is(.toggleRow,[data-look-show])[hidden]{display:none!important}
+/* a row with a choice and its colour (Matt, 11 Nov): its name above, the controls side by side under it */
+#app.hcDemo #housePane .hcLookList .toggleRow:has(>.hcRowControls){flex-direction:column;align-items:stretch;gap:12px}
+.hcRowControls{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+#app.hcDemo #housePane .hcRowControls>.themeChoice{display:inline-flex;width:auto}
+.hcRowControls>[data-look-show]{display:flex}
+/* HomeCore's slider in settings: the value on the left */
+.hcLookBar{display:block;flex:none;width:200px}
+.hcLookBar i{background:var(--primary)}
 /* the Style tab's preview: three of the house page's cards on the background, kept at the top as the controls scroll */
 .hcLookPreview{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;padding:16px 0 24px;background:var(--page)}
 .hcLookPreview>*{flex:none;pointer-events:none}
-@media(max-width:620px){.hcRange{width:110px}}
+@media(max-width:620px){.hcLookBar{width:140px}}
 #app .hcLookImg .hcBtn{height:32px;min-height:32px;padding:0 14px}
 /* a Settings row's line wraps rather than cutting off, as Home Assistant's do */
 #app .hcConfigRow{height:auto;min-height:60px}
