@@ -1,6 +1,8 @@
 # HomeCore demo
 
-HomeCore, the redesign of Home Assistant's dashboard, running on its own with a made-up house. No Home Assistant or HACS needed.
+HomeCore. A proof of space concept.
+
+One layer of interaction deep in some places, two in others.
 
 Try it: https://mbb365.github.io/homecore-demo/
 
