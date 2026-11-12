@@ -942,8 +942,8 @@ button.tfAreaIcon{cursor:pointer}
 /* Home's welcome message: a line above the home's name (Matt, 12 Nov) */
 .tfDashTitle .tfGreeting{display:block;margin-bottom:6px;font:500 20px/1.2 var(--font-tile);letter-spacing:0;color:var(--muted)}
 .hcHeWelcome{padding-top:0;padding-bottom:6px}
-/* titles in light mode (Matt, 12 Nov): card titles and tile and row names, everywhere, in #6A625A; not the big titles
+/* titles in light mode (Matt, 12 Nov): card titles and tile and row names, everywhere, in #55504A; not the big titles
    (a page's name, a popup's) or the areas' names, which keep the text colour */
-#app.light{--title:#6a625a}
+#app.light{--title:#55504a}
 #app.light :is(.activityTitle,.hcCardTitle,.wbTitle,.activityRowName,.hcRowName,.wbName){color:var(--title)}
 #app.light .tfRoomTile .tfActionHead .activityRowName{color:var(--text)}
