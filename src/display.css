@@ -1057,3 +1057,6 @@ button.tfAreaIcon{cursor:pointer}
 .tfEditTray .hcTrayTabs .rubberIndicator{background:var(--text)}
 .tfEditTray .hcTrayTabs .tab.active{color:var(--card)}
 .tfEditTray .tfTraySection[hidden]{display:none!important}
+/* Edit Home page in tabs, as the dashboard's tray: the note, the tabs, then the open tab's settings */
+.hcHeTabBody{display:flex;flex-direction:column;gap:8px}
+.hcHomeTray .hcTrayTabs{margin:0 0 8px}

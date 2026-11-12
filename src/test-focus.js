@@ -2545,8 +2545,15 @@ export function mountTestFocus(root, { config, getHass }) {
   homeTray.setAttribute('aria-label', 'Edit Home page');
   homeTray.toggleAttribute('inert', true);
   let homeEditing = false, homePicking = false, homeStart = '', penHome = null;
-  // its two sections fold away, as Home Assistant's (Matt, 12 Nov: "keep the collapsable menus")
-  const homeFolded = new Set();
+  let homeTab = 'page';
+  // the open tab's mark, as on HomeCore settings' tabs
+  function placeHomeMark(animate, from) {
+    const bar = homeTray.querySelector('.hcTrayTabs'), mark = bar?.querySelector('.rubberIndicator'), on = bar?.querySelector('.tab.active');
+    if (!on?.offsetWidth) { requestAnimationFrame(() => homeTray.querySelector('.hcTrayTabs .tab.active')?.offsetWidth && placeHomeMark(animate, from)); return; }
+    mark.style.transition = 'none';
+    if (animate && from) stretchTo(mark, from.left, from.width, on.offsetLeft, on.offsetWidth);
+    else { mark.style.left = on.offsetLeft + 'px'; mark.style.width = on.offsetWidth + 'px'; }
+  }
   const infoBtn = (k) => '<button class="hcInfoBtn" type="button" data-info="' + k + '" aria-expanded="false" aria-label="About ' + esc(HOME_INFO[k][0]) + '">' + INFO_SVG + '</button>';
   const sw = (on, label, attr) => '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '" ' + attr + '></button>';
   const heGrip = (label) => '<button class="tfTrayBtn hcHeGrip" type="button" data-he-grip aria-label="Move ' + esc(label) + '. Use the up and down arrows">' + GRIP + '</button>';
@@ -2565,34 +2572,34 @@ export function mountTestFocus(root, { config, getHass }) {
     const sumLi = (k) => { const x = SUMMARIES[k]; return '<li class="hcHeRow hcHeSum" data-he-id="' + esc(k) + '"' + (x.colour && sumInk(x.colour) ? ' style="' + sumInk(x.colour).slice(1) + '"' : '') + '>' + heGrip(x.name) +
       '<span class="tfIcon"' + iconSlot('', x.icon, x.name) + '></span><span class="activityRowName">' + esc(x.name) + '</span>' + sw(sumOn(k), x.name, 'data-he-sum="' + esc(k) + '"') + '</li>'; };
     const search = homeTray.querySelector('[data-he-search]')?.value || '';
-    // a section's head folds it (the whole head, and its chevron for keyboards); an (i) can sit beside its name
-    const sec = (key, icon, title, sub, body, info = '') => '<section class="hcHeSec" data-he-sec="' + key + '"><div class="hcHeSecHead" data-he-fold="' + key + '">' +
-      '<span class="tfIcon" data-icon-for="" data-icon-name="' + icon + '"></span><span class="tfTrayName"><span class="hcHeSecTitle"><span class="activityRowName">' + title + '</span>' + info + '</span><span class="activityRowMeta">' + sub + '</span></span>' +
-      '<button class="hcHeChevron" type="button" aria-expanded="' + !homeFolded.has(key) + '" aria-label="' + (homeFolded.has(key) ? 'Open ' : 'Fold ') + title + '">' + CHEVRON + '</button></div><div class="hcHeSecBody"' + (homeFolded.has(key) ? ' hidden' : '') + '>' + body + '</div></section>';
-    homeTray.querySelector('[data-he-body]').innerHTML =
-      // the note about the areas page first (Matt, 12 Nov: "to the top of the rollover"), as Home Assistant's dialog has it
-      '<p class="tfTrayNote hcHeAreasNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>' +
-      sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
-        '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
+    // tabs instead of folding sections (Matt, 12 Nov: "use tabs as well"), as the dashboard's tray: Page, Favourites, Summaries
+    const tabs = [['page', 'Page'], ['favs', 'Favourites'], ['sums', 'Summaries']];
+    const bodies = {
+      page: '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
         '<hr class="hcHeRule">' +
-        '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
+        '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
+        '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
+        '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>',
+      favs: '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
         homeSeg('Show as', 'data-he-favs-as', favsStrip() ? 'strip' : 'card', [['card', 'Card'], ['strip', 'Strip']]) +
         '<ul class="tfTrayList hcHeList" data-he-list="favs">' + (favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>') + '</ul>' +
         '<button class="pill tfTrayAdd hcAddBtn" type="button" data-he-add aria-expanded="' + homePicking + '">' + PLUS + '<span>Add favourite</span></button>' +
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
-'<hr class="hcHeRule">' +
-        '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>' +
-'<hr class="hcHeRule">' +
-        '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
-        '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
-        '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>') +
-      sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
-        '<div class="hcHeLine"><span class="activityRowName">Show summaries</span>' + sw(prefs.home?.sums !== false, 'Show summaries', 'data-he-card="sums"') + '</div>' +
+        '<hr class="hcHeRule">' +
+        '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>',
+      sums: '<div class="hcHeLine"><span class="activityRowName">Show summaries</span>' + infoBtn('sums') + sw(prefs.home?.sums !== false, 'Show summaries', 'data-he-card="sums"') + '</div>' +
         homeSeg('Width', 'data-he-sums-width', sumsFit() ? 'fit' : 'match', [['match', 'Match the cards'], ['fit', 'Fit the summaries']]) +
         '<hr class="hcHeRule">' +
-        '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>', infoBtn('sums')) +
-      '';
+        '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>',
+    };
+    homeTray.querySelector('[data-he-body]').innerHTML =
+      // the note about the areas page first (Matt, 12 Nov: "to the top of the rollover"), as Home Assistant's dialog has it
+      '<p class="tfTrayNote hcHeAreasNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>' +
+      '<div class="tabs rubberTabs hcTrayTabs" role="tablist" aria-label="Edit Home page"><div class="rubberIndicator" aria-hidden="true"></div>' +
+        tabs.map(([k, t]) => '<button class="tab segBtn' + (k === homeTab ? ' active' : '') + '" type="button" role="tab" aria-selected="' + (k === homeTab) + '" data-he-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
+      '<div class="hcHeTabBody" role="tabpanel">' + bodies[homeTab] + '</div>';
+    placeHomeMark(false);
     fillIcons(homeTray);
   }
   const homeSave = (next) => { prefs = { ...prefs, ...next }; savePrefs(); refresh(); drawHomeTray(); };
@@ -2669,7 +2676,8 @@ export function mountTestFocus(root, { config, getHass }) {
   homeTray.addEventListener('click', (ev) => {
     const t = ev.target;
     const info = t.closest('[data-info]'); if (info) { openInfo(info); return; }
-    const fold = t.closest('[data-he-fold]'); if (fold && !t.closest('.hcInfoBtn')) { const k = fold.dataset.heFold; if (homeFolded.has(k)) homeFolded.delete(k); else homeFolded.add(k); closeInfo(); drawHomeTray(); return; }
+    const tabBtn = t.closest('[data-he-tab]');
+    if (tabBtn) { const m = homeTray.querySelector('.hcTrayTabs .rubberIndicator'), from = { left: m.offsetLeft, width: m.offsetWidth }; homeTab = tabBtn.dataset.heTab; homePicking = false; closeInfo(); drawHomeTray(); placeHomeMark(true, from); homeTray.querySelector('.tfTrayInner').scrollTop = 0; return; }
     if (t.closest('[data-he-welcome]')) { homePrefs({ welcome: !welcomeOn() }); return; }
     const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = ['schedule', 'sums'].includes(k) ? prefs.home?.[k] !== false : !!prefs.home?.[k]; homePrefs({ [k]: !on }); return; }
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
