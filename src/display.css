@@ -1140,3 +1140,10 @@ button.tfAreaIcon{cursor:pointer}
 }
 /* the demo's own popups (Oops, Search) aren't a device's: they stay as tall as what they hold */
 #app .tfMoreBackdrop:is(.hcOops,.hcSearchPop) .tfMore{height:auto}
+/* a popup's pages as icons in place of dots (Matt, 12 Nov): Control and Info, a small segmented pair, the open one dark */
+.tfMoreDots.hcMorePageIcons{gap:3px;align-self:center;margin-top:0;padding:3px;border-radius:19px;background:var(--tile)}
+.tfMoreDots.hcMorePageIcons button{width:48px;height:32px;border-radius:16px;color:var(--muted);transition:background .15s ease,color .15s ease}
+.tfMoreDots.hcMorePageIcons button::before{display:none}
+.tfMoreDots.hcMorePageIcons button svg{width:20px;height:20px;fill:currentColor}
+.tfMoreDots.hcMorePageIcons button[aria-selected="true"]{background:var(--text);color:var(--card)}
+.tfMoreDots.hcMorePageIcons button:not([aria-selected="true"]):hover{color:var(--text)}

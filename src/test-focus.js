@@ -85,6 +85,8 @@ const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,
 const EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
 const CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>';
 // a tray's Add… button: a plus before its words (Matt, 12 Nov: "proper buttons with a plus icon")
+// a popup's Control page (Material Design Icons' tune-variant)
+const TUNE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z"/></svg>';
 const PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>';
 const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // a stroke icon on the 24 grid
@@ -3461,7 +3463,8 @@ export function mountTestFocus(root, { config, getHass }) {
       '<div class="tfMorePages" data-more-pages>' +
         '<section class="tfMorePage" aria-label="Control">' + moreSpace(id) + (d === 'plant' ? plantProblems(id).join('') : '') + s.sections.filter(Boolean).join('') + '</section>' +
         '<section class="tfMorePage" aria-label="Info">' + infoOf(id) + '</section></div>',
-      '<div class="tfMoreDots" role="tablist" aria-label="Pages">' + ['Control', 'Info'].map((n, i) => '<button type="button" role="tab" aria-selected="' + (i === page) + '" aria-label="' + n + '" data-more-page="' + i + '"' + (i === page ? '' : ' tabindex="-1"') + '></button>').join('') + '</div>',
+      // the pages' icons in place of their dots (Matt, 12 Nov): Control's sliders and Info's (i)
+      '<div class="tfMoreDots hcMorePageIcons" role="tablist" aria-label="Pages">' + [['Control', TUNE_SVG], ['Info', INFO_SVG]].map(([n, svg], i) => '<button type="button" role="tab" aria-selected="' + (i === page) + '" aria-label="' + n + '" title="' + n + '" data-more-page="' + i + '"' + (i === page ? '' : ' tabindex="-1"') + '>' + svg + '</button>').join('') + '</div>',
     ];
   }
   // the popup's head is the tile's: Back where it was opened from inside a popup, the icon (its button), the name
