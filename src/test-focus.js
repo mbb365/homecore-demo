@@ -2023,11 +2023,17 @@ export function mountTestFocus(root, { config, getHass }) {
     const xOf = (c) => c * (w + gap) - (n >= 3 && c >= 2 ? gap - HOME.inner : 0);
     const gridW = n * w + (n - 1) * gap - (n >= 3 ? gap - HOME.inner : 0);
     let top = 0;
-    shown.filter((it) => HEAD.includes(it.key)).forEach((it) => {
+    const strip = favsStrip();
+    app.classList.toggle('hcSumsFit', sumsFit());
+    app.classList.toggle('hcFavStrip', strip);
+    const heads = shown.filter((it) => HEAD.includes(it.key) || (strip && it.key === 'favs'));
+    heads.sort((a, b) => ['title', 'sums', 'favs'].indexOf(a.key) - ['title', 'sums', 'favs'].indexOf(b.key));
+    heads.forEach((it) => {
       it.el.classList.add('tfBoardItem');
-      Object.assign(it.el.style, { width: (it.key === 'sums' ? gridW : W) + 'px', height: '', left: '0px', top: top + 'px' });
-      // the summaries in one row while they fit, else in even rows (halves, thirds…)
-      const bar = it.key === 'sums' && !phone && it.el.querySelector('.tfDash-bar>.activityRows'), count = bar ? bar.children.length : 0;
+      it.el.toggleAttribute('data-narrow', false);
+      Object.assign(it.el.style, { width: (it.key === 'title' ? W : gridW) + 'px', height: '', left: '0px', top: top + 'px' });
+      // a bar's tiles in one row while they fit, else in even rows (halves, thirds…)
+      const bar = it.key !== 'title' && !phone && (it.el.querySelector('.tfDash-bar>.activityRows') || (it.key === 'favs' && it.el.querySelector(':scope>.activityRows'))), count = bar ? bar.children.length : 0;
       if (bar) {
         bar.classList.remove('hcBarRows');
         if (bar.scrollWidth > bar.clientWidth + 1) for (let rows = 2; rows <= count; rows++) { bar.classList.add('hcBarRows'); bar.style.setProperty('--bar-cols', String(Math.ceil(count / rows))); if (bar.scrollWidth <= bar.clientWidth + 1) break; }
@@ -2042,7 +2048,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const saved = homeDrag?.order || prefs.home?.order;
     const order = saved ? [...saved.filter((x) => own.includes(x)), ...own.filter((x) => !saved.includes(x))] : own;
     homeOrderNow = order;
-    const cards = shown.filter((it) => !HEAD.includes(it.key)).sort((a, b) => ((order.indexOf(a.key) + 1) || 99) - ((order.indexOf(b.key) + 1) || 99));
+    const cards = shown.filter((it) => !HEAD.includes(it.key) && !(strip && it.key === 'favs')).sort((a, b) => ((order.indexOf(a.key) + 1) || 99) - ((order.indexOf(b.key) + 1) || 99));
     // each card in the first free cell from the top left, a row at a time
     const taken = new Set(), at = new Map();
     cards.forEach((it) => {
@@ -2474,6 +2480,12 @@ export function mountTestFocus(root, { config, getHass }) {
   const infoBtn = (k) => '<button class="hcInfoBtn" type="button" data-info="' + k + '" aria-expanded="false" aria-label="About ' + esc(HOME_INFO[k][0]) + '">' + INFO_SVG + '</button>';
   const sw = (on, label, attr) => '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '" ' + attr + '></button>';
   const heGrip = (label) => '<button class="tfTrayBtn hcHeGrip" type="button" data-he-grip aria-label="Move ' + esc(label) + '. Use the up and down arrows">' + GRIP + '</button>';
+  // Matt, 12 Nov: the summaries as wide as the cards (as drawn) or as wide as their own tiles; Favourites as its card or
+  // a strip under the summaries, the same pattern as theirs
+  const sumsFit = () => prefs.home?.sumsWidth === 'fit';
+  const favsStrip = () => prefs.home?.favsAs === 'strip';
+  const homeSeg = (label, attr, value, opts) => '<div class="hcHeLine hcHeChoiceLine"><span class="activityRowName">' + label + '</span><div class="themeChoice hcHeChoice" role="group" aria-label="' + esc(label) + '">' +
+    opts.map(([v, text]) => '<button class="wxLayoutBtn" type="button" ' + attr + '="' + v + '" aria-pressed="' + (value === v) + '">' + text + '</button>').join('') + '</div></div>';
   const homeSumOrder = () => summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key);
   function drawHomeTray() {
     if (!homeEditing) return;
@@ -2491,12 +2503,14 @@ export function mountTestFocus(root, { config, getHass }) {
       sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
         '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
         '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
+        homeSeg('Show as', 'data-he-favs-as', favsStrip() ? 'strip' : 'card', [['card', 'Card'], ['strip', 'Strip']]) +
         '<ul class="tfTrayList hcHeList" data-he-list="favs">' + (favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>') + '</ul>' +
         '<button class="pill tfTrayAdd" type="button" data-he-add aria-expanded="' + homePicking + '">Add favourite</button>' +
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
         '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>') +
       sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
+        homeSeg('Width', 'data-he-sums-width', sumsFit() ? 'fit' : 'match', [['match', 'Match the cards'], ['fit', 'Fit the summaries']]) +
         '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>', infoBtn('sums')) +
       '<p class="tfTrayNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>';
     fillIcons(homeTray);
@@ -2577,6 +2591,8 @@ export function mountTestFocus(root, { config, getHass }) {
     const info = t.closest('[data-info]'); if (info) { openInfo(info); return; }
     const fold = t.closest('[data-he-fold]'); if (fold && !t.closest('.hcInfoBtn')) { const k = fold.dataset.heFold; if (homeFolded.has(k)) homeFolded.delete(k); else homeFolded.add(k); closeInfo(); drawHomeTray(); return; }
     if (t.closest('[data-he-welcome]')) { homePrefs({ welcome: !welcomeOn() }); return; }
+    const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
+    const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
     const sm = t.closest('[data-he-sum]');
     if (sm) {
