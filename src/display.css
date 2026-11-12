@@ -906,6 +906,11 @@ button.tfAreaIcon{cursor:pointer}
    refined one */
 @media (min-width:621px){
   #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,31px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
+  /* every page keeps the same top corner (Matt, 12 Nov: "follow this top corner spacing pattern on the other pages"):
+     31 down and 44 in from the side menu, its first line level with the logo */
+  #app.hcDemo .view{padding-top:var(--home-top,31px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
+  #app.hcDemo #homeView .hcMapCard{top:var(--home-top,31px);left:var(--home-side,44px);max-width:calc(100% - 2 * var(--home-side,44px))}
+  #app.hcDemo .hcTopRight{top:20px;right:var(--home-side,44px)}
 }
 #app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
 #app.tfOverview.tfDash #homeView .card.tfDash-bar{width:100%;max-width:none}
@@ -977,7 +982,7 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn .wbWx.wbS60{width:60px;height:60px;border-radius:20px}
 
 /* Edit Home page: a tray at the side, as the dashboard's editor; its rows as the tray's */
-.hcHomeTray{width:468px} /* 30% wider than the dashboard's, for breathing room (Matt, 12 Nov) */
+.hcHomeTray{width:608px} /* 30% wider than the dashboard's, then 30% again: 360, 468, 608 (Matt, 12 Nov) */
 .hcHeBody{display:flex;flex-direction:column;gap:12px}
 .hcHeSec{border-radius:var(--r-inner);background:var(--tile)}
 .hcHeSecHead{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr) 32px;align-items:center;gap:12px;padding:12px 10px 12px 12px;color:var(--text);cursor:pointer}
