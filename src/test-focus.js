@@ -2204,7 +2204,9 @@ export function mountTestFocus(root, { config, getHass }) {
       if (!box) { box = Object.assign(document.createElement('div'), { className: 'hcFloorBox' }); box.dataset.floor = f.id; box.setAttribute('aria-hidden', 'true'); grid.prepend(box); }
       Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
     };
-    const place = (f, g, x0, y0) => { headAt(f, x0, y0, g.w ?? W); g.places.forEach((p) => put(p.it, { x: x0 + p.x, y: y0 + p.y, w: p.w, h: p.h })); };
+    // in a floor's box its name starts where its areas' icons do (Matt, 12 Nov), the cards' own padding in
+    const cardPad = (f) => parseFloat(getComputedStyle(f.cards[0].el).paddingLeft) || 0;
+    const place = (f, g, x0, y0, indent = 0) => { headAt(f, x0 + indent, y0, (g.w ?? W) - indent); g.places.forEach((p) => put(p.it, { x: x0 + p.x, y: y0 + p.y, w: p.w, h: p.h })); };
     if (floors.length && tops.length) top += HOME.floorTop;
     if (columns) {
       // a column per floor, as wide as a card, side by side; more floors than fit go on under the tallest
@@ -2229,7 +2231,7 @@ export function mountTestFocus(root, { config, getHass }) {
         for (let s = 0; s + c <= n; s++) { const t = Math.max(...colTop.slice(s, s + c)); if (t < best) { best = t; s0 = s; } }
         const x = s0 * (cw + gap), h = g.h + 2 * BOX;
         boxAt(f, x, best, outer, h);
-        place(f, g, x + BOX, best + BOX);
+        place(f, g, x + BOX, best + BOX, cardPad(f));
         for (let s = s0; s < s0 + c; s++) colTop[s] = best + h + gap;
       });
       top = Math.max(...colTop);
