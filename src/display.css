@@ -981,7 +981,8 @@ button.tfAreaIcon{cursor:pointer}
 /* Edit Home page open: Home's cards move by dragging, as Dashboards' do */
 #app.hcHomeEditing.tfOverview #homeView .tfBoardItem:not(.tfDashTitle,.tfDashBarRow){cursor:grab;user-select:none;touch-action:none;outline:1.5px solid var(--primary);outline-offset:-1.5px}
 #app.hcHomeEditing.tfOverview #homeView .tfBoardItem.tfRoomTile{border-radius:28px}
-#app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:left .25s cubic-bezier(.2,.7,.3,1),top .25s cubic-bezier(.2,.7,.3,1)}
+#app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:left .34s cubic-bezier(.2,1.35,.4,1),top .34s cubic-bezier(.2,1.35,.4,1)} /* the others make room with a small bounce */
+@media (prefers-reduced-motion:reduce){#app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:none}}
 #app.hcHomeEditing #homeView .tfBoardItem.tfDragging{z-index:20;transition:none!important;scale:1.02;cursor:grabbing;filter:drop-shadow(0 10px 30px rgba(0,0,0,.35))}
 /* the weather: the refined card (Figma 1063:13647). Now (its picture, temperature and place), the forecast in a
    sentence, then the days, each 159 tall without a tile behind it */

@@ -2027,7 +2027,8 @@ export function mountTestFocus(root, { config, getHass }) {
     const move = (e) => {
       const dx = e.clientX - homeDrag.x0, dy = e.clientY - homeDrag.y0;
       if (!homeDrag.on && Math.hypot(dx, dy) < 5) return;
-      if (!homeDrag.on) { homeDrag.on = true; el.classList.add('tfDragging'); }
+      // it lifts with a small bounce (Matt, 12 Nov: "the small bouncy effect")
+      if (!homeDrag.on) { homeDrag.on = true; el.classList.add('tfDragging'); if (!reduced()) el.animate([{ scale: '1' }, { scale: '1.05' }, { scale: '1.02' }], { duration: 260, easing: 'cubic-bezier(.2,1.35,.4,1)' }); }
       Object.assign(el.style, { left: homeDrag.left + dx + 'px', top: homeDrag.top + dy + 'px' });
       // it goes where the card nearest the pointer is (before it, or after it past its middle)
       const px = e.clientX - g.left, py = e.clientY - g.top + grid.scrollTop;
@@ -2045,6 +2046,8 @@ export function mountTestFocus(root, { config, getHass }) {
       el.classList.remove('tfDragging');
       if (d.on) homePrefs({ order: d.order });
       layoutBoard();
+      // and settles into its place with a little overshoot (its move's easing), then a squash, as Dashboards' cards land
+      if (d.on && !reduced()) setTimeout(() => squash(el), 340);
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
