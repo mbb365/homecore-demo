@@ -486,6 +486,7 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfDash .tfAreas{order:var(--o,4)!important}
 #app.tfDash .tfDash-favs{order:var(--o,5)!important}
 #app.tfDash .tfDash-act{order:var(--o,6)!important}
+#app.tfDash .tfDash-sched{order:var(--o,6)!important} /* Home's Schedule, in its place on phones too */
 #app.tfDash .tfDash-energy{order:var(--o,7)!important}
 #app.tfDash .tfDash-avg{order:var(--o,8)!important}
 #app.tfDash :is(.tfDash-aq,.tfDash-pollen,.tfDash-radar){order:var(--o,8)!important}

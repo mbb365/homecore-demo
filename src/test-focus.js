@@ -2097,8 +2097,9 @@ export function mountTestFocus(root, { config, getHass }) {
       it.el.classList.add('tfBoardItem');
       it.el.dataset.rows = 5; it.el.dataset.cols = p.cols; it.el.toggleAttribute('data-narrow', false);
       Object.assign(it.el.style, { width: span(p.cols) + 'px', height: phone ? '' : HOME.row + 'px' });
-      if (phone) rowH[p.r] = Math.max(rowH[p.r] || 0, it.el.offsetHeight);
     });
+    // measured once every card has let go of its old height (a neighbour's would stretch it)
+    if (phone) cards.forEach((it) => { const p = at.get(it.key); rowH[p.r] = Math.max(rowH[p.r] || 0, it.el.offsetHeight); });
     // a phone's page flows in the order (--o) rather than by place
     cards.forEach((it, i) => it.el.style.setProperty('--o', String(3 + i)));
     let y = top;
