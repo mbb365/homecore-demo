@@ -3456,7 +3456,7 @@ export function mountTestFocus(root, { config, getHass }) {
       return [head(r.name + ' ' + k.label.toLowerCase()), '<div class="tfMoreNowRow">' + now(k.value) + all + '</div>', groupGrid(groupIds(r, key))];
     }
     const d = id.split('.')[0], st = states[id];
-    const s = ACTION_DOMAINS.includes(d) ? specFor(id) : { sections: [] };
+    const s = ACTION_DOMAINS.includes(d) ? specFor(id) : quickSpec(id);
     const page = more?.page || 0;
     return [
       moreHead(id, s, head),
@@ -3490,7 +3490,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (NO_SPACE.includes(d) || (d === 'light' && !dacFor(id))) {
       // its icon, big, is the switch (Matt, 11 Nov; rules popup.device, popup.sheet): the tile's icon button at 240,
       // toggling like the tile's
-      const s = ACTION_DOMAINS.includes(d) ? specFor(id) : null;
+      const s = ACTION_DOMAINS.includes(d) ? specFor(id) : quickSpec(id);
       return s?.button ? '<div class="tfMoreSpace tfMoreSwitch' + (s.on ? ' on' : '') + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' + iconButton(id, s) + '</div>' : '';
     }
     if (d === 'cover') return '<div class="tfMoreSpace tfMoreFill"><div data-cover-art="' + esc(id) + '"></div></div>';
@@ -3498,6 +3498,14 @@ export function mountTestFocus(root, { config, getHass }) {
     const { big, lines } = bigOf(id);
     return '<div class="tfMoreSpace"><div class="tfMoreBig' + (held('pos', id) != null ? ' live' : '') + '"><span class="tfMoreNum">' + esc(big[0]) + '</span>' + (big[1] ? '<span class="tfMoreUnit">' + esc(big[1]) + '</span>' : '') + '</div>' +
       '<div class="tfMoreFacts">' + lines.map(([k, v]) => '<div class="tfMoreFact"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>').join('') + '</div></div>';
+  }
+  // a device without a tile of its own (a switch, a plug, an input boolean, a fan; a scene or script): its icon is still
+  // its button (Matt, 12 Nov: Sparkles' popup should have a large icon to click in the data and action space)
+  function quickSpec(id) {
+    const d = id.split('.')[0], on = states[id]?.state === 'on';
+    const button = TOGGLES.includes(d) ? { act: act(d, 'toggle', id), label: 'Turn ' + nameOf(id) + (on ? ' off' : ' on') }
+      : d === 'scene' || d === 'script' ? { act: act(d, 'turn_on', id), label: 'Run ' + nameOf(id) } : null;
+    return { sections: [], on, button, icon: iconFor(id) };
   }
   function bigOf(id) {
     const st = states[id], a = attr(id), d = id.split('.')[0];
