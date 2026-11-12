@@ -939,3 +939,6 @@ button.tfAreaIcon{cursor:pointer}
 .hcHeToggle .activityRowMeta{white-space:normal}
 @media(max-width:620px){#app .hcHomeEditCard{width:100%;max-height:calc(100dvh - 16px)}}
 .hcHeSecHead .tfTrayName>*{white-space:normal}
+/* Home's welcome message: a line above the home's name (Matt, 12 Nov) */
+.tfDashTitle .tfGreeting{display:block;margin-bottom:6px;font:500 20px/1.2 var(--font-tile);letter-spacing:0;color:var(--muted)}
+.hcHeWelcome{padding-top:0;padding-bottom:6px}

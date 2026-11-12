@@ -1648,11 +1648,20 @@ export function mountTestFocus(root, { config, getHass }) {
     const climates = dashPicks.climates.filter((id) => states[id]).slice(0, n > 3 ? 2 : 1);
     return [...dashPicks.lights.filter((id) => states[id]).slice(0, Math.max(0, n - climates.length)), ...climates];
   }
+  /* Home's welcome message (Matt, 12 Nov: "dynamic to the time of day and then the name"), above the home's name; Edit
+     Home page switches it off */
+  const welcomeOn = () => prefs.home?.welcome ?? true;
+  const myName = () => {
+    const user = getHass()?.user;
+    return user?.name || Object.values(states).find((st) => st.entity_id.startsWith('person.') && user?.id && st.attributes?.user_id === user.id)?.attributes.friendly_name
+      || states['person.wembely']?.attributes.friendly_name || ''; // the demo: you are Wembely
+  };
+  const greeting = () => { const h = new Date().getHours(), name = myName(); return (h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 18 ? 'Good afternoon' : 'Good evening') + (name ? ', ' + name : ''); };
   const dashWrap = (cls, key, label, titled) => (inner) => '<section class="card tfCard tfDashCard ' + cls + '" data-tf data-k="' + key + '" aria-label="' + label + '">' +
     (titled ? '<div class="activityHeader">' + (key === 'favs' ? '<button class="activityTitle tfTitleBtn" type="button" data-more="favourites" aria-label="Favourites. More info">' + label + '</button>' : '<div class="activityTitle">' + label + '</div>') + '</div>' : '') + '<div class="activityRows">' + inner + '</div></section>';
   function dashboard(out, sums) {
     out.dash = true;
-    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
+    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + (overview && welcomeOn() ? '<span class="tfGreeting">' + esc(greeting()) + '</span>' : '') + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
     // the summaries: a row of their own, the bar only as wide as its tiles
     if (sums.length) out.push({ key: 'sums', wrap: (inner) => '<div class="tfDashBarRow" data-tf data-k="sums">' + dashWrap('tfDash-bar', 'sums-bar', 'Summaries', false)(inner).replace(' data-tf', '') + '</div>', tiles: sums.map((s) => ({ key: 'sum:' + s.key, html: summaryRow(s) })) });
     if (!overview && areasShown().length) out.push({ key: 'areas', html: areasHtml(0) });
@@ -2324,14 +2333,13 @@ export function mountTestFocus(root, { config, getHass }) {
       trayName(id, whereIs.get(id) || '—') + '</button></li>').join('') || '<li class="tfTrayNote">Nothing matches.</li>';
   }
   /* Edit Home page (Matt, 12 Nov: "the same edit capabilities as the current HA default dashboard"): Home Assistant's
-     Edit Overview page dialog in HomeCore's parts. Its favourites (drag to order, remove, add), Suggested entities, and
-     the summaries (drag to order, each on or off); Cancel or Save, as Home Assistant. Not yet: the Welcome message (Matt
-     will describe it) and Add shortcut */
+     Edit Overview page dialog in HomeCore's parts. Its welcome message, favourites (drag to order, remove, add), Suggested entities, and
+     the summaries (drag to order, each on or off); Cancel or Save, as Home Assistant. Not yet: Add shortcut */
   function openHomeEdit() {
     app.querySelector('.hcHomeEdit')?.remove();
     const was = root.activeElement;
-    const start = { favs: starred(), suggest: suggestOn(), order: summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key), on: Object.fromEntries(Object.keys(SUMMARIES).map((k) => [k, sumOn(k)])) };
-    const d = { favs: [...start.favs], suggest: start.suggest, order: [...start.order], on: { ...start.on } };
+    const start = { welcome: welcomeOn(), favs: starred(), suggest: suggestOn(), order: summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key), on: Object.fromEntries(Object.keys(SUMMARIES).map((k) => [k, sumOn(k)])) };
+    const d = { welcome: start.welcome, favs: [...start.favs], suggest: start.suggest, order: [...start.order], on: { ...start.on } };
     let picking = false;
     const sw = (on, label, attr) => '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '" ' + attr + '></button>';
     const grip = (label) => '<button class="tfTrayBtn hcHeGrip" type="button" data-he-grip aria-label="Move ' + esc(label) + '. Use the up and down arrows">' + GRIP + '</button>';
@@ -2348,6 +2356,7 @@ export function mountTestFocus(root, { config, getHass }) {
       '<p class="hcHeInfo">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>' +
       '<div class="hcHeScroll">' +
       sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
+        '<div class="hcHeToggle hcHeWelcome"><div><div class="activityRowName">Welcome message</div><div class="activityRowMeta">Show the personalized greeting at the top of your Home page.</div></div>' + sw(d.welcome, 'Welcome message', 'data-he-welcome') + '</div>' +
         '<div class="sectionLabel">Favourite entities</div><ul class="tfTrayList hcHeList" data-he-list="favs"></ul>' +
         '<button class="pill tfTrayAdd" type="button" data-he-add aria-expanded="false">Add favourite</button>' +
         '<div class="tfTrayPick" data-he-pick hidden><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search><ul class="tfTrayList" data-he-list="pick"></ul></div>' +
@@ -2368,7 +2377,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
     const save = () => {
       prefs = { ...prefs, favourites: d.favs, suggest: d.suggest,
-        home: { ...(prefs.home || {}), sumOrder: d.order, hiddenSums: Object.keys(SUMMARIES).filter((k) => !EXTRA_SUMS.includes(k) && !d.on[k]), shownSums: EXTRA_SUMS.filter((k) => d.on[k]) } };
+        home: { ...(prefs.home || {}), welcome: d.welcome, sumOrder: d.order, hiddenSums: Object.keys(SUMMARIES).filter((k) => !EXTRA_SUMS.includes(k) && !d.on[k]), shownSums: EXTRA_SUMS.filter((k) => d.on[k]) } };
       savePrefs(); close(); refresh(); toast('Changes saved');
     };
     const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); if (picking) { picking = false; draw(); } else close(); } };
@@ -2412,6 +2421,8 @@ export function mountTestFocus(root, { config, getHass }) {
       if (t.closest('[data-he-add]')) { picking = !picking; draw(); if (picking) pop.querySelector('[data-he-search]').focus({ preventScroll: true }); return; }
       const pick = t.closest('[data-he-pick-id]');
       if (pick) { d.favs.push(pick.dataset.hePickId); picking = false; pop.querySelector('[data-he-search]').value = ''; draw(); return; }
+      const wl = t.closest('[data-he-welcome]');
+      if (wl) { d.welcome = !d.welcome; wl.classList.toggle('on', d.welcome); wl.setAttribute('aria-checked', String(d.welcome)); draw(); return; }
       const sg = t.closest('[data-he-suggest]');
       if (sg) { d.suggest = !d.suggest; sg.classList.toggle('on', d.suggest); sg.setAttribute('aria-checked', String(d.suggest)); draw(); return; }
       const sm = t.closest('[data-he-sum]');
