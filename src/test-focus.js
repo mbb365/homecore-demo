@@ -1971,6 +1971,47 @@ export function mountTestFocus(root, { config, getHass }) {
      columns, each area one: Favourites, three areas, the weather, three more, then the rest */
   // a two-column card is two columns and 16 (520 at 252), as Matt drew Favourites and the weather
   const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, colMin: 200, cols: 5, row: 337, nameGap: 28, sumsGap: 16 };
+  let homeDrag = null, homeOrderNow = [], homePlaced = new Map();
+  function homeLand(box) {
+    let land = grid.querySelector('.hcHomeLand');
+    if (!box) { land?.remove(); return; }
+    if (!land) { land = Object.assign(document.createElement('div'), { className: 'tfBoardLand hcHomeLand' }); grid.appendChild(land); }
+    Object.assign(land.style, { left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px' });
+  }
+  /* with Edit Home page open, Home's cards move by dragging (Matt, 12 Nov: "the drag and drop functionality and
+     behaviours", as on Dashboards): a card lifts and follows the pointer, where it would land shows dashed, the others
+     make room, and the order is kept. Home's columns and sizes stay its own; only the order changes. Not on phones */
+  function homeDown(ev) {
+    if (!overview || !homeEditing || ev.button !== 0 || grid.clientWidth < 2 * PEG + PEG_GAP) return;
+    const el = ev.target.closest('.tfBoardItem'), it = el && boardItems().find((x) => x.el === el);
+    if (!it || HEAD.includes(it.key)) return;
+    ev.preventDefault();
+    const g = grid.getBoundingClientRect(), box = homePlaced.get(it.key);
+    homeDrag = { key: it.key, el, on: false, x0: ev.clientX, y0: ev.clientY, left: box.x, top: box.y, order: [...homeOrderNow] };
+    const move = (e) => {
+      const dx = e.clientX - homeDrag.x0, dy = e.clientY - homeDrag.y0;
+      if (!homeDrag.on && Math.hypot(dx, dy) < 5) return;
+      if (!homeDrag.on) { homeDrag.on = true; el.classList.add('tfDragging'); }
+      Object.assign(el.style, { left: homeDrag.left + dx + 'px', top: homeDrag.top + dy + 'px' });
+      // it goes where the card nearest the pointer is (before it, or after it past its middle)
+      const px = e.clientX - g.left, py = e.clientY - g.top + grid.scrollTop;
+      let best = null, bestD = Infinity;
+      homePlaced.forEach((b, key) => { if (key === it.key) return; const d = Math.hypot(px - (b.x + b.w / 2), py - (b.y + b.h / 2)); if (d < bestD) { bestD = d; best = { key, b }; } });
+      if (!best) return;
+      const rest = homeDrag.order.filter((x) => x !== it.key), i = rest.indexOf(best.key) + (px > best.b.x + best.b.w / 2 ? 1 : 0);
+      const next = [...rest.slice(0, i), it.key, ...rest.slice(i)];
+      if (next.join() !== homeDrag.order.join()) { homeDrag.order = next; layoutBoard(); }
+      else homeLand(homePlaced.get(it.key));
+    };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      const d = homeDrag; homeDrag = null;
+      el.classList.remove('tfDragging');
+      if (d.on) homePrefs({ order: d.order });
+      layoutBoard();
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
   function layoutHome(items, W, phone) {
     const hidden = new Set(dashPrefs().hidden);
     items.forEach((it) => it.el.classList.toggle('tfBoardHidden', hidden.has(it.key)));
@@ -1996,7 +2037,11 @@ export function mountTestFocus(root, { config, getHass }) {
     const rooms = overviewRooms().map((r) => 'room:' + r.id);
     // the weather starts the second row (after as many areas as fit beside Favourites); on a phone after four areas, so
     // no area is left alone in its row
-    const k = phone ? 4 : Math.max(1, n - 2), order = ['favs', ...rooms.slice(0, k), 'wx', ...rooms.slice(k)];
+    const k = phone ? 4 : Math.max(1, n - 2), own = ['favs', ...rooms.slice(0, k), 'wx', ...rooms.slice(k)];
+    // the order you dragged them into (Edit Home page), new cards after it; while one is dragged, where it would land
+    const saved = homeDrag?.order || prefs.home?.order;
+    const order = saved ? [...saved.filter((x) => own.includes(x)), ...own.filter((x) => !saved.includes(x))] : own;
+    homeOrderNow = order;
     const cards = shown.filter((it) => !HEAD.includes(it.key)).sort((a, b) => ((order.indexOf(a.key) + 1) || 99) - ((order.indexOf(b.key) + 1) || 99));
     // each card in the first free cell from the top left, a row at a time
     const taken = new Set(), at = new Map();
@@ -2021,13 +2066,21 @@ export function mountTestFocus(root, { config, getHass }) {
     let y = top;
     const rowTop = [];
     for (let r = 0; r < rowsN; r++) { rowTop[r] = y; y += (phone ? rowH[r] || 0 : HOME.row) + gap; }
+    homePlaced = new Map();
     cards.forEach((it) => {
-      const p = at.get(it.key);
-      Object.assign(it.el.style, { left: xOf(p.c) + 'px', top: rowTop[p.r] + 'px', height: (phone ? rowH[p.r] : HOME.row) + 'px' });
+      const p = at.get(it.key), box = { x: xOf(p.c), y: rowTop[p.r], w: span(p.cols), h: phone ? rowH[p.r] : HOME.row };
+      homePlaced.set(it.key, box);
+      it.el.style.height = box.h + 'px';
+      // the card being dragged follows the pointer; where it will land shows instead
+      if (homeDrag?.on && homeDrag.key === it.key) { homeLand(box); return; }
+      Object.assign(it.el.style, { left: box.x + 'px', top: box.y + 'px' });
     });
+    if (!homeDrag?.on) homeLand(null);
     grid.style.height = (rowsN ? y - gap : top) + 'px';
     readingOrder([...shown.filter((it) => HEAD.includes(it.key)), ...cards.slice().sort((a, b) => at.get(a.key).r - at.get(b.key).r || at.get(a.key).c - at.get(b.key).c)].map((it) => it.el));
     editTools(false);
+    // while Edit Home page is open the cards rest: a tap doesn't work their controls or open them
+    items.forEach((it) => [...it.el.children].forEach((c) => c.toggleAttribute('inert', homeEditing)));
     requestAnimationFrame(() => app.classList.add('tfBoardReady'));
     items.forEach((it) => itemSizes.observe(it.el));
     renderTray();
@@ -2457,6 +2510,7 @@ export function mountTestFocus(root, { config, getHass }) {
     homeTray.classList.toggle('open', on);
     homeTray.toggleAttribute('inert', !on);
     app.classList.toggle('hcHomeEditing', on);
+    if (testFocus && grid) layoutBoard();
     const pen = $('dashEditNav'), head = homeTray.querySelector('.tfTrayHead');
     if (pen && on) { penHome = pen.parentElement; head.appendChild(pen); }
     if (pen && !on && penHome) penHome.appendChild(pen);
@@ -3758,6 +3812,8 @@ export function mountTestFocus(root, { config, getHass }) {
     root.querySelector('.bottomNav')?.insertAdjacentHTML('beforeend', '<button class="navBtn" id="dashEditNav" type="button" title="Edit" aria-label="Edit the dashboard" aria-pressed="false" hidden>' + PENCIL + '</button>');
     $('dashEditNav')?.addEventListener('click', () => (overview ? setHomeEditing(!homeEditing) : setEditing(!editing)));
     grid.addEventListener('pointerdown', boardDown);
+    grid.addEventListener('pointerdown', homeDown);
+    grid.addEventListener('click', (ev) => { if (overview && homeEditing && ev.target.closest('.tfBoardItem')) { ev.preventDefault(); ev.stopPropagation(); } }, true);
     // the dashboard's bottom row holds as many tiles as fit, and its rows are measured again as the page changes size
     new ResizeObserver(() => { if (app.classList.contains('tfDash') && dashCols() !== dashColsSeen) refresh(); else queueFit(); }).observe(grid);
     window.addEventListener('resize', queueFit, { passive: true });

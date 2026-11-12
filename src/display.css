@@ -931,6 +931,18 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomHeads{display:none}
 #app.tfOverview.tfDash #homeView .tfRoomTile:not(:has(.tfRoomDevices :nth-child(4))) .tfRoomDevices{justify-content:flex-start;gap:18.67px}
 #app.light.tfOverview.tfDash #homeView .tfRoomTile .tfRoomIcon{background-color:#acacac;color:#ffffff}
+/* phones: an area card is half the width, so its devices sit two to a row and its reading is Dashboards' narrow size
+   (Matt, 12 Nov) */
+@media (max-width:620px){
+  #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomBig{font-size:46px;line-height:46px;letter-spacing:-.92px}
+  #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-top:24px}
+  #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:grid;grid-template-columns:repeat(2,max-content);gap:12px;justify-content:start}
+}
+/* Edit Home page open: Home's cards move by dragging, as Dashboards' do */
+#app.hcHomeEditing.tfOverview #homeView .tfBoardItem:not(.tfDashTitle,.tfDashBarRow){cursor:grab;user-select:none;touch-action:none;outline:1.5px solid var(--primary);outline-offset:-1.5px}
+#app.hcHomeEditing.tfOverview #homeView .tfBoardItem.tfRoomTile{border-radius:28px}
+#app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:left .25s cubic-bezier(.2,.7,.3,1),top .25s cubic-bezier(.2,.7,.3,1)}
+#app.hcHomeEditing #homeView .tfBoardItem.tfDragging{z-index:20;transition:none!important;scale:1.02;cursor:grabbing;filter:drop-shadow(0 10px 30px rgba(0,0,0,.35))}
 /* the weather: the refined card (Figma 1063:13647). Now (its picture, temperature and place), the forecast in a
    sentence, then the days, each 159 tall without a tile behind it */
 #app.tfOverview.tfDash #homeView .tfDash-wx .wbCard.wbWeather{gap:0;padding:18px}
