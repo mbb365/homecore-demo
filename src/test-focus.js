@@ -1045,8 +1045,15 @@ export function mountTestFocus(root, { config, getHass }) {
     // a switch, plug, input boolean or fan: a tile of its own, its icon the switch (Matt, 12 Nov: plugs as tiles on the
     // area page, beside the other devices)
     if (TOGGLES.includes(d)) {
+      // and Off and On under its name, as a valve's Open and Close (Matt, 12 Nov: "these are switches so they should have
+      // an on/off toggle")
       const on = st.state === 'on';
-      return { on, button: toggle(d, 'Turn ' + nameOf(id) + (on ? ' off' : ' on')), parts: [], sections: [] };
+      return { on, button: toggle(d, 'Turn ' + nameOf(id) + (on ? ' off' : ' on')), parts: ['controls'], sections: [
+        buttons('tfSeg', nameOf(id), [
+          { label: 'Off', act: act(d, 'turn_off', id), pressed: !on },
+          { label: 'On', act: act(d, 'turn_on', id), pressed: on },
+        ]),
+      ] };
     }
     return { on: false, button: { act: '', label: nameOf(id) }, sections: [] };
   }
@@ -3463,7 +3470,7 @@ export function mountTestFocus(root, { config, getHass }) {
       return [head(r.name + ' ' + k.label.toLowerCase()), '<div class="tfMoreNowRow">' + now(k.value) + all + '</div>', groupGrid(groupIds(r, key))];
     }
     const d = id.split('.')[0], st = states[id];
-    const s = ACTION_DOMAINS.includes(d) ? specFor(id) : quickSpec(id);
+    const s = ACTION_DOMAINS.includes(d) || TOGGLES.includes(d) ? specFor(id) : quickSpec(id);
     const page = more?.page || 0;
     return [
       moreHead(id, s, head),
@@ -3497,7 +3504,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (NO_SPACE.includes(d) || (d === 'light' && !dacFor(id))) {
       // its icon, big, is the switch (Matt, 11 Nov; rules popup.device, popup.sheet): the tile's icon button at 240,
       // toggling like the tile's
-      const s = ACTION_DOMAINS.includes(d) ? specFor(id) : quickSpec(id);
+      const s = ACTION_DOMAINS.includes(d) || TOGGLES.includes(d) ? specFor(id) : quickSpec(id);
       return s?.button ? '<div class="tfMoreSpace tfMoreSwitch' + (s.on ? ' on' : '') + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' + iconButton(id, s) + '</div>' : '';
     }
     if (d === 'cover') return '<div class="tfMoreSpace tfMoreFill"><div data-cover-art="' + esc(id) + '"></div></div>';

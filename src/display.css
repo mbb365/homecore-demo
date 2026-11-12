@@ -1147,5 +1147,5 @@ button.tfAreaIcon{cursor:pointer}
 .tfMoreDots.hcMorePageIcons button svg{width:20px;height:20px;fill:currentColor}
 .tfMoreDots.hcMorePageIcons button[aria-selected="true"]{background:var(--text);color:var(--card)}
 .tfMoreDots.hcMorePageIcons button:not([aria-selected="true"]):hover{color:var(--text)}
-/* a tile that's only its head (a plug, a switch) stays its own height on an area page rather than its row's */
-#homeView .grid>.tfDashTiles>.tfAction.tfHeadOnly,#homeView .grid .tfAction.tfHeadOnly{align-self:start}
+/* on an area page a tile is its own height, not its row's (a plug's Off and On sat at the foot of a light-tall tile) */
+#app.tfAreaOpen #homeView .grid .tfAction{align-self:start}
