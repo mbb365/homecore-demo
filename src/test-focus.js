@@ -1283,7 +1283,7 @@ export function mountTestFocus(root, { config, getHass }) {
     });
     keys.forEach((key) => { if (!seen.has(key)) out.push({ type: 'summary', key }); });
     // the order picked in Edit Home page
-    const order = prefs.sumOrder || [], at = (it) => (it.type === 'summary' && order.includes(it.key) ? order.indexOf(it.key) : order.length);
+    const order = sumPrefs().sumOrder || [], at = (it) => (it.type === 'summary' && order.includes(it.key) ? order.indexOf(it.key) : order.length);
     return order.length ? out.map((it, i) => [it, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(([it]) => it) : out;
   }
   // Maintenance (Matt, 29 Oct): counted as Home Assistant counts it (batteries at 20% or under that aren't charging,
@@ -1322,7 +1322,10 @@ export function mountTestFocus(root, { config, getHass }) {
   }
   // each summary's line, worked out as Home Assistant's summary card does, and the devices it opens to
   // a summary shows when it's on: Home Assistant's own unless switched off, the demo's extras only once switched on
-  const sumOn = (k) => (EXTRA_SUMS.includes(k) ? (prefs.shownSums || []).includes(k) : !(prefs.hiddenSums || []).includes(k));
+  // Home's summaries are its own (Matt, 12 Nov: "they shouldn't be linked"): which show and their order, set in Edit Home
+  // page; Dashboards keeps the ones chosen in its edit tray
+  const sumPrefs = () => (overview ? prefs.home || {} : prefs);
+  const sumOn = (k) => (EXTRA_SUMS.includes(k) ? (sumPrefs().shownSums || []).includes(k) : !(sumPrefs().hiddenSums || []).includes(k));
   function extraSums(rooms, groups, of) {
     const covers = rooms.flatMap((r) => of(r, /^cover\./)), open = covers.filter((id) => ['open', 'opening'].includes(states[id]?.state)).length;
     const people = Object.keys(states).filter((id) => id.startsWith('person.')), home = people.filter((id) => states[id]?.state === 'home').length;
@@ -1399,7 +1402,7 @@ export function mountTestFocus(root, { config, getHass }) {
     ]);
     // edit mode's old choices (sections, order, sizes…) are left behind: the page is laid out as Home Assistant has it
     const v = mine?.value || {};
-    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, sumOrder: v.sumOrder, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
+    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, home: v.home, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
     haHome = home?.value || {};
     haSecurity = security?.value || {};
     predicted = Array.isArray(usage?.entities) ? usage.entities : [];
@@ -2364,8 +2367,8 @@ export function mountTestFocus(root, { config, getHass }) {
     };
     const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
     const save = () => {
-      prefs = { ...prefs, favourites: d.favs, suggest: d.suggest, sumOrder: d.order,
-        hiddenSums: Object.keys(SUMMARIES).filter((k) => !EXTRA_SUMS.includes(k) && !d.on[k]), shownSums: EXTRA_SUMS.filter((k) => d.on[k]) };
+      prefs = { ...prefs, favourites: d.favs, suggest: d.suggest,
+        home: { ...(prefs.home || {}), sumOrder: d.order, hiddenSums: Object.keys(SUMMARIES).filter((k) => !EXTRA_SUMS.includes(k) && !d.on[k]), shownSums: EXTRA_SUMS.filter((k) => d.on[k]) } };
       savePrefs(); close(); refresh(); toast('Changes saved');
     };
     const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); if (picking) { picking = false; draw(); } else close(); } };
