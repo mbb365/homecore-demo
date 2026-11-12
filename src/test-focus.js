@@ -2408,7 +2408,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const LEARN_MORE = 'https://www.home-assistant.io/dashboards/';
   const HOME_INFO = {
     welcome: ['Welcome message', '<p>Shows a <strong>greeting</strong> above your home\'s name: good morning, afternoon or evening, then your name.</p>'],
-    favs: ['Favourites', '<p>The devices you use most, at the top of Home.</p><ul><li><strong>Drag</strong> one to change the order</li><li>Press <strong>×</strong> to take it off</li></ul>'],
+    favs: ['Favourite entities', '<p>The devices you use most, at the top of Home.</p><ul><li><strong>Drag</strong> one to change the order</li><li>Press <strong>×</strong> to take it off</li></ul>'],
     suggest: ['Suggested entities', '<p>Fills Favourites with devices you often use, after your own. They change as you use your home.</p>'],
     sums: ['Summaries', '<p>Each summary sums up one kind of thing across your home, like <strong>Lights</strong>: how many are on.</p><ul><li>Switch one off to hide it</li><li><strong>Drag</strong> one to change the order</li></ul>'],
   };
@@ -2416,6 +2416,8 @@ export function mountTestFocus(root, { config, getHass }) {
   homeTray.setAttribute('aria-label', 'Edit Home page');
   homeTray.toggleAttribute('inert', true);
   let homeEditing = false, homePicking = false, homeStart = '', penHome = null;
+  // its two sections fold away, as Home Assistant's (Matt, 12 Nov: "keep the collapsable menus")
+  const homeFolded = new Set();
   const infoBtn = (k) => '<button class="hcInfoBtn" type="button" data-info="' + k + '" aria-expanded="false" aria-label="About ' + esc(HOME_INFO[k][0]) + '">' + INFO_SVG + '</button>';
   const sw = (on, label, attr) => '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '" ' + attr + '></button>';
   const heGrip = (label) => '<button class="tfTrayBtn hcHeGrip" type="button" data-he-grip aria-label="Move ' + esc(label) + '. Use the up and down arrows">' + GRIP + '</button>';
@@ -2428,16 +2430,21 @@ export function mountTestFocus(root, { config, getHass }) {
     const sumLi = (k) => { const x = SUMMARIES[k]; return '<li class="hcHeRow hcHeSum" data-he-id="' + esc(k) + '"' + (x.colour && sumInk(x.colour) ? ' style="' + sumInk(x.colour).slice(1) + '"' : '') + '>' + heGrip(x.name) +
       '<span class="tfIcon"' + iconSlot('', x.icon, x.name) + '></span><span class="activityRowName">' + esc(x.name) + '</span>' + sw(sumOn(k), x.name, 'data-he-sum="' + esc(k) + '"') + '</li>'; };
     const search = homeTray.querySelector('[data-he-search]')?.value || '';
+    // a section's head folds it (the whole head, and its chevron for keyboards); an (i) can sit beside its name
+    const sec = (key, icon, title, sub, body, info = '') => '<section class="hcHeSec" data-he-sec="' + key + '"><div class="hcHeSecHead" data-he-fold="' + key + '">' +
+      '<span class="tfIcon" data-icon-for="" data-icon-name="' + icon + '"></span><span class="tfTrayName"><span class="hcHeSecTitle"><span class="activityRowName">' + title + '</span>' + info + '</span><span class="activityRowMeta">' + sub + '</span></span>' +
+      '<button class="hcHeChevron" type="button" aria-expanded="' + !homeFolded.has(key) + '" aria-label="' + (homeFolded.has(key) ? 'Open ' : 'Fold ') + title + '">' + CHEVRON + '</button></div><div class="hcHeSecBody"' + (homeFolded.has(key) ? ' hidden' : '') + '>' + body + '</div></section>';
     homeTray.querySelector('[data-he-body]').innerHTML =
-      '<section class="tfTraySection"><div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div></section>' +
-      '<section class="tfTraySection"><div class="hcHeLabel"><span class="sectionLabel">Favourites</span>' + infoBtn('favs') + '</div>' +
+      sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
+        '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
+        '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
         '<ul class="tfTrayList hcHeList" data-he-list="favs">' + (favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>') + '</ul>' +
         '<button class="pill tfTrayAdd" type="button" data-he-add aria-expanded="' + homePicking + '">Add favourite</button>' +
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
-        '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div></section>' +
-      '<section class="tfTraySection"><div class="hcHeLabel"><span class="sectionLabel">Summaries</span>' + infoBtn('sums') + '</div>' +
-        '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul></section>' +
+        '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>') +
+      sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
+        '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>', infoBtn('sums')) +
       '<p class="tfTrayNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>';
     fillIcons(homeTray);
   }
@@ -2514,6 +2521,7 @@ export function mountTestFocus(root, { config, getHass }) {
   homeTray.addEventListener('click', (ev) => {
     const t = ev.target;
     const info = t.closest('[data-info]'); if (info) { openInfo(info); return; }
+    const fold = t.closest('[data-he-fold]'); if (fold && !t.closest('.hcInfoBtn')) { const k = fold.dataset.heFold; if (homeFolded.has(k)) homeFolded.delete(k); else homeFolded.add(k); closeInfo(); drawHomeTray(); return; }
     if (t.closest('[data-he-welcome]')) { homePrefs({ welcome: !welcomeOn() }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
     const sm = t.closest('[data-he-sum]');

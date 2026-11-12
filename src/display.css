@@ -943,7 +943,19 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn .wbWx.wbS60{width:60px;height:60px;border-radius:20px}
 
 /* Edit Home page: a tray at the side, as the dashboard's editor; its rows as the tray's */
-.hcHeBody{display:flex;flex-direction:column;gap:32px}
+.hcHomeTray{width:468px} /* 30% wider than the dashboard's, for breathing room (Matt, 12 Nov) */
+.hcHeBody{display:flex;flex-direction:column;gap:12px}
+.hcHeSec{border-radius:var(--r-inner);background:var(--tile)}
+.hcHeSecHead{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr) 32px;align-items:center;gap:12px;padding:12px 10px 12px 12px;color:var(--text);cursor:pointer}
+.hcHeSecTitle{display:flex;align-items:center;gap:4px}
+.hcHeSecHead .tfTrayName>*{white-space:normal}
+.hcHeSec .hcHeSecHead .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+.hcHeChevron{display:grid;place-items:center;width:32px;height:32px;min-height:0;padding:0;border:0;border-radius:12px;background:none;color:var(--muted);transform:rotate(-90deg);transition:transform .18s ease;cursor:pointer}
+.hcHeChevron svg{width:20px;height:20px}
+.hcHeChevron[aria-expanded="false"]{transform:rotate(90deg)}
+.hcHeSecBody{display:flex;flex-direction:column;gap:8px;padding:4px 16px 18px}
+.hcHeSecBody[hidden]{display:none}
+.hcHeBody>.tfTrayNote{margin-top:8px}
 .hcHeLabel{display:flex;align-items:center;gap:4px}
 .hcHeLine{display:flex;align-items:center;gap:4px;min-height:44px}
 .hcHeLine>.activityRowName{min-width:0}
