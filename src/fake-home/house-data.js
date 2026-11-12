@@ -5,6 +5,15 @@ const AREAS = [
   ["living_room", "Living Room", "alcove", "mdi:sofa"], ["kitchen", "Kitchen", "back_bit", "mdi:countertop"], ["balcony", "Balcony", "back_bit"],
   ["bedroom", "Bedroom", "half_1", "mdi:bed"], ["office", "Office", "half_1", "mdi:desk"], ["bathroom", "Bathroom", "half_1", "mdi:shower"],
   ["roaming", "Roaming", null], ["test_area", "Test Area", "test"],
+  // made up (Matt, 12 Nov: "see this layout with multiple floors and levels"), two more floors and an area or two more on his
+  ["spare_room", "Spare room", "loft", "mdi:bed-empty"], ["storage", "Storage", "loft", "mdi:package-variant-closed"],
+  ["hallway", "Hallway", "alcove", "mdi:coat-rack"], ["dining_room", "Dining room", "back_bit", "mdi:table-chair"],
+  ["workshop", "Workshop", "docs_workshop", "mdi:hammer-wrench"], ["laundry", "Laundry", "docs_workshop", "mdi:washing-machine"],
+];
+// [id, name, level, icon], top floor first: the three floors of Matt's house named, and two made up (the loft, the basement)
+const FLOORS = [
+  ["loft", "The Loft", 3, "mdi:home-roof"], ["half_1", "Half Landing", 2, "mdi:home-floor-2"], ["alcove", "The Alcove", 1, "mdi:home-floor-1"],
+  ["back_bit", "The Back Bit", 0, "mdi:home-floor-0"], ["docs_workshop", "Doc's Workshop", -1, "mdi:home-floor-negative-1"], ["test", "Test bench", null, null],
 ];
 const light = (name, state, modes, extra = {}) => ({ state, attributes: { friendly_name: name, supported_color_modes: modes, ...(state === "on" ? { color_mode: "color_temp", brightness: 189, color_temp_kelvin: 2538, hs_color: [28.8, 71.2] } : {}), min_color_temp_kelvin: 2000, max_color_temp_kelvin: 6535, ...extra } });
 const ENTITIES = {
@@ -45,6 +54,25 @@ const ENTITIES = {
     "switch.clothes_washer": { state: "unavailable", attributes: { friendly_name: "Clothes washer" } },
     "sensor.big_bathroom_light_power": { state: "0.58", attributes: { friendly_name: "Big bathroom light Power", device_class: "power", unit_of_measurement: "W", state_class: "measurement" } },
   },
+  // the made-up areas' lights and plugs
+  spare_room: { "light.gobos_lamp": light("Gobo's lamp", "on", ["color_temp"], { brightness: 120, color_temp_kelvin: 2400 }) },
+  storage: { "light.storage": light("Storage light", "off", ["color_temp"]) },
+  hallway: {
+    "light.hallway": light("Hallway", "on", ["color_temp", "xy"], { brightness: 160, color_temp_kelvin: 2700 }),
+    "switch.hallway_heater": { state: "off", attributes: { friendly_name: "Towel warmer" } },
+  },
+  dining_room: {
+    "light.radish_pendant": light("Radish pendant", "on", ["color_temp", "xy"], { brightness: 200, color_temp_kelvin: 2600 }),
+    "light.dining_candles": light("Candles", "off", ["color_temp"]),
+  },
+  workshop: {
+    "light.docs_bench": light("Doc's bench light", "on", ["color_temp"], { brightness: 255, color_temp_kelvin: 4000 }),
+    "switch.doozer_saw": { state: "off", attributes: { friendly_name: "Doozer saw" } },
+  },
+  laundry: {
+    "light.laundry": light("Laundry", "off", ["color_temp"]),
+    "switch.dryer": { state: "on", attributes: { friendly_name: "Dryer" } },
+  },
   "": {
     "sensor.p1_meter_power": { state: "243.0", attributes: { friendly_name: "P1 Meter Power", device_class: "power", unit_of_measurement: "W", state_class: "measurement" } },
     // what met.no and the sun give the weather bento on HA
@@ -69,6 +97,7 @@ const ENTITIES = {
 export const HOUSE = {
   config: { latitude: 52.3676, longitude: 4.9041, location_name: "Fraggle rock", time_zone: "Europe/Amsterdam", unit_system: { temperature: "°C", length: "km" } },
   areas: Object.fromEntries(AREAS.map(([area_id, name, floor_id, icon]) => [area_id, { area_id, name, floor_id, ...(icon ? { icon } : {}) }])),
+  floors: Object.fromEntries(FLOORS.map(([floor_id, name, level, icon]) => [floor_id, { floor_id, name, level, icon, aliases: [] }])),
   entities: {},
   states: {},
 };

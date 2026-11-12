@@ -1938,6 +1938,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (pen && overview) { pen.hidden = !board; if (!homeEditing) { pen.classList.remove('active'); pen.setAttribute('aria-pressed', 'false'); pen.setAttribute('aria-label', 'Edit Home page'); pen.title = 'Edit'; pen.innerHTML = PENCIL; } }
     else if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit custom dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
+    if (!board || !overview) grid.querySelectorAll(':scope > .hcFloor').forEach((el) => el.remove()); // Home's floor names
     if (!board) {
       grid.style.height = '';
       grid.querySelectorAll('.tfBoardItem').forEach((el) => { el.classList.remove('tfBoardItem', 'tfBoardHidden'); el.style.left = el.style.top = el.style.width = el.style.height = ''; });
@@ -2022,7 +2023,23 @@ export function mountTestFocus(root, { config, getHass }) {
      (on phones as tall as it needs), 20 apart; the summaries as wide as the cards. Favourites and the weather card are two
      columns, each area one: Favourites, three areas, the weather, three more, then the rest */
   // a two-column card is two columns and 16 (520 at 252), as Matt drew Favourites and the weather
-  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, colMin: 200, cols: 5, row: 337, nameGap: 28, sumsGap: 16 };
+  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, row: 337, nameGap: 28, sumsGap: 16, full: 1336, floorTop: 12, floorHead: 40, floorGap: 16 };
+  /* the area cards' size, picked in Edit Home page (Matt, 12 Nov: "change the size of the area cards", Small, Medium or
+     Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
+  const AREA_SIZES = { s: { w: 160, h: 192 }, m: { w: 200, h: 240 }, l: { w: 252, h: 337 } };
+  const areaSize = () => (AREA_SIZES[prefs.home?.areaSize] ? prefs.home.areaSize : 'm');
+  // Home's areas by floor, top floor first, as Home Assistant's Areas dashboard groups them; an area with no floor goes
+  // last, under Other areas (with no floors at all, the areas without a name over them)
+  const FLOOR_ICON = { 0: 'mdi:home-floor-0', 1: 'mdi:home-floor-1', 2: 'mdi:home-floor-2', 3: 'mdi:home-floor-3', '-1': 'mdi:home-floor-negative-1' };
+  function floorGroups() {
+    const rooms = overviewRooms();
+    const fl = Object.values(getHass()?.floors || {}).sort((a, b) => (b.level ?? -99) - (a.level ?? -99));
+    const ids = new Set(fl.map((f) => f.floor_id));
+    const groups = fl.map((f) => ({ id: f.floor_id, name: f.name, icon: f.icon || FLOOR_ICON[f.level] || 'mdi:home', rooms: rooms.filter((r) => r.floor === f.floor_id) }));
+    const rest = rooms.filter((r) => !ids.has(r.floor));
+    if (rest.length) groups.push({ id: '', name: fl.length ? 'Other areas' : '', icon: 'mdi:home', rooms: rest });
+    return groups;
+  }
   let homeDrag = null, homeOrderNow = [], homePlaced = new Map();
   function homeLand(box) {
     let land = grid.querySelector('.hcHomeLand');
@@ -2036,7 +2053,8 @@ export function mountTestFocus(root, { config, getHass }) {
   function homeDown(ev) {
     if (!overview || !homeEditing || ev.button !== 0 || grid.clientWidth < 2 * PEG + PEG_GAP) return;
     const el = ev.target.closest('.tfBoardItem'), it = el && boardItems().find((x) => x.el === el);
-    if (!it || HEAD.includes(it.key)) return;
+    // the areas keep the areas page's order (Matt, 12 Nov: "I can't move them"); the cards above the floors move
+    if (!it || HEAD.includes(it.key) || isRoomKey(it.key)) return;
     ev.preventDefault();
     const g = grid.getBoundingClientRect(), box = homePlaced.get(it.key);
     homeDrag = { key: it.key, el, on: false, x0: ev.clientX, y0: ev.clientY, left: box.x, top: box.y, order: [...homeOrderNow] };
@@ -2049,7 +2067,7 @@ export function mountTestFocus(root, { config, getHass }) {
       // it goes where the card nearest the pointer is (before it, or after it past its middle)
       const px = e.clientX - g.left, py = e.clientY - g.top + grid.scrollTop;
       let best = null, bestD = Infinity;
-      homePlaced.forEach((b, key) => { if (key === it.key) return; const d = Math.hypot(px - (b.x + b.w / 2), py - (b.y + b.h / 2)); if (d < bestD) { bestD = d; best = { key, b }; } });
+      homePlaced.forEach((b, key) => { if (key === it.key || !homeDrag.order.includes(key)) return; const d = Math.hypot(px - (b.x + b.w / 2), py - (b.y + b.h / 2)); if (d < bestD) { bestD = d; best = { key, b }; } });
       if (!best) return;
       const rest = homeDrag.order.filter((x) => x !== it.key), i = rest.indexOf(best.key) + (px > best.b.x + best.b.w / 2 ? 1 : 0);
       const next = [...rest.slice(0, i), it.key, ...rest.slice(i)];
@@ -2074,11 +2092,8 @@ export function mountTestFocus(root, { config, getHass }) {
     items.forEach((it) => it.el.classList.toggle('tfBoardHidden', hidden.has(it.key)));
     const shown = items.filter((it) => !hidden.has(it.key) && getComputedStyle(it.el).display !== 'none');
     const gap = phone ? HOME.phoneGap : HOME.gap;
-    const n = phone ? 2 : Math.max(2, Math.min(HOME.cols, Math.floor((W + gap) / (HOME.colMin + gap))));
-    const w = phone ? Math.floor((W - gap) / 2) : Math.min(HOME.col, Math.floor((W - (n - 1) * gap) / n));
-    const span = (cols) => cols * w + (cols - 1) * (cols === 2 ? HOME.inner : gap);
-    const xOf = (c) => c * (w + gap) - (n >= 3 && c >= 2 ? gap - HOME.inner : 0);
-    const gridW = n * w + (n - 1) * gap - (n >= 3 ? gap - HOME.inner : 0);
+    // the summaries (and Favourites as a strip) as wide as five of Matt's columns, or the page where it's narrower
+    const gridW = Math.min(W, HOME.full);
     let top = 0;
     const strip = favsStrip();
     app.classList.toggle('hcSumsFit', sumsFit());
@@ -2097,51 +2112,78 @@ export function mountTestFocus(root, { config, getHass }) {
       }
       top += it.el.offsetHeight + (it.key === 'title' ? HOME.nameGap : HOME.sumsGap);
     });
-    const rooms = overviewRooms().map((r) => 'room:' + r.id);
-    // the weather starts the second row (after as many areas as fit beside Favourites); on a phone after four areas, so
-    // no area is left alone in its row
-    const k = phone ? 4 : Math.max(1, n - 2), own = ['favs', ...rooms.slice(0, k), 'sched', ...rooms.slice(k), 'wx', 'energy'];
-    // the order you dragged them into (Edit Home page), new cards after it; while one is dragged, where it would land
+    /* the cards above the floors (Matt, 12 Nov: Favourites and Schedule "above the floors"), a row at a time in the
+       order you dragged them into, 520 and 337 as drawn; on a phone each the whole width and as tall as it needs. Then
+       each floor: its name, then its areas at the size picked, as many to a row as fit (two on a phone, as tall as they
+       need). Everything gives up to 15% on a smaller screen */
+    const k = phone ? 1 : Math.max(0.85, Math.min(1, W / HOME.full));
+    const own = ['favs', 'sched', 'wx', 'energy'];
     const saved = homeDrag?.order || prefs.home?.order;
     const order = saved ? [...saved.filter((x) => own.includes(x)), ...own.filter((x) => !saved.includes(x))] : own;
     homeOrderNow = order;
-    const cards = shown.filter((it) => !HEAD.includes(it.key) && !(strip && it.key === 'favs')).sort((a, b) => ((order.indexOf(a.key) + 1) || 99) - ((order.indexOf(b.key) + 1) || 99));
-    // each card in the first free cell from the top left, a row at a time
-    const taken = new Set(), at = new Map();
-    cards.forEach((it) => {
-      const cols = Math.min(n, ['favs', 'sched', 'wx', 'energy'].includes(it.key) ? 2 : 1);
-      for (let r = 0; ; r++) {
-        const c = [...Array(n - cols + 1).keys()].find((c0) => [...Array(cols).keys()].every((k) => !taken.has(r + ',' + (c0 + k))));
-        if (c != null) { [...Array(cols).keys()].forEach((k) => taken.add(r + ',' + (c + k))); at.set(it.key, { r, c, cols }); break; }
-      }
-    });
-    // a row's height: 337, or on a phone its tallest card's own
-    const rowsN = Math.max(0, ...[...at.values()].map((p) => p.r + 1)), rowH = [];
-    cards.forEach((it) => {
-      const p = at.get(it.key);
-      it.el.classList.add('tfBoardItem');
-      it.el.dataset.rows = 5; it.el.dataset.cols = p.cols; it.el.toggleAttribute('data-narrow', false);
-      Object.assign(it.el.style, { width: span(p.cols) + 'px', height: phone ? '' : HOME.row + 'px' });
-    });
-    // measured once every card has let go of its old height (a neighbour's would stretch it)
-    if (phone) cards.forEach((it) => { const p = at.get(it.key); rowH[p.r] = Math.max(rowH[p.r] || 0, it.el.offsetHeight); });
-    // a phone's page flows in the order (--o) rather than by place
-    cards.forEach((it, i) => it.el.style.setProperty('--o', String(3 + i)));
-    let y = top;
-    const rowTop = [];
-    for (let r = 0; r < rowsN; r++) { rowTop[r] = y; y += (phone ? rowH[r] || 0 : HOME.row) + gap; }
+    const tops = shown.filter((it) => own.includes(it.key) && !(strip && it.key === 'favs')).sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
     homePlaced = new Map();
-    cards.forEach((it) => {
-      const p = at.get(it.key), box = { x: xOf(p.c), y: rowTop[p.r], w: span(p.cols), h: phone ? rowH[p.r] : HOME.row };
+    const put = (it, box) => {
       homePlaced.set(it.key, box);
-      it.el.style.height = box.h + 'px';
+      Object.assign(it.el.style, { width: box.w + 'px', height: box.h + 'px' });
       // the card being dragged follows the pointer; where it will land shows instead
       if (homeDrag?.on && homeDrag.key === it.key) { homeLand(box); return; }
       Object.assign(it.el.style, { left: box.x + 'px', top: box.y + 'px' });
+    };
+    const tw = phone ? W : Math.round((2 * HOME.col + HOME.inner) * k), th = Math.round(HOME.row * k);
+    let x = 0, rowH = 0;
+    tops.forEach((it) => {
+      it.el.classList.add('tfBoardItem');
+      it.el.dataset.rows = 5; it.el.dataset.cols = 2; it.el.toggleAttribute('data-narrow', false);
+      if (x && x + tw > W) { top += rowH + gap; x = 0; rowH = 0; }
+      let h = th;
+      if (phone) { Object.assign(it.el.style, { width: tw + 'px', height: '' }); h = it.el.offsetHeight; }
+      put(it, { x, y: top, w: tw, h });
+      x += tw + gap; rowH = Math.max(rowH, h);
     });
+    if (tops.length) top += rowH + gap;
+    const size = areaSize(), dims = AREA_SIZES[size];
+    const cw = phone ? Math.floor((W - gap) / 2) : Math.round(dims.w * k), ch = Math.round(dims.h * k);
+    const n = phone ? 2 : Math.max(1, Math.floor((W + gap) / (cw + gap)));
+    const roomEls = new Map(shown.filter((it) => isRoomKey(it.key)).map((it) => [it.key, it]));
+    const floors = floorGroups().map((f) => ({ ...f, cards: f.rooms.map((r) => roomEls.get('room:' + r.id)).filter(Boolean) })).filter((f) => f.cards.length);
+    const oldHeads = new Map([...grid.querySelectorAll(':scope > .hcFloor')].map((el) => [el.dataset.floor, el]));
+    const floorHeads = [];
+    floors.forEach((f, fi) => {
+      if (f.name) {
+        if (fi || tops.length) top += HOME.floorTop;
+        let head = oldHeads.get(f.id);
+        oldHeads.delete(f.id);
+        if (!head) { head = Object.assign(document.createElement('div'), { className: 'hcFloor' }); head.dataset.floor = f.id; grid.appendChild(head); }
+        const sig = f.name + '|' + f.icon;
+        if (head.dataset.sig !== sig) {
+          head.dataset.sig = sig;
+          head.innerHTML = '<span class="tfIcon hcFloorIcon" aria-hidden="true"><span class="tfAreaGlyph"' + iconSlot('floor:' + f.id, f.icon, f.name) + '></span></span><h2 class="hcFloorName">' + esc(f.name) + '</h2>';
+          fillIcons(head);
+        }
+        Object.assign(head.style, { left: '0px', top: top + 'px', width: W + 'px' });
+        floorHeads.push(head);
+        top += HOME.floorHead + HOME.floorGap;
+      }
+      f.cards.forEach((it) => {
+        it.el.classList.add('tfBoardItem');
+        it.el.classList.remove('hcAreaS', 'hcAreaM', 'hcAreaL');
+        it.el.classList.add('hcArea' + size.toUpperCase());
+        it.el.style.setProperty('--hc-k', String(k));
+        it.el.dataset.rows = 5; it.el.dataset.cols = 1; it.el.toggleAttribute('data-narrow', false);
+        Object.assign(it.el.style, { width: cw + 'px', height: phone ? '' : ch + 'px' });
+      });
+      // a phone's row is as tall as its tallest area, measured once they've all let go of their old height
+      const rowHs = [];
+      if (phone) f.cards.forEach((it, i) => { const r = Math.floor(i / n); rowHs[r] = Math.max(rowHs[r] || 0, it.el.offsetHeight); });
+      const rowTop = [];
+      for (let r = 0; r < Math.ceil(f.cards.length / n); r++) { rowTop[r] = top; top += (phone ? rowHs[r] : ch) + gap; }
+      f.cards.forEach((it, i) => { const r = Math.floor(i / n); put(it, { x: (i % n) * (cw + gap), y: rowTop[r], w: cw, h: phone ? rowHs[r] : ch }); });
+    });
+    oldHeads.forEach((el) => el.remove());
     if (!homeDrag?.on) homeLand(null);
-    grid.style.height = (rowsN ? y - gap : top) + 'px';
-    readingOrder([...shown.filter((it) => HEAD.includes(it.key)), ...cards.slice().sort((a, b) => at.get(a.key).r - at.get(b.key).r || at.get(a.key).c - at.get(b.key).c)].map((it) => it.el));
+    grid.style.height = Math.max(0, top - gap) + 'px';
+    readingOrder([...shown.filter((it) => HEAD.includes(it.key)).map((it) => it.el), ...tops.map((it) => it.el), ...floorHeads, ...floors.flatMap((f) => f.cards.map((it) => it.el))]);
     editTools(false);
     // while Edit Home page is open the cards rest: a tap doesn't work their controls or open them
     items.forEach((it) => [...it.el.children].forEach((c) => c.toggleAttribute('inert', homeEditing)));
@@ -2595,7 +2637,9 @@ export function mountTestFocus(root, { config, getHass }) {
         '<hr class="hcHeRule">' +
         '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
-        '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>',
+        '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>' +
+        '<hr class="hcHeRule">' +
+        homeSeg('Area cards', 'data-he-area-size', areaSize(), [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]),
       // Favourites on Home at all (Matt, 12 Nov: "a show favourites toggle")
       favs: '<div class="hcHeLine"><span class="activityRowName">Show favourites</span>' + sw(prefs.home?.favs !== false, 'Show favourites', 'data-he-card="favs"') + '</div>' +
         '<hr class="hcHeRule">' +
@@ -2701,6 +2745,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = ['schedule', 'sums', 'favs'].includes(k) ? prefs.home?.[k] !== false : !!prefs.home?.[k]; homePrefs({ [k]: !on }); return; }
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
+    const as = t.closest('[data-he-area-size]'); if (as) { homePrefs({ areaSize: as.dataset.heAreaSize }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
     const sm = t.closest('[data-he-sum]');
     if (sm) {

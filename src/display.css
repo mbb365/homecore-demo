@@ -1020,8 +1020,33 @@ button.tfAreaIcon{cursor:pointer}
 @media (max-width:620px){
   #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:grid;grid-template-columns:repeat(2,max-content);gap:12px;justify-content:start}
 }
-/* Edit Home page open: Home's cards move by dragging, as Dashboards' do */
-#app.hcHomeEditing.tfOverview #homeView .tfBoardItem:not(.tfDashTitle,.tfDashBarRow){cursor:grab;user-select:none;touch-action:none;outline:1.5px solid var(--primary);outline-offset:-1.5px}
+/* Home's floors (Matt, 12 Nov), as Home Assistant's Areas dashboard groups areas: each floor's icon and name over its
+   areas */
+#app.tfOverview.tfBoard #homeView .hcFloor{position:absolute;z-index:1;display:flex;align-items:center;gap:12px;height:40px;margin:0;box-sizing:border-box}
+#app.tfOverview #homeView .hcFloorIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+#app.light.tfOverview #homeView .hcFloorIcon{background-color:#acacac;color:#ffffff}
+#app.tfOverview #homeView .hcFloorName{margin:0;font:500 20px/28px var(--font);color:var(--title,var(--text));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the area cards' sizes (Edit Home page: Small, Medium, Large; Matt, 12 Nov). Large is his Figma card as it was; each
+   gives up to 15% on a smaller screen (--hc-k), its reading with it. A card shows what fits: its devices one row, the
+   ones that don't fit left off */
+#app.tfOverview.tfDash #homeView .tfRoomTile{overflow:hidden}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaL .tfRoomBig{font-size:calc(48px * var(--hc-k,1));line-height:calc(64px * var(--hc-k,1))}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaL .tfRoomReading{margin-top:calc(35px * var(--hc-k,1))}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaM .tfRoomReading{margin-top:calc(14px * var(--hc-k,1))}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaM .tfRoomBig{font-size:calc(40px * var(--hc-k,1));line-height:calc(52px * var(--hc-k,1));letter-spacing:-1.6px}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaM .tfRoomSub{margin-top:-6px}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS{padding:12px}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS .tfRoomReading{margin-top:calc(8px * var(--hc-k,1))}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS .tfRoomBig{font-size:calc(32px * var(--hc-k,1));line-height:calc(40px * var(--hc-k,1));letter-spacing:-1.28px}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS .tfRoomSub{display:none}
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaM,.hcAreaS) .tfRoomDevices,
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaM,.hcAreaS):not(:has(.tfRoomDevices :nth-child(4))) .tfRoomDevices{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:0 8px;height:var(--chip-size);overflow:hidden;padding-top:0;margin-top:auto}
+#app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS .tfRoomReading{flex:none}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-bottom:12px} /* the devices at least 12 under it (on a phone the card is only as tall as it needs) */
+/* Edit Home page open: the cards above the floors move by dragging, as Dashboards' do; the areas keep the areas page's
+   order (Matt, 12 Nov) */
+#app.hcHomeEditing.tfOverview #homeView .tfBoardItem.tfRoomTile{cursor:default;outline:0}
+#app.hcHomeEditing.tfOverview #homeView .tfBoardItem:not(.tfDashTitle,.tfDashBarRow,.tfRoomTile){cursor:grab;user-select:none;touch-action:none;outline:1.5px solid var(--primary);outline-offset:-1.5px}
 #app.hcHomeEditing.tfOverview #homeView .tfBoardItem.tfRoomTile{border-radius:28px}
 #app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:left .34s cubic-bezier(.2,1.35,.4,1),top .34s cubic-bezier(.2,1.35,.4,1)} /* the others make room with a small bounce */
 @media (prefers-reduced-motion:reduce){#app.hcHomeEditing.tfBoardReady #homeView .tfBoardItem{transition:none}}

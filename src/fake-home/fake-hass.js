@@ -143,6 +143,7 @@ const hass = {
   states,
   config: HOUSE.config,
   areas: HOUSE.areas,
+  floors: HOUSE.floors,
   entities: HOUSE.entities,
   devices: {},
   callWS: async (msg) => {
