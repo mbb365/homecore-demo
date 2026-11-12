@@ -1920,7 +1920,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const pen = $('dashEditNav');
     if (!board && homeEditing) setHomeEditing(false);
     if (pen && overview) { pen.hidden = !board; if (!homeEditing) { pen.classList.remove('active'); pen.setAttribute('aria-pressed', 'false'); pen.setAttribute('aria-label', 'Edit Home page'); pen.title = 'Edit'; pen.innerHTML = PENCIL; } }
-    else if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit the dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
+    else if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit custom dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
     if (!board) {
       grid.style.height = '';
@@ -2479,11 +2479,11 @@ export function mountTestFocus(root, { config, getHass }) {
     else { mark.style.left = on.offsetLeft + 'px'; mark.style.width = on.offsetWidth + 'px'; }
   }
   const tray = Object.assign(document.createElement('aside'), { className: 'tfEditTray' });
-  tray.setAttribute('aria-label', 'Edit the dashboard');
+  tray.setAttribute('aria-label', 'Edit custom dashboard');
   tray.innerHTML = '<button class="tfTrayTuck" type="button" data-tray-tuck></button>' +
-    '<div class="tfTrayInner"><div class="tfTrayHead"><div class="activityTitle">Edit dashboard</div><button class="pill" type="button" data-tray-done>Done</button></div>' +
+    '<div class="tfTrayInner"><div class="tfTrayHead"><div class="activityTitle">Edit custom dashboard</div><button class="pill" type="button" data-tray-done>Done</button></div>' +
     // tabs instead of one long scroll (Matt, 12 Nov), HomeCore settings' tabs
-    '<div class="tabs rubberTabs hcTrayTabs" role="tablist" aria-label="Edit dashboard"><div class="rubberIndicator" aria-hidden="true"></div>' +
+    '<div class="tabs rubberTabs hcTrayTabs" role="tablist" aria-label="Edit custom dashboard"><div class="rubberIndicator" aria-hidden="true"></div>' +
       TRAY_TABS.map(([k, t], i) => '<button class="tab segBtn' + (i ? '' : ' active') + '" type="button" role="tab" aria-selected="' + !i + '" data-tray-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
     '<section class="tfTraySection" data-tray="welcome"></section>' +
     '<section class="tfTraySection" data-tray="cards"></section>' +
