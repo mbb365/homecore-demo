@@ -29,6 +29,9 @@ export const USER_DATA = {
       'light.kitchen_spots', 'humidifier.made_up_bedroom'],
     favSeeded: true,
     shownSums: ['covers', 'people'],
+    // Home's first look (Matt, 12 Nov, his screenshot: "push this as the default layout"): Favourites as a strip under the
+    // summaries, no Schedule, the areas grouped by floor in Bento, each floor a box, every area card Small
+    home: { favsAs: 'strip', schedule: false, byFloor: true, areaLayout: 'bento', bentoBoxes: true, bentoMixed: false, areaSize: 's' },
     dash: {
       pegs: 8,
       cells: CELLS,
