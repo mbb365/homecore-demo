@@ -18,7 +18,10 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 
 // the rail, top to bottom (Matt's file has Automation where Weather is: Matt, 9 Nov)
 // Home is the logo at the top (Matt, 9 Nov); Map has Home's old place
-const RAIL = [['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
+// Home (the house) is the overview, the simple default page, and Dashboards (Home Assistant's dashboard icon) the board
+// you edit, which was Home (Matt, 12 Nov)
+const BOARDS = new Set(['home', 'dashboards']);
+const RAIL = [['home', 'Home', 'mdi:home'], ['dashboards', 'Dashboards', 'mdi:view-dashboard'], ['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
 // HomeCore's own settings are HomeCore settings (Matt, 9 Nov); Home Assistant's Settings has the cog, above you
@@ -34,7 +37,7 @@ function renderMap(page, ctx) {
 const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity, config: renderConfig, about: renderAbout };
 // Activity is the demo's own page now (Home Assistant's logbook with its filters: Matt, 9 Nov)
 const HOMECORE_PAGES = new Set(['weather']);
-const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
+const ROUTES = new Set(['home', 'dashboards', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
 
 export function mountDemoShell(root, { getHass, homecore }) {
   const $ = (id) => root.getElementById(id);
@@ -66,7 +69,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   app.insertAdjacentHTML('beforeend',
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
       '<div class="hcDrawerHead"><div class="hcLogo">' + HA_LOGO + '</div><button class="hcRailBtn" type="button" data-hc-close aria-label="Close">' + icon('mdi:close') + '</button></div>' +
-      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + drawerRow(['home', 'Home', 'mdi:home']) + RAIL.map((r) => drawerRow(r)).join('') +
+      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + RAIL.map((r) => drawerRow(r)).join('') +
       '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') + drawerRow(CONFIG) +
       '<button class="hcRow hcNavRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcNavIcon hcNavMe"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
@@ -106,7 +109,8 @@ export function mountDemoShell(root, { getHass, homecore }) {
      from inside another page (a card, a search result, a row) has ‹ back to it. The trail is a list of places:
      'home', a page, 'settings', or 'area:<key>' for HomeCore's own pages (Weather, Logbook, a room) */
   let trail = [], going = false, cur = 'home';
-  const where = () => (settingsView.classList.contains('active') ? 'settings' : homecore.page ? 'area:' + homecore.page : pageOn || 'home');
+  const board = () => (homecore.overview === false ? 'dashboards' : 'home');
+  const where = () => (settingsView.classList.contains('active') ? 'settings' : homecore.page ? 'area:' + homecore.page : pageOn || board());
   const BACK_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18L9 12L15 6"/></svg>';
   const ctx = { getHass, homecore, root, esc, icon, opts: null,
     // from inside a page: remember it, then go
@@ -127,7 +131,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     const to = trail.pop();
     if (!to) return go('home');
     going = true;
-    if (to.startsWith('area:')) { const k = to.slice(5); if (HOMECORE_PAGES.has(k)) go(k, true); else { go('home', true); homecore.openArea(k); } } else go(to, true);
+    if (to.startsWith('area:')) { const k = to.slice(5); if (HOMECORE_PAGES.has(k)) go(k, true); else { go(board(), true); homecore.openArea(k); } } else go(to, true);
     going = false; cur = where(); sync();
   }
   // every icon is the dashboard's chip (Matt, 9 Nov: "make it all the same"): HomeCore fills, fits and colours them
@@ -164,7 +168,11 @@ export function mountDemoShell(root, { getHass, homecore }) {
     } else {
       if (inSettings) $('homeNav').click();
       if (HOMECORE_PAGES.has(route)) { showPage(null); if (homecore.page !== route) homecore.openArea(route); }
-      else { if (homecore.page) homecore.closeArea(); showPage(route === 'home' ? null : route, again); }
+      else {
+        if (homecore.page) homecore.closeArea();
+        if (BOARDS.has(route)) homecore.setOverview(route === 'home');
+        showPage(BOARDS.has(route) ? null : route, again);
+      }
     }
     if (outer) { going = false; cur = where(); }
     sync();
@@ -174,10 +182,10 @@ export function mountDemoShell(root, { getHass, homecore }) {
   function sync() {
     // HomeCore opened a page itself (the weather card, a room): remember where from; back on Home: a fresh start
     const now = where();
-    if (!going && now !== cur) { if (now === 'home') trail = []; else trail.push(cur); cur = now; }
+    if (!going && now !== cur) { if (BOARDS.has(now)) trail = []; else trail.push(cur); cur = now; }
     app.classList.toggle('hcNoBack', !trail.length);
     const open = settingsView.classList.contains('active') ? 'settings'
-      : HOMECORE_PAGES.has(homecore.page) ? homecore.page : pageOn || 'home';
+      : HOMECORE_PAGES.has(homecore.page) ? homecore.page : pageOn || board();
     const lit = MORE.some(([k]) => k === open) ? 'more' : open === 'about' ? 'config' : open;
     root.querySelectorAll('.hcRail [data-hc-go],.hcRail [data-hc-more]').forEach((b) => {
       const on = (b.dataset.hcGo || 'more') === lit;
@@ -206,7 +214,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   root.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-hc-back],[data-area-back],#settingsBack');
     if (!b) return;
-    if (b.matches('[data-hc-back]') || (trail.length && trail[trail.length - 1] !== 'home') || b.id === 'settingsBack') { ev.stopImmediatePropagation(); ev.preventDefault(); back(); }
+    if (b.matches('[data-hc-back]') || (trail.length && !BOARDS.has(trail[trail.length - 1])) || b.id === 'settingsBack') { ev.stopImmediatePropagation(); ev.preventDefault(); back(); }
   }, true);
 
   // a card's title that opens a page of its own (Home's Activity): from another page, so with ‹ back; not while editing

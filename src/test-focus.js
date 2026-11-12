@@ -1650,10 +1650,15 @@ export function mountTestFocus(root, { config, getHass }) {
     out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
     // the summaries: a row of their own, the bar only as wide as its tiles
     if (sums.length) out.push({ key: 'sums', wrap: (inner) => '<div class="tfDashBarRow" data-tf data-k="sums">' + dashWrap('tfDash-bar', 'sums-bar', 'Summaries', false)(inner).replace(' data-tf', '') + '</div>', tiles: sums.map((s) => ({ key: 'sum:' + s.key, html: summaryRow(s) })) });
-    if (areasShown().length) out.push({ key: 'areas', html: areasHtml(0) });
+    if (!overview && areasShown().length) out.push({ key: 'areas', html: areasHtml(0) });
     // what you've starred always shows, from any room; only the suggestions that fill the card keep to the dashboard's rooms
     const favs = dashFavourites();
     if (favs.length) out.push({ key: 'favs', wrap: dashWrap('tfDash-favs', 'favs', 'Favourites', true), tiles: favs.map((id) => ({ key: 'fav:' + id, html: deviceRow(id, { area: true }) })) });
+    if (overview) {
+      dashTileIds(0).forEach((id) => out.push({ key: 'dash:tile:' + id, wrap: (inner) => '<div class="tfDashTiles" data-tf data-k="dash:tile:' + esc(id) + '">' + inner + '</div>',
+        tiles: [{ key: id, html: roomTile(roomOf(id), id) }] }));
+      return out;
+    }
     const items = activityItems();
     // HomeCore demo: its title opens the Activity page (Matt, 9 Nov), as Favourites' title opens its own view
     out.push({ key: 'dash:act', html: card('dash:act', 0, 'Activity', items.length ? items.map(activityRow) : ['<p class="tfDashNone">Nothing has changed in the last day.</p>'], '', null, 'tfDashCard tfDash-act')
@@ -1715,7 +1720,20 @@ export function mountTestFocus(root, { config, getHass }) {
   };
   // a card the page hasn't offered before starts off the board, waiting in the edit tray (known: the ones it has)
   // a layout saved for this board's width (the demo's defaults have one for six columns) stands in for the main one
-  const dashPrefs = () => {
+  /* HomeCore demo (12 Nov): Home is the overview, much like Home Assistant's default page today (Matt's grab): the name,
+     the summaries, each area's tile at L and Favourites at L, laid out the same for everyone and not edited. The board
+     you edit is Dashboards (the site's rail) */
+  let overview = true;
+  const OVERVIEW_ROOMS = ['living_room', 'kitchen', 'bedroom', 'bathroom', 'balcony', 'office'];
+  const overviewRooms = () => [...areaRooms].sort((a, b) => ((OVERVIEW_ROOMS.indexOf(a.id) + 1) || 99) - ((OVERVIEW_ROOMS.indexOf(b.id) + 1) || 99));
+  function overviewPrefs() {
+    const rooms = overviewRooms().map((r) => 'room:' + r.id), cells = { favs: { col: 3, row: 0 } };
+    rooms.forEach((k, i) => { cells[k] = i < 3 ? { col: i, row: 0 } : i < 6 ? { col: i - 3, row: 4 } : { col: (i - 6) % 6, row: 8 + 4 * Math.floor((i - 6) / 6) }; });
+    return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', 'sums', 'favs'].includes(k)),
+      opts: { favs: { h: 4 }, ...Object.fromEntries(rooms.map((k) => [k, { h: 4 }])) }, tiles: rooms, known: NEW_CARDS, areasOff: [] };
+  }
+  const dashPrefs = () => (overview ? overviewPrefs() : boardPrefs());
+  const boardPrefs = () => {
     let d = { cells: {}, spans: {}, hidden: [], opts: {}, ...(prefs.dash || {}) };
     const alt = d.byPegs?.[dashCols()];
     if (alt) d = { ...d, cells: alt.cells || d.cells, spans: alt.spans || d.spans };
@@ -1723,7 +1741,7 @@ export function mountTestFocus(root, { config, getHass }) {
     return fresh.length ? { ...d, hidden: [...d.hidden, ...fresh] } : d;
   };
   // what's saved is the visitor's own layout from then on, at every width (the per-width defaults go)
-  function saveDash(next) { const { byPegs: _defaults, ...own } = next; prefs = { ...prefs, dash: { ...own, known: NEW_CARDS } }; savePrefs(); }
+  function saveDash(next) { if (overview) return; const { byPegs: _defaults, ...own } = next; prefs = { ...prefs, dash: { ...own, known: NEW_CARDS } }; savePrefs(); }
   // what's on the board: each card's key, its element, its width in pegs ('full' the whole width) and whether it's a tile
   function boardItems() {
     const q = (sel) => grid.querySelector(sel);
@@ -1836,6 +1854,8 @@ export function mountTestFocus(root, { config, getHass }) {
     // a phone is the same board two columns wide (Matt, 1 Nov: one rule everywhere, so Smalls stack beside a Medium
     // there too), its cards in the phone's order and not edited there
     const W = grid.clientWidth, phone = W < 2 * PEG + PEG_GAP, board = app.classList.contains('tfDash');
+    if (overview) editing = false;
+    app.classList.toggle('tfOverview', overview);
     const { n, w } = phone ? { n: 2, w: Math.floor((W - PEG_GAP) / 2) } : pegsFor(W);
     // the Weather page is laid on the same board, its columns the dashboard's (Matt, 1 Nov: one rule set)
     bentoBox.classList.add('tfPegs');
@@ -1848,7 +1868,7 @@ export function mountTestFocus(root, { config, getHass }) {
     app.classList.toggle('tfBoard', board);
     app.classList.toggle('tfEditing', board && editing && !phone);
     const pen = $('dashEditNav');
-    if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', editing ? 'Done editing' : 'Edit the dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
+    if (pen) { pen.hidden = !board || phone || overview; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', editing ? 'Done editing' : 'Edit the dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
     if (!board) {
       grid.style.height = '';
@@ -2791,7 +2811,7 @@ export function mountTestFocus(root, { config, getHass }) {
     wrap.querySelectorAll('[data-icon-for]').forEach((slot) => { const el = !slot.firstElementChild && drawn.get(slotKey(slot))?.shift(); if (el) slot.appendChild(el); });
     grid.append(...wrap.children);
     placeBento(out.weather);
-    placeDash(true);
+    placeDash(!overview);
     itemSizes.disconnect();
     layoutBoard();
     fillIcons(grid);
@@ -3531,6 +3551,15 @@ export function mountTestFocus(root, { config, getHass }) {
     openArea, closeArea,
     get page() { return areaPage; },
     get model() { return model; },
+    // Home (the overview) or Dashboards (the board you edit): the same view, its own cards
+    get overview() { return overview; },
+    setOverview(on) {
+      if (overview === on) return;
+      if (editing) setEditing(false);
+      overview = on;
+      lastPlaced = new Map();
+      if (testFocus && grid) render();
+    },
     // every icon on the demo's pages is the dashboard's chip (Matt, 9 Nov: "make it all the same"): a device's icon slot
     // and its colour while on, any colour by the same rule, and the filling and fitting of the glyphs
     chip(id) { const c = kindRgb(id); return iconSlot(id, iconFor(id)) + (c ? ' data-light style="' + colourVars(c) + '"' : ''); },
@@ -3570,7 +3599,7 @@ export function mountTestFocus(root, { config, getHass }) {
       suspended = false;
       if (!testFocus || !grid?.querySelector('[data-tf]')) return;
       if (bentoBox.isConnected) placeBento(bentoBox.style.order);
-      placeDash(true);
+      placeDash(!overview);
     },
   };
 }
