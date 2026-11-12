@@ -1231,7 +1231,7 @@ export function mountTestFocus(root, { config, getHass }) {
   // suggestions on, suggestions from the dashboard's rooms to fill the card
   const suggestOn = () => prefs.suggest ?? !haHome.hide_suggested_entities;
   function dashFavourites() {
-    const hidden = new Set(prefs.favHidden || []), stars = starred().filter((id) => !hidden.has(id));
+    const hidden = new Set(overview ? [] : prefs.favHidden || []), stars = starred().filter((id) => !hidden.has(id));
     const fill = suggestOn() ? suggestionIds().filter((id) => !hidden.has(id) && dashLight(id)) : [];
     return [...stars, ...fill].slice(0, DASH_FAVOURITES);
   }
@@ -1282,7 +1282,9 @@ export function mountTestFocus(root, { config, getHass }) {
       out.push(it);
     });
     keys.forEach((key) => { if (!seen.has(key)) out.push({ type: 'summary', key }); });
-    return out;
+    // the order picked in Edit Home page
+    const order = prefs.sumOrder || [], at = (it) => (it.type === 'summary' && order.includes(it.key) ? order.indexOf(it.key) : order.length);
+    return order.length ? out.map((it, i) => [it, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(([it]) => it) : out;
   }
   // Maintenance (Matt, 29 Oct): counted as Home Assistant counts it (batteries at 20% or under that aren't charging,
   // battery and problem sensors that are on, any of them unavailable), plus plants that need care and a vacuum that's
@@ -1335,7 +1337,7 @@ export function mountTestFocus(root, { config, getHass }) {
       vacuum: vac.length && { value: cap(states[vac[0]].state), groups: [{ name: 'Vacuum', ids: vac }] },
     };
   }
-  function summaryData() {
+  function summaryData(every = false) {
     const rooms = model.rooms, sec = model.security, of = (r, re) => r.actions.filter((id) => re.test(id));
     const groups = (pick) => rooms.map((r) => ({ name: r.name, ids: pick(r) })).filter((g) => g.ids.length);
     const lights = rooms.flatMap((r) => r.lights), lit = lights.filter((id) => states[id]?.state === 'on').length;
@@ -1363,7 +1365,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (active.length) out.push({ key: 'alerts', name: 'Alerts', icon: 'mdi:alarm-plus', colour: '#f44336', value: count(active.length, 'active alert', 'active alerts'), groups: [{ name: 'Active', ids: active.map((x) => x.entity) }] });
     shortcutItems().forEach((it) => {
       if (it.type !== 'summary') out.push({ key: 'path:' + it.path, name: it.label || it.path, icon: it.icon || 'mdi:link-variant', colour: '', value: '' });
-      else if (!it.hidden && all[it.key] && sumOn(it.key)) out.push({ key: it.key, ...SUMMARIES[it.key], ...all[it.key] });
+      else if (!it.hidden && all[it.key] && (every || sumOn(it.key))) out.push({ key: it.key, ...SUMMARIES[it.key], ...all[it.key] });
     });
     return out;
   }
@@ -1397,7 +1399,7 @@ export function mountTestFocus(root, { config, getHass }) {
     ]);
     // edit mode's old choices (sections, order, sizes…) are left behind: the page is laid out as Home Assistant has it
     const v = mine?.value || {};
-    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
+    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, sumOrder: v.sumOrder, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded };
     haHome = home?.value || {};
     haSecurity = security?.value || {};
     predicted = Array.isArray(usage?.entities) ? usage.entities : [];
@@ -1724,13 +1726,16 @@ export function mountTestFocus(root, { config, getHass }) {
      the summaries, each area's tile at L and Favourites at L, laid out the same for everyone and not edited. The board
      you edit is Dashboards (the site's rail) */
   let overview = true;
+  // Home's own spacing (Matt, 12 Nov): the name further from the summaries, and Favourites' rows further apart (Matt's
+  // reference: 89 a row). Only Home: Dashboards keeps the board's
+  const HOME_SPACE = { titleGap: 28, favRow: 88 };
   const OVERVIEW_ROOMS = ['living_room', 'kitchen', 'bedroom', 'bathroom', 'balcony', 'office'];
   const overviewRooms = () => [...areaRooms].sort((a, b) => ((OVERVIEW_ROOMS.indexOf(a.id) + 1) || 99) - ((OVERVIEW_ROOMS.indexOf(b.id) + 1) || 99));
   function overviewPrefs() {
     const rooms = overviewRooms().map((r) => 'room:' + r.id), cells = { favs: { col: 3, row: 0 } };
-    rooms.forEach((k, i) => { cells[k] = i < 3 ? { col: i, row: 0 } : i < 6 ? { col: i - 3, row: 4 } : { col: (i - 6) % 6, row: 8 + 4 * Math.floor((i - 6) / 6) }; });
+    rooms.forEach((k, i) => { cells[k] = i < 3 ? { col: i, row: 0 } : i < 6 ? { col: i - 3, row: 5 } : { col: (i - 6) % 6, row: 10 + 5 * Math.floor((i - 6) / 6) }; });
     return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', 'sums', 'favs'].includes(k)),
-      opts: { favs: { h: 4 }, ...Object.fromEntries(rooms.map((k) => [k, { h: 4 }])) }, tiles: rooms, known: NEW_CARDS, areasOff: [] };
+      opts: { favs: { h: 5 }, ...Object.fromEntries(rooms.map((k) => [k, { h: 5 }])) }, tiles: rooms, known: NEW_CARDS, areasOff: [] };
   }
   const dashPrefs = () => (overview ? overviewPrefs() : boardPrefs());
   const boardPrefs = () => {
@@ -1868,7 +1873,7 @@ export function mountTestFocus(root, { config, getHass }) {
     app.classList.toggle('tfBoard', board);
     app.classList.toggle('tfEditing', board && editing && !phone);
     const pen = $('dashEditNav');
-    if (pen) { pen.hidden = !board || phone || overview; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', editing ? 'Done editing' : 'Edit the dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
+    if (pen) { pen.hidden = !board || (phone && !overview); pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit the dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
     if (!board) {
       grid.style.height = '';
@@ -1895,7 +1900,7 @@ export function mountTestFocus(root, { config, getHass }) {
       if (bar) bar.style.maxWidth = 'none';
       for (let rows = 1; bar && rows <= count; rows++) { bar.style.setProperty('--bar-cols', String(Math.ceil(count / rows))); if (bar.offsetWidth <= W) break; }
       if (bar) bar.style.maxWidth = '';
-      top += it.el.offsetHeight + PEG_GAP;
+      top += it.el.offsetHeight + (overview && it.key === 'title' ? HOME_SPACE.titleGap : PEG_GAP);
     });
     boardTop = top;
     const cards = shown.filter((it) => !HEAD.includes(it.key));
@@ -1934,7 +1939,7 @@ export function mountTestFocus(root, { config, getHass }) {
       // at XS a card has no title: its one row of tiles is the card
       // measured to the list's real top, rounded down: whole pixels (offsetTop) overshot by a fraction and made it scroll
       const below = list.getBoundingClientRect().top - card.getBoundingClientRect().top;
-      const space = p.rows === 1 ? p.h : Math.floor(p.h - below - parseFloat(getComputedStyle(card).paddingBottom)), n = Math.max(1, Math.floor(space / FILL_MIN));
+      const space = p.rows === 1 ? p.h : Math.floor(p.h - below - parseFloat(getComputedStyle(card).paddingBottom)), n = Math.max(1, Math.floor(space / (overview && key === 'favs' ? HOME_SPACE.favRow : FILL_MIN)));
       list.style.setProperty('--fill-row', (space / n).toFixed(2) + 'px');
       list.style.maxHeight = space + 'px';
     });
@@ -2314,6 +2319,103 @@ export function mountTestFocus(root, { config, getHass }) {
       .sort((a, b) => (whereIs.get(a) || '~').localeCompare(whereIs.get(b) || '~') || nameOf(a).localeCompare(nameOf(b))).slice(0, 40);
     return ids.map((id) => '<li><button class="tfTrayPickItem" type="button" ' + attr + '="' + esc(id) + '"><span class="tfIcon"' + iconSlot(id, iconFor(id)) + '></span>' +
       trayName(id, whereIs.get(id) || '—') + '</button></li>').join('') || '<li class="tfTrayNote">Nothing matches.</li>';
+  }
+  /* Edit Home page (Matt, 12 Nov: "the same edit capabilities as the current HA default dashboard"): Home Assistant's
+     Edit Overview page dialog in HomeCore's parts. Its favourites (drag to order, remove, add), Suggested entities, and
+     the summaries (drag to order, each on or off); Cancel or Save, as Home Assistant. Not yet: the Welcome message (Matt
+     will describe it) and Add shortcut */
+  function openHomeEdit() {
+    app.querySelector('.hcHomeEdit')?.remove();
+    const was = root.activeElement;
+    const start = { favs: starred(), suggest: suggestOn(), order: summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key), on: Object.fromEntries(Object.keys(SUMMARIES).map((k) => [k, sumOn(k)])) };
+    const d = { favs: [...start.favs], suggest: start.suggest, order: [...start.order], on: { ...start.on } };
+    let picking = false;
+    const sw = (on, label, attr) => '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '" ' + attr + '></button>';
+    const grip = (label) => '<button class="tfTrayBtn hcHeGrip" type="button" data-he-grip aria-label="Move ' + esc(label) + '. Use the up and down arrows">' + GRIP + '</button>';
+    const favLi = (id) => '<li class="hcHeRow" data-he-id="' + esc(id) + '">' + grip(nameOf(id)) + '<span class="tfIcon"' + iconSlot(id, iconFor(id)) + '></span>' +
+      trayName(id, whereIs.get(id) || valueOf(id)) + '<button class="tfTrayBtn" type="button" data-he-remove="' + esc(id) + '" aria-label="Remove ' + esc(nameOf(id)) + ' from favourites">' + CROSS + '</button></li>';
+    const sumLi = (k) => { const x = SUMMARIES[k]; return '<li class="hcHeRow hcHeSum" data-he-id="' + esc(k) + '"' + (x.colour && sumInk(x.colour) ? ' style="' + sumInk(x.colour).slice(1) + '"' : '') + '>' + grip(x.name) +
+      '<span class="tfIcon"' + iconSlot('', x.icon, x.name) + '></span><span class="activityRowName">' + esc(x.name) + '</span>' + sw(d.on[k], x.name, 'data-he-sum="' + esc(k) + '"') + '</li>'; };
+    const sec = (key, icon, title, sub, body) => '<section class="hcHeSec" data-he-sec="' + key + '"><button class="hcHeSecHead" type="button" aria-expanded="true">' +
+      '<span class="tfIcon" data-icon-for="" data-icon-name="' + icon + '"></span><span class="tfTrayName"><span class="activityRowName">' + title + '</span><span class="activityRowMeta">' + sub + '</span></span>' +
+      '<span class="hcHeChevron" aria-hidden="true">' + CHEVRON + '</span></button><div class="hcHeSecBody">' + body + '</div></section>';
+    app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcHomeEdit"><div class="tfMore hcHomeEditCard" role="dialog" aria-modal="true" aria-labelledby="hcHeTitle">' +
+      '<div class="hcHeHead"><button class="tfTrayBtn" type="button" data-he-cancel aria-label="Close">' + CROSS + '</button><div><div class="hcHeTitle" id="hcHeTitle">Edit Home page</div>' +
+      '<p class="hcHeSub">Configure your Home page display preferences.</p></div></div>' +
+      '<p class="hcHeInfo">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>' +
+      '<div class="hcHeScroll">' +
+      sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
+        '<div class="sectionLabel">Favourite entities</div><ul class="tfTrayList hcHeList" data-he-list="favs"></ul>' +
+        '<button class="pill tfTrayAdd" type="button" data-he-add aria-expanded="false">Add favourite</button>' +
+        '<div class="tfTrayPick" data-he-pick hidden><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search><ul class="tfTrayList" data-he-list="pick"></ul></div>' +
+        '<div class="hcHeToggle"><div><div class="activityRowName">Suggested entities</div><div class="activityRowMeta">Show entities you often use alongside your favourites.</div></div>' + sw(d.suggest, 'Suggested entities', 'data-he-suggest') + '</div>') +
+      sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.', '<ul class="tfTrayList hcHeList" data-he-list="sums"></ul>') +
+      '</div><div class="hcOopsActions"><button class="pill" type="button" data-he-cancel>Cancel</button><button class="primary" type="button" data-he-save disabled>Save</button></div></div></div>');
+    const pop = app.querySelector('.hcHomeEdit'), card = pop.querySelector('.hcHomeEditCard'), list = (k) => pop.querySelector('[data-he-list="' + k + '"]');
+    const changed = () => JSON.stringify(d) !== JSON.stringify(start);
+    const draw = () => {
+      list('favs').innerHTML = d.favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>';
+      list('sums').innerHTML = d.order.map(sumLi).join('');
+      pop.querySelector('[data-he-pick]').hidden = !picking;
+      pop.querySelector('[data-he-add]').setAttribute('aria-expanded', String(picking));
+      if (picking) list('pick').innerHTML = pickHtml(pop.querySelector('[data-he-search]').value, (id) => PICK_DOMAINS.test(id), new Set(d.favs), 'data-he-pick-id');
+      pop.querySelector('[data-he-save]').disabled = !changed();
+      fillIcons(pop);
+    };
+    const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
+    const save = () => {
+      prefs = { ...prefs, favourites: d.favs, suggest: d.suggest, sumOrder: d.order,
+        hiddenSums: Object.keys(SUMMARIES).filter((k) => !EXTRA_SUMS.includes(k) && !d.on[k]), shownSums: EXTRA_SUMS.filter((k) => d.on[k]) };
+      savePrefs(); close(); refresh(); toast('Changes saved');
+    };
+    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); if (picking) { picking = false; draw(); } else close(); } };
+    root.addEventListener('keydown', onKey, true);
+    // a row moves up or down its list: its grip dragged, or the arrows on it
+    const arr = (ul) => (ul.dataset.heList === 'favs' ? d.favs : d.order);
+    const move = (ul, from, to) => { const a = arr(ul); if (to < 0 || to >= a.length || to === from) return false; a.splice(to, 0, a.splice(from, 1)[0]); return true; };
+    pop.addEventListener('keydown', (ev) => {
+      const g = ev.target.closest('[data-he-grip]'); if (!g || !['ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+      ev.preventDefault();
+      const li = g.closest('[data-he-id]'), ul = li.parentElement, i = [...ul.children].indexOf(li);
+      if (move(ul, i, i + (ev.key === 'ArrowUp' ? -1 : 1))) { draw(); list(ul.dataset.heList).querySelector('[data-he-id="' + CSS.escape(li.dataset.heId) + '"] [data-he-grip]').focus(); }
+    });
+    pop.addEventListener('pointerdown', (ev) => {
+      const g = ev.target.closest('[data-he-grip]'); if (!g || ev.button !== 0) return;
+      ev.preventDefault();
+      const li = g.closest('[data-he-id]'), ul = li.parentElement;
+      li.classList.add('moving');
+      const onMove = (e) => {
+        const rows = [...ul.children].filter((x) => x !== li), next = rows.find((x) => { const r = x.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+        if (next !== li.nextElementSibling) ul.insertBefore(li, next || null);
+      };
+      const onUp = () => {
+        removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp);
+        li.classList.remove('moving');
+        const ids = [...ul.children].map((x) => x.dataset.heId).filter(Boolean);
+        arr(ul).splice(0, arr(ul).length, ...ids);
+        draw();
+      };
+      addEventListener('pointermove', onMove); addEventListener('pointerup', onUp);
+    });
+    pop.addEventListener('input', (ev) => { if (ev.target.matches('[data-he-search]')) draw(); });
+    pop.addEventListener('click', (ev) => {
+      const t = ev.target;
+      if (t === pop || t.closest('[data-he-cancel]')) { close(); return; }
+      if (t.closest('[data-he-save]')) { if (changed()) save(); return; }
+      const head = t.closest('.hcHeSecHead');
+      if (head) { const open = head.getAttribute('aria-expanded') !== 'true'; head.setAttribute('aria-expanded', String(open)); head.nextElementSibling.hidden = !open; return; }
+      const rm = t.closest('[data-he-remove]');
+      if (rm) { d.favs = d.favs.filter((x) => x !== rm.dataset.heRemove); draw(); return; }
+      if (t.closest('[data-he-add]')) { picking = !picking; draw(); if (picking) pop.querySelector('[data-he-search]').focus({ preventScroll: true }); return; }
+      const pick = t.closest('[data-he-pick-id]');
+      if (pick) { d.favs.push(pick.dataset.hePickId); picking = false; pop.querySelector('[data-he-search]').value = ''; draw(); return; }
+      const sg = t.closest('[data-he-suggest]');
+      if (sg) { d.suggest = !d.suggest; sg.classList.toggle('on', d.suggest); sg.setAttribute('aria-checked', String(d.suggest)); draw(); return; }
+      const sm = t.closest('[data-he-sum]');
+      if (sm) { const k = sm.dataset.heSum; d.on[k] = !d.on[k]; draw(); }
+    });
+    draw();
+    card.querySelector('[data-he-cancel]').focus({ preventScroll: true });
   }
   function renderTray() {
     const show = editing && app.classList.contains('tfBoard');
@@ -3536,7 +3638,7 @@ export function mountTestFocus(root, { config, getHass }) {
     root.getElementById('homeNav')?.addEventListener('click', () => { if (areaPage) closeArea(); });
     // the dashboard's edit mode: the pencil in the bottom bar, and dragging on the board
     root.querySelector('.bottomNav')?.insertAdjacentHTML('beforeend', '<button class="navBtn" id="dashEditNav" type="button" title="Edit" aria-label="Edit the dashboard" aria-pressed="false" hidden>' + PENCIL + '</button>');
-    $('dashEditNav')?.addEventListener('click', () => setEditing(!editing));
+    $('dashEditNav')?.addEventListener('click', () => (overview ? openHomeEdit() : setEditing(!editing)));
     grid.addEventListener('pointerdown', boardDown);
     // the dashboard's bottom row holds as many tiles as fit, and its rows are measured again as the page changes size
     new ResizeObserver(() => { if (app.classList.contains('tfDash') && dashCols() !== dashColsSeen) refresh(); else queueFit(); }).observe(grid);

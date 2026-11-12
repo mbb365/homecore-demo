@@ -898,3 +898,44 @@ button.tfAreaIcon{cursor:pointer}
 /* a room's page: two columns that stack on their own (rows 1 px, each item spans its height; test-focus.js stack()) */
 #homeView .grid.tfStack{grid-auto-rows:1px;row-gap:0}
 #homeView .grid.tfStack>*{align-self:start}
+
+/* ---------- Home, the overview (Matt, 12 Nov) ----------
+   Its own spacing, never the custom dashboards' (Dashboards keeps the board's): the page further off the corner, as
+   Matt's reference (the name 87 down, 44 in from the rail), Favourites' rows further apart and the summaries' icons
+   without their chip */
+@media (min-width:621px){
+  #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,87px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
+}
+#app.tfOverview.tfDash #homeView .tfDash-favs{padding:24px 18px 18px}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{padding-left:23px;padding-right:23px}
+#app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
+
+/* Edit Home page: Home Assistant's Edit Overview page, in HomeCore's popup */
+.hcHomeEdit{z-index:300}
+.hcHomeEditCard{width:560px;max-height:calc(100dvh - 32px);padding:20px;gap:14px;overflow:hidden}
+.hcHeHead{display:flex;align-items:flex-start;gap:10px}
+.hcHeTitle{font:500 28px/1.15 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+.hcHeSub{margin:4px 0 0;font:400 14px/1.4 var(--font);color:var(--muted)}
+.hcHeInfo{margin:0;padding:12px 16px;border-radius:var(--r-inner);background:var(--tile);font:400 14px/1.45 var(--font);color:var(--text)}
+.hcHeLink{display:inline;min-height:0;padding:0;border:0;background:none;font:inherit;color:var(--primary);text-decoration:underline;cursor:pointer}
+.hcHeScroll{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;margin:0 -4px;padding:0 4px}
+.hcHeSec{border-radius:var(--r-inner);background:var(--tile)}
+.hcHeSecHead{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr) 24px;align-items:center;gap:12px;width:100%;min-height:0;padding:10px 14px 10px 10px;border:0;background:none;color:var(--text);text-align:start;cursor:pointer}
+.hcHeSec .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+.hcHeChevron{display:grid;place-items:center;color:var(--muted);transform:rotate(-90deg);transition:transform .18s ease}
+.hcHeChevron svg{width:20px;height:20px}
+.hcHeSecHead[aria-expanded="false"] .hcHeChevron{transform:rotate(90deg)}
+.hcHeSecBody{display:flex;flex-direction:column;gap:8px;padding:0 10px 14px}
+.hcHeSecBody[hidden]{display:none}
+.hcHeSecBody>.sectionLabel{padding:4px 6px 0}
+.hcHeList{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.hcHeRow{display:grid;grid-template-columns:36px var(--chip-size) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:var(--tile-min);padding:0 4px;border-radius:var(--r-tile)}
+.hcHeRow.moving{background:var(--card);box-shadow:var(--hc-hair-all)}
+.hcHeGrip{color:var(--muted);cursor:grab;touch-action:none}
+.hcHeSum .tfIcon{color:var(--sum-ink,var(--hc-icon-ink))}
+#app.house .hcHeSum{--sum-ink:var(--sum-d,var(--hc-icon-ink))}
+#app.house.light .hcHeSum{--sum-ink:var(--sum-l,var(--hc-icon-ink))}
+.hcHeToggle{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 6px 0}
+.hcHeToggle .activityRowMeta{white-space:normal}
+@media(max-width:620px){#app .hcHomeEditCard{width:100%;max-height:calc(100dvh - 16px)}}
+.hcHeSecHead .tfTrayName>*{white-space:normal}
