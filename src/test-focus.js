@@ -1254,7 +1254,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const hidden = new Set(overview ? [] : prefs.favHidden || []), stars = starred().filter((id) => !hidden.has(id));
     const fill = suggestOn() ? suggestionIds().filter((id) => !hidden.has(id) && dashLight(id)) : [];
     // Home's card grows with its favourites, so every one shows there (as Move Assistant v0.85.0); as a strip, ten
-    return overview && !favsStrip() ? [...stars, ...fill] : [...stars, ...fill].slice(0, DASH_FAVOURITES);
+    return overview && !favsStripNow() ? [...stars, ...fill] : [...stars, ...fill].slice(0, DASH_FAVOURITES);
   }
   // starred first, then suggestions up to 8
   function favouriteIds(most = 8) {
@@ -2097,7 +2097,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // the summaries (and Favourites as a strip) as wide as five of Matt's columns, or the page where it's narrower
     const gridW = Math.min(W, HOME.full);
     let top = 0;
-    const strip = favsStrip();
+    const strip = favsStripNow();
     app.classList.toggle('hcSumsFit', sumsFit());
     app.classList.toggle('hcFavStrip', strip);
     const heads = shown.filter((it) => HEAD.includes(it.key) || (strip && it.key === 'favs'));
@@ -2696,6 +2696,10 @@ export function mountTestFocus(root, { config, getHass }) {
   // a strip under the summaries, the same pattern as theirs
   const sumsFit = () => prefs.home?.sumsWidth === 'fit';
   const favsStrip = () => prefs.home?.favsAs === 'strip';
+  // Side stacks every card that isn't an area down the left, so there Favourites is always its card (Matt, 12 Nov: "it
+  // should be stacking the non area elements to the left"); on a phone Side is Rows, and the strip stays
+  const homeSide = () => overview && areaLayout() === 'side' && !!grid && grid.clientWidth >= 2 * PEG + PEG_GAP;
+  const favsStripNow = () => favsStrip() && !homeSide();
   const homeSeg = (label, attr, value, opts) => '<div class="hcHeLine hcHeChoiceLine"><span class="activityRowName">' + label + '</span><div class="themeChoice hcHeChoice" role="group" aria-label="' + esc(label) + '">' +
     opts.map(([v, text]) => '<button class="wxLayoutBtn" type="button" ' + attr + '="' + v + '" aria-pressed="' + (value === v) + '">' + text + '</button>').join('') + '</div></div>';
   const homeSumOrder = () => summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key);
