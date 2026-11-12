@@ -1022,12 +1022,9 @@ button.tfAreaIcon{cursor:pointer}
 }
 /* Home's floors (Matt, 12 Nov), as Home Assistant's Areas dashboard groups areas: each floor's icon and name over its
    areas */
-#app.tfOverview.tfBoard #homeView .hcFloor{position:absolute;z-index:1;display:flex;align-items:center;gap:8px;height:24px;margin:0;box-sizing:border-box}
+#app.tfOverview.tfBoard #homeView .hcFloor{position:absolute;z-index:1;display:flex;align-items:center;height:24px;margin:0;box-sizing:border-box}
 /* Bento's floor boxes (Matt, 12 Nov): a faint panel 12 around a floor's name and areas, its corners the cards' and 12 */
 #app.tfOverview.tfBoard #homeView .hcFloorBox{position:absolute;z-index:0;border-radius:40px;background:color-mix(in srgb,var(--text) 5%,transparent);box-sizing:border-box;pointer-events:none}
-/* the floor's icon on its own, no chip behind it, as tall as the name (Matt, 12 Nov: "remove the backgrounds... smaller") */
-#app.tfOverview #homeView .hcFloorIcon{position:relative;width:20px;height:20px;background:none;color:var(--title,var(--text))}
-#app.tfOverview #homeView .hcFloorIcon>.tfAreaGlyph{position:absolute;left:50%;top:50%;translate:-50% -50%} /* the glyph on the box's middle, whatever size it's drawn */
 #app.tfOverview #homeView .hcFloorName{margin:0;font:500 16px/24px var(--font);color:var(--title,var(--text));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* the area cards' sizes (Edit Home page: Small, Medium, Large; Matt, 12 Nov). Large is his Figma card as it was; each
    gives up to 15% on a smaller screen (--hc-k), its reading with it. A card shows what fits: its devices one row, the

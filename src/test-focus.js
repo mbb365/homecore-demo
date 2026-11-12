@@ -733,8 +733,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (!(x2 > x1)) return false;
     const vb = svg.viewBox?.baseVal?.width ? svg.viewBox.baseVal : { x: 0, y: 0, width: 24, height: 24 };
     // a glyph fills its room less 14 (26 in the 40 chip); a bigger room (the sheet's big switch, 240) keeps that share
-    // a floor's icon has no chip, so it fills its own box (Matt, 12 Nov)
-    const target = el.closest('.hcFloorIcon') ? room : room > 40 ? room * (26 / 40) : room - 14, size = (target * vb.width) / Math.max(x2 - x1, y2 - y1), at = size / vb.width;
+    const target = room > 40 ? room * (26 / 40) : room - 14, size = (target * vb.width) / Math.max(x2 - x1, y2 - y1), at = size / vb.width;
     if (el.localName === 'svg') { el.style.width = size + 'px'; el.style.height = size + 'px'; } else el.style.setProperty('--mdc-icon-size', size + 'px');
     svg.style.translate = ((vb.x + vb.width / 2 - (x1 + x2) / 2) * at).toFixed(2) + 'px ' + ((vb.y + vb.height / 2 - (y1 + y2) / 2) * at).toFixed(2) + 'px';
     el.dataset.fitted = key;
@@ -2194,12 +2193,8 @@ export function mountTestFocus(root, { config, getHass }) {
       let head = oldHeads.get(f.id);
       oldHeads.delete(f.id);
       if (!head) { head = Object.assign(document.createElement('div'), { className: 'hcFloor' }); head.dataset.floor = f.id; grid.appendChild(head); }
-      const sig = f.name + '|' + f.icon;
-      if (head.dataset.sig !== sig) {
-        head.dataset.sig = sig;
-        head.innerHTML = '<span class="tfIcon hcFloorIcon" aria-hidden="true"><span class="tfAreaGlyph"' + iconSlot('floor:' + f.id, f.icon, f.name) + '></span></span><h2 class="hcFloorName">' + esc(f.name) + '</h2>';
-        fillIcons(head);
-      }
+      // the floor's name on its own (Matt, 12 Nov: "remove the icon")
+      if (head.dataset.sig !== f.name) { head.dataset.sig = f.name; head.innerHTML = '<h2 class="hcFloorName">' + esc(f.name) + '</h2>'; }
       Object.assign(head.style, { left: x + 'px', top: y + 'px', width: w + 'px' });
       floorHeads.push(head);
     };
