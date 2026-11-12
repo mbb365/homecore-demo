@@ -1165,10 +1165,12 @@ export function mountTestFocus(root, { config, getHass }) {
   }
   let areaRooms = []; // the rooms with area cards, in Matt's order
   // the areas the Areas card shows (Matt, 11 Nov: chosen in the edit tray); one switched off keeps its page and its tile
+  // the area open to start with: the dashboard's (Bedroom in the demo's default, Matt, 12 Nov), else the first
+  const firstArea = (list) => (list.some((r) => r.id === prefs.dash?.openArea) ? prefs.dash.openArea : list[0]?.id) || null;
   const areasShown = () => { const off = new Set(prefs.dash?.areasOff || []); return areaRooms.filter((r) => !off.has(r.id)); };
   const areasHtml = (order) => {
     const shown = areasShown();
-    if (!shown.some((r) => r.id === activeArea)) activeArea = shown[0]?.id || null;
+    if (!shown.some((r) => r.id === activeArea)) activeArea = firstArea(shown);
     return '<div class="tfAreas" data-tf data-k="areas" style="order:' + order + '">' +
       '<section class="workoutGallery tfAreaGallery" aria-label="Areas">' + shown.map(areaPanel).join('') + '</section></div>';
   };
@@ -1407,6 +1409,7 @@ export function mountTestFocus(root, { config, getHass }) {
     haSecurity = security?.value || {};
     predicted = Array.isArray(usage?.entities) ? usage.entities : [];
     suggested = null;
+    if (prefs.dash?.openArea) activeArea = null; // the dashboard's own open area, now it's known
     if (Object.keys(states).length) refresh();
     nameDashboard();
     prefsReady = true;
@@ -3023,7 +3026,7 @@ export function mountTestFocus(root, { config, getHass }) {
     let order = 0;
     const secs = sectionsOf();
     areaRooms = secs.filter((x) => x.room).map((x) => x.room);
-    if (!areaRooms.some((r) => r.id === activeArea)) activeArea = areaRooms[0]?.id || null;
+    if (!areaRooms.some((r) => r.id === activeArea)) activeArea = firstArea(areaRooms);
     // Home is the dashboard (Matt, 27 Oct: no house page any more). A section has its own page: a room's from its area
     // card's Go; its header, then only that section. The weather card opens the Weather
     // page: its header and the whole bento
