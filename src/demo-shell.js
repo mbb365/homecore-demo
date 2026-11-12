@@ -21,7 +21,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Home (the house) is the overview, the simple default page, and Dashboards (Home Assistant's dashboard icon) the board
 // you edit, which was Home (Matt, 12 Nov)
 const BOARDS = new Set(['home', 'dashboards']);
-const RAIL = [['home', 'Home', 'mdi:home'], ['dashboards', 'Dashboards', 'mdi:view-dashboard'], ['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
+// Home's own button went (Matt, 12 Nov): the logo opens Home
+const RAIL = [['dashboards', 'Dashboards', 'mdi:view-dashboard'], ['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
 // HomeCore's own settings are HomeCore settings (Matt, 9 Nov); Home Assistant's Settings has the cog, above you
@@ -69,7 +70,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   app.insertAdjacentHTML('beforeend',
     '<div class="hcDrawer" hidden><div class="hcDrawerPanel" role="dialog" aria-label="Menu">' +
       '<div class="hcDrawerHead"><div class="hcLogo">' + HA_LOGO + '</div><button class="hcRailBtn" type="button" data-hc-close aria-label="Close">' + icon('mdi:close') + '</button></div>' +
-      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + RAIL.map((r) => drawerRow(r)).join('') +
+      drawerRow(['search', 'Search', 'mdi:magnify'], 'data-hc-search') + drawerRow(['home', 'Home', 'mdi:home']) + RAIL.map((r) => drawerRow(r)).join('') +
       '<div class="hcDrawerLine"></div>' + MORE.map((r) => drawerRow(r)).join('') + drawerRow(CONFIG) +
       '<button class="hcRow hcNavRow hcDrawerMe" type="button" data-hc-go="account"><span class="hcNavIcon hcNavMe"><img src="' + avatar + '" alt=""></span><span class="hcRowText"><span class="hcRowName">My account</span></span></button>' +
     '</div></div>' +
