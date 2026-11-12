@@ -1046,3 +1046,7 @@ button.tfAreaIcon{cursor:pointer}
 #app .tfTrayAdd.hcAddBtn svg{width:18px;height:18px;flex:none;fill:currentColor}
 #app .tfTrayAdd.hcAddBtn:hover{background:#0398dc}
 #app .tfTrayAdd.hcAddBtn[aria-expanded="true"]{background:#0288d1}
+/* a fine line between a tray's sections (Matt, 12 Nov) */
+.tfEditTray:not(.hcHomeTray) .tfTraySection+.tfTraySection{padding-top:20px;border-top:1px solid var(--line)}
+#app.hcDemo .tfEditTray:not(.hcHomeTray) .tfTrayInner{gap:20px}
+.hcHeRule{width:100%;height:0;margin:8px 0;border:0;border-top:1px solid var(--line)}

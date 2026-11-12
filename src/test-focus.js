@@ -2547,18 +2547,22 @@ export function mountTestFocus(root, { config, getHass }) {
     homeTray.querySelector('[data-he-body]').innerHTML =
       sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
         '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
+        '<hr class="hcHeRule">' +
         '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
         homeSeg('Show as', 'data-he-favs-as', favsStrip() ? 'strip' : 'card', [['card', 'Card'], ['strip', 'Strip']]) +
         '<ul class="tfTrayList hcHeList" data-he-list="favs">' + (favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>') + '</ul>' +
         '<button class="pill tfTrayAdd hcAddBtn" type="button" data-he-add aria-expanded="' + homePicking + '">' + PLUS + '<span>Add favourite</span></button>' +
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
+'<hr class="hcHeRule">' +
         '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>' +
+'<hr class="hcHeRule">' +
         '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>') +
       sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
         homeSeg('Width', 'data-he-sums-width', sumsFit() ? 'fit' : 'match', [['match', 'Match the cards'], ['fit', 'Fit the summaries']]) +
+        '<hr class="hcHeRule">' +
         '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>', infoBtn('sums')) +
       '<p class="tfTrayNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>';
     fillIcons(homeTray);
