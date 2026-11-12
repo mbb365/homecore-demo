@@ -961,7 +961,10 @@ button.tfAreaIcon{cursor:pointer}
 /* Schedule: its title, then each day's events, scrolling if there are more */
 #app.tfOverview.tfDash #homeView .tfDash-sched{display:flex;flex-direction:column;padding:18px 18px 10px}
 #app.tfOverview.tfDash #homeView .tfDash-sched>.activityHeader{padding:0;margin-bottom:8px}
-.hcSchedList{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;gap:12px}
+/* no scrollbar (Matt, 12 Nov): while there's more below, its lower edge fades out instead */
+.hcSchedList{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:12px}
+.hcSchedList::-webkit-scrollbar{display:none}
+.hcSchedList.hcMore{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent)}
 .hcSchedLabel{padding:4px 0;font:600 14px/20px var(--font-tile);color:var(--muted)}
 .hcSchedDay ul{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
 .hcSchedRow{display:grid;grid-template-columns:64px 4px minmax(0,1fr);align-items:center;gap:12px;min-height:52px}

@@ -2042,6 +2042,8 @@ export function mountTestFocus(root, { config, getHass }) {
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
+  // the Schedule's lower edge fades while there's more below it
+  const schedFade = (el) => el.classList.toggle('hcMore', el.scrollHeight - el.scrollTop - el.clientHeight > 1);
   function layoutHome(items, W, phone) {
     const hidden = new Set(dashPrefs().hidden);
     items.forEach((it) => it.el.classList.toggle('tfBoardHidden', hidden.has(it.key)));
@@ -2118,6 +2120,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // while Edit Home page is open the cards rest: a tap doesn't work their controls or open them
     items.forEach((it) => [...it.el.children].forEach((c) => c.toggleAttribute('inert', homeEditing)));
     drawDashGraph(); // Energy today's hours
+    grid.querySelectorAll('.hcSchedList').forEach(schedFade);
     requestAnimationFrame(() => app.classList.add('tfBoardReady'));
     items.forEach((it) => itemSizes.observe(it.el));
     renderTray();
@@ -3867,6 +3870,7 @@ export function mountTestFocus(root, { config, getHass }) {
     $('dashEditNav')?.addEventListener('click', () => (overview ? setHomeEditing(!homeEditing) : setEditing(!editing)));
     grid.addEventListener('pointerdown', boardDown);
     grid.addEventListener('pointerdown', homeDown);
+    grid.addEventListener('scroll', (ev) => { if (ev.target.classList?.contains('hcSchedList')) schedFade(ev.target); }, true);
     grid.addEventListener('click', (ev) => { if (overview && homeEditing && ev.target.closest('.tfBoardItem')) { ev.preventDefault(); ev.stopPropagation(); } }, true);
     // the dashboard's bottom row holds as many tiles as fit, and its rows are measured again as the page changes size
     new ResizeObserver(() => { if (app.classList.contains('tfDash') && dashCols() !== dashColsSeen) refresh(); else queueFit(); }).observe(grid);
