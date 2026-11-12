@@ -929,9 +929,9 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfRoomTile{padding:18px;gap:0;border-radius:28px}
 #app.tfOverview.tfDash #homeView .tfRoomTile>.tfActionHead{margin-bottom:0}
 #app.tfOverview.tfDash #homeView .tfRoomTile .tfActionHead .activityRowMeta{display:none}
-#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-top:31px;gap:0}
-#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomBig{font:400 64px/64px var(--font-tile);letter-spacing:-1.92px}
-#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomSub{display:block;font:400 16px/19px var(--font)}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-top:35px;gap:0} /* the reading 48 on a 64 line, 93 down; its second line 150 down (Matt's Figma, 12 Nov) */
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomBig{font:400 48px/64px var(--font-tile);letter-spacing:-1.92px}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomSub{display:block;margin-top:-7px;font:400 16px/19px var(--font)}
 #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:flex;justify-content:space-between;margin-top:auto;padding-top:16px}
 #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomHeads{display:none}
 #app.tfOverview.tfDash #homeView .tfRoomTile:not(:has(.tfRoomDevices :nth-child(4))) .tfRoomDevices{justify-content:flex-start;gap:18.67px}
@@ -958,11 +958,8 @@ button.tfAreaIcon{cursor:pointer}
 .hcHeChoice.themeChoice{display:inline-flex;flex-wrap:nowrap;height:32px;padding:3px;gap:3px;box-sizing:border-box;border-radius:16px;background:var(--control-2,var(--hc-icon))}
 #app .hcHeChoice>button{height:26px!important;min-height:0;padding:0 12px;border:0;border-radius:13px!important;background:none;color:var(--text);font:600 12px/16px var(--font-tile)!important;white-space:nowrap}
 #app .hcHeChoice>button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all)}
-/* phones: an area card is half the width, so its devices sit two to a row and its reading is Dashboards' narrow size
-   (Matt, 12 Nov) */
+/* phones: an area card is half the width, so its devices sit two to a row (the 48 reading fits as it is) (Matt, 12 Nov) */
 @media (max-width:620px){
-  #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomBig{font-size:46px;line-height:46px;letter-spacing:-.92px}
-  #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-top:24px}
   #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:grid;grid-template-columns:repeat(2,max-content);gap:12px;justify-content:start}
 }
 /* Edit Home page open: Home's cards move by dragging, as Dashboards' do */
