@@ -24,7 +24,9 @@ const S = { h: 2 }, L = { h: 4 };
 export const USER_DATA = {
   move_assistant_house: {
     favourites: ['climate.made_up_living_room', 'cover.made_up_living_room_curtains', 'valve.made_up_balcony_watering', 'lock.openable_lock',
-      'light.green_wavy_light', 'light.fire_place_lamp', 'light.living_room', 'light.office_2'],
+      'light.green_wavy_light', 'light.fire_place_lamp', 'light.living_room', 'light.office_2',
+      // and two more (Matt, 12 Nov): Home's Favourites card shows four rows, the fifth under a fade
+      'light.kitchen_spots', 'humidifier.made_up_bedroom'],
     favSeeded: true,
     shownSums: ['covers', 'people'],
     dash: {

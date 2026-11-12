@@ -84,6 +84,8 @@ const DOTS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16,12A2,2 0 
 const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
 const EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
 const CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>';
+// a tray's Add… button: a plus before its words (Matt, 12 Nov: "proper buttons with a plus icon")
+const PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>';
 const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // a stroke icon on the 24 grid
 const svgIcon = (paths) => '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">' + paths.map((d) => '<path d="' + d + '"/>').join('') + '</svg>';
@@ -1690,7 +1692,7 @@ export function mountTestFocus(root, { config, getHass }) {
     (titled ? '<div class="activityHeader">' + (key === 'favs' ? '<button class="activityTitle tfTitleBtn" type="button" data-more="favourites" aria-label="Favourites. More info">' + label + '</button>' : '<div class="activityTitle">' + label + '</div>') + '</div>' : '') + '<div class="activityRows">' + inner + '</div></section>';
   function dashboard(out, sums) {
     out.dash = true;
-    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + (overview && welcomeOn() ? '<span class="tfGreeting">' + esc(greeting()) + '</span>' : '') + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
+    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + ((overview ? welcomeOn() : dashPrefs().welcome) ? '<span class="tfGreeting">' + esc(greeting()) + '</span>' : '') + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
     // the summaries: a row of their own, the bar only as wide as its tiles
     if (sums.length) out.push({ key: 'sums', wrap: (inner) => '<div class="tfDashBarRow" data-tf data-k="sums">' + dashWrap('tfDash-bar', 'sums-bar', 'Summaries', false)(inner).replace(' data-tf', '') + '</div>', tiles: sums.map((s) => ({ key: 'sum:' + s.key, html: summaryRow(s) })) });
     if (!overview && areasShown().length) out.push({ key: 'areas', html: areasHtml(0) });
@@ -2045,7 +2047,7 @@ export function mountTestFocus(root, { config, getHass }) {
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
-  // the Schedule's lower edge fades while there's more below it
+  // Schedule's and Favourites' lower edge fades while there's more below (no scrollbar: Matt, 12 Nov)
   const schedFade = (el) => el.classList.toggle('hcMore', el.scrollHeight - el.scrollTop - el.clientHeight > 1);
   function layoutHome(items, W, phone) {
     const hidden = new Set(dashPrefs().hidden);
@@ -2124,7 +2126,8 @@ export function mountTestFocus(root, { config, getHass }) {
     // while Edit Home page is open the cards rest: a tap doesn't work their controls or open them
     items.forEach((it) => [...it.el.children].forEach((c) => c.toggleAttribute('inert', homeEditing)));
     drawDashGraph(); // Energy today's hours
-    grid.querySelectorAll('.hcSchedList').forEach(schedFade);
+    grid.querySelector('.tfDash-favs>.activityRows')?.classList.toggle('hcFadeList', !strip);
+    grid.querySelectorAll('.hcSchedList, .hcFadeList').forEach(schedFade);
     requestAnimationFrame(() => app.classList.add('tfBoardReady'));
     items.forEach((it) => itemSizes.observe(it.el));
     renderTray();
@@ -2457,18 +2460,19 @@ export function mountTestFocus(root, { config, getHass }) {
   tray.setAttribute('aria-label', 'Edit the dashboard');
   tray.innerHTML = '<button class="tfTrayTuck" type="button" data-tray-tuck></button>' +
     '<div class="tfTrayInner"><div class="tfTrayHead"><div class="activityTitle">Edit dashboard</div><button class="pill" type="button" data-tray-done>Done</button></div>' +
+    '<section class="tfTraySection" data-tray="welcome"></section>' +
     '<section class="tfTraySection" data-tray="cards"></section>' +
     '<section class="tfTraySection" data-tray="weather"></section>' +
     '<section class="tfTraySection"><div class="sectionLabel">Tiles</div><p class="tfTrayNote">Remove a tile from its ⋯.</p>' +
-    '<button class="pill tfTrayAdd" type="button" data-tile-add aria-expanded="false">Add tile</button>' +
+    '<button class="pill tfTrayAdd hcAddBtn" type="button" data-tile-add aria-expanded="false">' + PLUS + '<span>Add tile</span></button>' +
     '<div class="tfTrayPick" data-pick="tiles" hidden><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-tile-search>' +
     '<ul class="tfTrayList" data-tray="tilepick"></ul></div></section>' +
     '<section class="tfTraySection"><div class="sectionLabel">Areas</div><p class="tfTrayNote">One area on its own, instead of all of them in the Areas card.</p>' +
-    '<button class="pill tfTrayAdd" type="button" data-room-add aria-expanded="false">Add area</button>' +
+    '<button class="pill tfTrayAdd hcAddBtn" type="button" data-room-add aria-expanded="false">' + PLUS + '<span>Add area</span></button>' +
     '<ul class="tfTrayList" data-tray="roompick" hidden></ul></section>' +
     '<section class="tfTraySection" data-tray="phone"></section>' +
     '<section class="tfTraySection"><div class="sectionLabel">Favourites</div><ul class="tfTrayList" data-tray="favs"></ul>' +
-    '<button class="pill tfTrayAdd" type="button" data-fav-add aria-expanded="false">Add favourite</button>' +
+    '<button class="pill tfTrayAdd hcAddBtn" type="button" data-fav-add aria-expanded="false">' + PLUS + '<span>Add favourite</span></button>' +
     '<div class="tfTrayPick" data-pick="favs" hidden><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-fav-search>' +
     '<ul class="tfTrayList" data-tray="pick"></ul></div><div class="toggleRow tfTraySuggest" data-tray="suggest"></div></section></div>';
   app.appendChild(tray);
@@ -2546,7 +2550,7 @@ export function mountTestFocus(root, { config, getHass }) {
         '<div class="hcHeLabel"><span class="activityRowName">Favourite entities</span>' + infoBtn('favs') + '</div>' +
         homeSeg('Show as', 'data-he-favs-as', favsStrip() ? 'strip' : 'card', [['card', 'Card'], ['strip', 'Strip']]) +
         '<ul class="tfTrayList hcHeList" data-he-list="favs">' + (favs.map(favLi).join('') || '<li class="tfTrayNote">No favourites yet.</li>') + '</ul>' +
-        '<button class="pill tfTrayAdd" type="button" data-he-add aria-expanded="' + homePicking + '">Add favourite</button>' +
+        '<button class="pill tfTrayAdd hcAddBtn" type="button" data-he-add aria-expanded="' + homePicking + '">' + PLUS + '<span>Add favourite</span></button>' +
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
         '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>' +
@@ -2666,6 +2670,9 @@ export function mountTestFocus(root, { config, getHass }) {
     const trayCard = (k, verb) => '<button class="tfTrayCard" type="button" data-tray-card="' + esc(k) + '" aria-label="' + esc(boardName(k)) + ': drag it onto the board, or press to ' + verb + '">' +
       '<span class="tfTrayGrip" aria-hidden="true">' + GRIP + '</span>' + esc(boardName(k)) + '</button>';
     const cardsOff = hiddenCards.filter((k) => !WIDGETS.includes(k)), widgetsOff = WIDGETS.filter((k) => hiddenCards.includes(k));
+    // the welcome message, as on Home (Matt, 12 Nov: "a greeting option to the custom dashboard"); off to start with
+    trayPut('welcome', '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') +
+      '<button class="switch' + (dashPrefs().welcome ? ' on' : '') + '" type="button" role="switch" aria-checked="' + !!dashPrefs().welcome + '" aria-label="Welcome message" data-dash-welcome></button></div>');
     trayPut('cards', '<div class="sectionLabel">Hidden and new cards</div>' + (cardsOff.length ? '<div class="tfTrayCards">' + cardsOff.map((k) => trayCard(k, 'put it back')).join('') + '</div>' : '<p class="tfTrayNote">Cards you hide, and new ones, wait here.</p>'));
     // the Weather page's widgets that aren't on the board (Matt, 11 Nov); one hidden from its ⋯ comes back here
     trayPut('weather', '<div class="sectionLabel">Weather</div>' + (widgetsOff.length ? '<p class="tfTrayNote">The Weather page\'s widgets. Drag one onto the board, or press to add it.</p><div class="tfTrayCards">' +
@@ -2706,6 +2713,8 @@ export function mountTestFocus(root, { config, getHass }) {
     const t = ev.target.closest('button');
     if (!t) return;
     if (t.hasAttribute('data-tray-done')) setEditing(false);
+    else if (t.hasAttribute('data-info')) openInfo(t);
+    else if (t.hasAttribute('data-dash-welcome')) { const d = dashPrefs(); saveDash({ ...d, welcome: !d.welcome }); refresh(); renderTray(); }
     else if (t.hasAttribute('data-tray-tuck')) { trayTucked = !trayTucked; renderTray(); }
     else if (t.hasAttribute('data-phone-toggle')) { phoneShown = !phoneShown; renderTray(); if (phoneShown) phone.querySelector('[data-phone-key]')?.focus({ preventScroll: true }); }
     else if (t.dataset.trayCard) { if (ev.detail === 0) { showCard(t.dataset.trayCard); renderTray(); } } // a press from the keyboard; a pointer's is its drag
@@ -3874,7 +3883,7 @@ export function mountTestFocus(root, { config, getHass }) {
     $('dashEditNav')?.addEventListener('click', () => (overview ? setHomeEditing(!homeEditing) : setEditing(!editing)));
     grid.addEventListener('pointerdown', boardDown);
     grid.addEventListener('pointerdown', homeDown);
-    grid.addEventListener('scroll', (ev) => { if (ev.target.classList?.contains('hcSchedList')) schedFade(ev.target); }, true);
+    grid.addEventListener('scroll', (ev) => { if (ev.target.classList?.contains('hcSchedList') || ev.target.classList?.contains('hcFadeList')) schedFade(ev.target); }, true);
     grid.addEventListener('click', (ev) => { if (overview && homeEditing && ev.target.closest('.tfBoardItem')) { ev.preventDefault(); ev.stopPropagation(); } }, true);
     // the dashboard's bottom row holds as many tiles as fit, and its rows are measured again as the page changes size
     new ResizeObserver(() => { if (app.classList.contains('tfDash') && dashCols() !== dashColsSeen) refresh(); else queueFit(); }).observe(grid);

@@ -923,7 +923,9 @@ button.tfAreaIcon{cursor:pointer}
 /* Favourites: no title, two columns of tiles 60 tall and 25 apart */
 #app.tfOverview.tfDash #homeView .tfDash-favs{padding:10px;border-radius:var(--r-card)}
 #app.tfOverview.tfDash #homeView .tfDash-favs>.activityHeader{display:none}
-#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:60px;row-gap:25px;max-height:none;margin:0;overflow:hidden}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:60px;row-gap:25px;max-height:100%;margin:0;overflow-y:auto;scrollbar-width:none}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows::-webkit-scrollbar{display:none}
+.hcFadeList.hcMore{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent)}
 #app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{height:60px;min-height:0;padding:10px;box-sizing:border-box}
 /* an area: the Living Room card (Figma 1063:13192). 18 in, its reading under its name, its devices in one row along
    the foot */
@@ -1038,3 +1040,9 @@ button.tfAreaIcon{cursor:pointer}
 #app.light{--title:#55504a}
 #app.light :is(.activityTitle,.hcCardTitle,.wbTitle,.activityRowName,.hcRowName,.wbName){color:var(--title)}
 #app.light .tfRoomTile .tfActionHead .activityRowName{color:var(--text)}
+/* a tray's Add… button: a plus before its words, on the tray's tile colour, as tall as a segmented control (32) and as wide
+   as its words (Matt, 12 Nov) */
+#app .tfTrayAdd.hcAddBtn{display:inline-flex;align-items:center;gap:6px;height:32px;min-height:0;padding:0 14px 0 10px;border:0;border-radius:16px!important;background:var(--hc-icon);color:var(--text);font:600 14px/20px var(--font-tile)}
+#app .tfTrayAdd.hcAddBtn svg{width:18px;height:18px;flex:none;fill:currentColor}
+#app .tfTrayAdd.hcAddBtn:hover{background:color-mix(in srgb,var(--hc-icon) 80%,var(--text))}
+#app .tfTrayAdd.hcAddBtn[aria-expanded="true"]{background:var(--text);color:var(--card)}
