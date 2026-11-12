@@ -2024,7 +2024,7 @@ export function mountTestFocus(root, { config, getHass }) {
      (on phones as tall as it needs), 20 apart; the summaries as wide as the cards. Favourites and the weather card are two
      columns, each area one: Favourites, three areas, the weather, three more, then the rest */
   // a two-column card is two columns and 16 (520 at 252), as Matt drew Favourites and the weather
-  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, row: 337, nameGap: 28, sumsGap: 16, full: 1336, floorTop: 12, floorHead: 28, floorGap: 16 };
+  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, row: 337, nameGap: 28, sumsGap: 16, full: 1336, floorTop: 12, floorHead: 24, floorGap: 16 };
   /* the area cards' size, picked in Edit Home page (Matt, 12 Nov: "change the size of the area cards", Small, Medium or
      Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
   const AREA_SIZES = { s: { w: 160, h: 192 }, m: { w: 200, h: 240 }, l: { w: 252, h: 337 } };
