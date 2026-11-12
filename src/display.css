@@ -1040,9 +1040,9 @@ button.tfAreaIcon{cursor:pointer}
 #app.light{--title:#55504a}
 #app.light :is(.activityTitle,.hcCardTitle,.wbTitle,.activityRowName,.hcRowName,.wbName){color:var(--title)}
 #app.light .tfRoomTile .tfActionHead .activityRowName{color:var(--text)}
-/* a tray's Add… button: a plus before its words, on the tray's tile colour, as tall as a segmented control (32) and as wide
-   as its words (Matt, 12 Nov) */
-#app .tfTrayAdd.hcAddBtn{display:inline-flex;align-items:center;gap:6px;height:32px;min-height:0;padding:0 14px 0 10px;border:0;border-radius:16px!important;background:var(--hc-icon);color:var(--text);font:600 14px/20px var(--font-tile)}
+/* a tray's Add… button: a plus before its words, in Home Assistant's blue (#03a9f4, its primary colour), no underline, with
+   room around it; as tall as a segmented control (32) and as wide as its words (Matt, 12 Nov) */
+#app .tfTrayAdd.hcAddBtn{display:inline-flex;align-items:center;gap:6px;height:32px;min-height:0;margin:10px 0 12px;padding:0 16px 0 12px;border:0;border-radius:16px!important;background:#03a9f4;color:#ffffff;font:600 14px/20px var(--font-tile);text-decoration:none!important}
 #app .tfTrayAdd.hcAddBtn svg{width:18px;height:18px;flex:none;fill:currentColor}
-#app .tfTrayAdd.hcAddBtn:hover{background:color-mix(in srgb,var(--hc-icon) 80%,var(--text))}
-#app .tfTrayAdd.hcAddBtn[aria-expanded="true"]{background:var(--text);color:var(--card)}
+#app .tfTrayAdd.hcAddBtn:hover{background:#0398dc}
+#app .tfTrayAdd.hcAddBtn[aria-expanded="true"]{background:#0288d1}
