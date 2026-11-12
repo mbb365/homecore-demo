@@ -2029,7 +2029,7 @@ export function mountTestFocus(root, { config, getHass }) {
      Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
   const AREA_SIZES = { s: { w: 160, h: 192 }, m: { w: 200, h: 240 }, l: { w: 252, h: 337 } };
   const areaSize = () => (AREA_SIZES[prefs.home?.areaSize] ? prefs.home.areaSize : 'm');
-  const areaLayout = () => (['rows', 'columns', 'bento'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
+  const areaLayout = () => (['rows', 'columns', 'bento', 'side'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
   // Home's areas by floor, top floor first, as Home Assistant's Areas dashboard groups them; an area with no floor goes
   // last, under Other areas (with no floors at all, the areas without a name over them)
   const FLOOR_ICON = { 0: 'mdi:home-floor-0', 1: 'mdi:home-floor-1', 2: 'mdi:home-floor-2', 3: 'mdi:home-floor-3', '-1': 'mdi:home-floor-negative-1' };
@@ -2133,26 +2133,33 @@ export function mountTestFocus(root, { config, getHass }) {
       Object.assign(it.el.style, { left: box.x + 'px', top: box.y + 'px' });
     };
     const tw = phone ? W : Math.round((2 * HOME.col + HOME.inner) * k), th = Math.round(HOME.row * k);
-    let x = 0, rowH = 0;
+    // Side (Matt, 12 Nov, as Move Assistant v0.86.0): the cards that aren't areas stacked down the left, a column 520
+    // wide, and the areas in rows to its right, each floor under the last; the page as tall as the taller side. On a
+    // phone, or with nothing but areas, as Rows
+    const side = areaLayout() === 'side' && !phone && tops.length > 0;
+    let x = 0, rowH = 0, colB = top;
     tops.forEach((it) => {
       it.el.classList.add('tfBoardItem');
       it.el.dataset.rows = 5; it.el.dataset.cols = 2; it.el.toggleAttribute('data-narrow', false);
-      if (x && x + tw > W) { top += rowH + gap; x = 0; rowH = 0; }
+      if (!side && x && x + tw > W) { top += rowH + gap; x = 0; rowH = 0; }
       // Favourites (as a card) is as tall as its favourites need: whole rows of tiles, two across, so one is one row and
       // nine are five, nothing to fade or scroll (Matt, 12 Nov, as Move Assistant v0.85.0; it was 337 whatever the count).
       // The others 337 as drawn; on a phone each as tall as it needs
       let h = th;
       if (phone || it.key === 'favs') { Object.assign(it.el.style, { width: tw + 'px', height: '' }); h = it.el.offsetHeight; }
+      if (side) { put(it, { x: 0, y: colB, w: tw, h }); colB += h + gap; return; }
       put(it, { x, y: top, w: tw, h });
       x += tw + gap; rowH = Math.max(rowH, h);
     });
-    if (tops.length) top += rowH + gap;
+    if (tops.length && !side) top += rowH + gap;
+    // the areas' part of the page: all of it, or in Side what's right of the column
+    const aX = side ? tw + gap : 0, aW = side ? W - tw - gap : W;
     /* the areas (Edit Home page, Matt, 12 Nov): grouped by floor or not, laid out as Rows (each floor's name, then its
        areas a row at a time), Columns (a column per floor, side by side) or Bento, where each floor can be a box the
        boxes fitting together, and each floor's first area can be big (two by two, its devices by name) */
     const size = areaSize(), dims = AREA_SIZES[size], lay = areaLayout(), byFloor = prefs.home?.byFloor !== false;
     const cw = phone ? Math.floor((W - gap) / 2) : Math.round(dims.w * k), ch = Math.round(dims.h * k);
-    const n = phone ? 2 : Math.max(1, Math.floor((W + gap) / (cw + gap)));
+    const n = phone ? 2 : Math.max(1, Math.floor((aW + gap) / (cw + gap)));
     const roomEls = new Map(shown.filter((it) => isRoomKey(it.key)).map((it) => [it.key, it]));
     const groupsAll = byFloor ? floorGroups() : [{ id: '', name: '', icon: '', rooms: overviewRooms() }];
     const floors = groupsAll.map((f) => ({ ...f, cards: f.rooms.map((r) => roomEls.get('room:' + r.id)).filter(Boolean) })).filter((f) => f.cards.length);
@@ -2211,7 +2218,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // in a floor's box its name starts where its areas' icons do (Matt, 12 Nov), the cards' own padding in
     const cardPad = (f) => parseFloat(getComputedStyle(f.cards[0].el).paddingLeft) || 0;
     const place = (f, g, x0, y0, indent = 0) => { headAt(f, x0 + indent, y0, (g.w ?? W) - indent); g.places.forEach((p) => put(p.it, { x: x0 + p.x, y: y0 + p.y, w: p.w, h: p.h })); };
-    if (floors.length && tops.length) top += HOME.floorTop;
+    if (floors.length && tops.length && !side) top += HOME.floorTop;
     if (columns) {
       // a column per floor, as wide as a card, side by side; more floors than fit go on under the tallest
       let x = 0, rowB = top;
@@ -2244,10 +2251,11 @@ export function mountTestFocus(root, { config, getHass }) {
       floors.forEach((f, i) => {
         if (i) top += HOME.floorTop;
         const g = pack(f, n, cw);
-        place(f, { ...g, w: W }, 0, top);
+        place(f, { ...g, w: aW }, aX, top);
         top += g.h + gap;
       });
     }
+    if (side) top = Math.max(top, colB);
     oldHeads.forEach((el) => el.remove());
     oldBoxes.forEach((el) => el.remove());
     if (!homeDrag?.on) homeLand(null);
@@ -2710,7 +2718,7 @@ export function mountTestFocus(root, { config, getHass }) {
         '<hr class="hcHeRule">' +
         // the areas: by floor or not, their layout, Bento's two ways, their size (Matt, 12 Nov)
         '<div class="hcHeLine"><span class="activityRowName">Group by floor</span>' + sw(prefs.home?.byFloor !== false, 'Group by floor', 'data-he-flag="byFloor"') + '</div>' +
-        homeSeg('Layout', 'data-he-area-layout', areaLayout(), [['rows', 'Rows'], ['columns', 'Columns'], ['bento', 'Bento']]) +
+        homeSeg('Layout', 'data-he-area-layout', areaLayout(), [['rows', 'Rows'], ['columns', 'Columns'], ['bento', 'Bento'], ['side', 'Side']]) +
         (areaLayout() === 'bento' ? '<div class="hcHeLine"><span class="activityRowName">Floors as boxes</span>' + sw(prefs.home?.bentoBoxes !== false, 'Floors as boxes', 'data-he-flag="bentoBoxes"') + '</div>' +
           '<div class="hcHeLine"><span class="activityRowName">Mixed sizes</span>' + sw(prefs.home?.bentoMixed !== false, 'Mixed sizes', 'data-he-flag="bentoMixed"') + '</div>' : '') +
         homeSeg('Area cards', 'data-he-area-size', areaSize(), [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]),
