@@ -279,6 +279,8 @@
 /* a popup holds the page behind it still: its own scrolling stops at its ends (and test-focus.js stops the rest) */
 .tfMoreBackdrop,.tfMore,.tfMoreSideInner,.tfMoreSideBody{overscroll-behavior:contain}
 .tfMoreBackdrop[hidden]{display:none}
+/* the popup a device was opened from, parked under the device's (Matt, 11 Nov): where it was, inert, dimmed by the top one */
+.tfMoreBackdrop.tfMoreUnder{z-index:179;pointer-events:none}
 .tfMore{flex:none;width:440px;max-width:100%;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--r-card);background:var(--card);box-shadow:var(--hc-hair-all)}
 .tfMoreHead{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
 .tfMoreState{font:500 28px/1.15 var(--font-tile);letter-spacing:-.01em}
@@ -289,9 +291,50 @@
 .tfMoreRow{display:flex;justify-content:space-between;gap:16px;padding:10px 0;box-shadow:inset 0 -.4px 0 var(--line);font:400 14px/20px var(--font)}
 .tfMoreRow span:first-child{color:var(--muted)}
 .tfMoreNote{color:var(--muted);font:400 12px/16px var(--font)}
-@media(max-width:620px){.tfMoreBackdrop{place-items:end stretch;padding:0}.tfMorePair{width:100%;max-height:85vh}.tfMore{width:100%;border-radius:var(--r-card) var(--r-card) 0 0}}
+/* phones: the sheet, at the end of this file (Matt, 11 Nov) */
 @media(max-width:1199px) and (min-width:901px){.tfCard{grid-column:span 6}.tfBlock{grid-column:span 12}}
 @media(max-width:900px){.tfCard,.tfBlock{grid-column:auto}}
+
+/* a device's popup as a tile (Matt, 10 Nov; Figma 1004:8984): its head (icon, name, area), then two pages one height,
+   swiped or clicked across: the big space (corner 16, 224 tall at the drawn 274) and the controls; Info and its device
+   page. Dots under them say which page */
+.tfMoreTileHead .tfName{display:grid;flex:1;min-width:0;cursor:default}
+.tfMoreTileHead :is(.activityRowName,.activityRowMeta){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfMoreTileHead .tfIcon{border:0;padding:0;background:var(--hc-icon);color:var(--hc-icon-ink);cursor:pointer}
+.tfMoreTileHead div.tfIcon{cursor:default}
+.tfMoreTileHead.on[data-light] .tfIcon{background:var(--light-soft);color:var(--light-ink)}
+.tfMoreTileHead.on[data-tone="alarm"] .tfIcon{background:#e53935;color:#ffffff}
+.tfMorePages{display:grid;grid-auto-flow:column;grid-auto-columns:100%;align-items:start;gap:20px;flex:none;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;transition:height .25s cubic-bezier(.2,.7,.3,1)}
+@media(prefers-reduced-motion:reduce){.tfMorePages{transition:none}}
+.tfMorePages::-webkit-scrollbar{display:none}
+.tfMorePage{display:flex;flex-direction:column;gap:14px;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+/* the space (Matt, 10 Nov): left largely undefined for contributors; for now the main number (the area card's 64) at
+   the top and the basic facts spread under it, the stack filling the space's height */
+.tfMoreSpace{flex:none;display:flex;flex-direction:column;justify-content:space-between;gap:12px;height:224px;padding:18px;border-radius:16px;background:var(--tile);overflow:hidden}
+/* a visual controller that is the space itself (a cover's drawing, the Dual Axis Controller's pad; Matt, 10 Nov: no
+   grey box round it): no fill, the drawing scaled to the space's height and centred */
+.tfMoreSpace.tfMoreFill{justify-content:center;align-items:center;height:auto;padding:0;background:none;border-radius:0}
+/* the drawing as wide as the popup allows (Matt, 10 Nov: scaled up), square */
+.tfMoreSpace.tfMoreFill>.tfCoverArt{width:100%;height:auto;max-width:none;align-self:center}
+.tfMoreSpace.tfMoreFill>.tfDacPad{width:100%;height:100%}
+.tfMoreBig{display:flex;align-items:baseline;min-width:0;font:500 64px/1 var(--font-tile);letter-spacing:-.03em;white-space:nowrap}
+.tfMoreBig.live{color:var(--primary)}
+.tfMoreNum{overflow:hidden;text-overflow:ellipsis}
+.tfMoreUnit{margin-inline-start:6px;font-size:24px;letter-spacing:0}
+.tfMoreFacts{display:flex;flex:1;flex-direction:column;justify-content:space-evenly;min-height:0}
+.tfMoreFact{display:flex;justify-content:space-between;gap:16px;font:400 14px/20px var(--font)}
+.tfMoreFact span:first-child{color:var(--muted)}
+.tfMoreFact span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfMoreGraph{display:flex;flex:none;flex-direction:column;gap:6px}
+.tfMoreGraph .tfMoreGroupName{margin:0}
+.tfMoreGraph .tfGraph.tfDay{width:100%}
+.tfMoreDots{display:flex;flex:none;justify-content:center;gap:4px;margin-top:-4px}
+.tfMoreDots button{display:grid;place-items:center;width:24px;height:24px;min-height:0;padding:0;border:0;background:none;cursor:pointer}
+.tfMoreDots button::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.45;transition:opacity .15s ease,background .15s ease}
+.tfMoreDots button[aria-selected="true"]::before{background:var(--text);opacity:1}
+.tfMoreLink{margin-top:auto}
+.tfMoreLink svg{transform:none!important}
+.tfMorePage .tfMoreRows{flex:none}
 
 /* density overlay (Settings → Appearance → Show density): every display card's height, and how many readings fit on the screen */
 #app.showDensity #homeView :is(.card,.tfAction){position:relative;outline:1px dashed color-mix(in srgb,var(--primary) 70%,transparent);outline-offset:-1px}
@@ -866,11 +909,8 @@ button.tfAreaIcon{cursor:pointer}
 /* widgets with an action zone (Matt, 9 Nov): XL (5 rows) on the Weather page, so the callouts show under the zone;
    on the dashboard L is the zone alone, XL adds the callouts; M shows the three callout lines (Matt, 9 Nov) under the reading; S keeps the reading and its parts as before */
 #app.tfWeatherOpen .tfBento.tfPegs .wbItem[data-xl]{grid-row:span 5}
-/* on a phone the Weather page's half-width widgets are M (3 rows, 212), drawn as the dashboard draws M: the reading where
-   the zone was, its three callout lines under it (Matt, 9 Nov: two columns of XL ran it far too long) */
-#app.tfWeatherOpen .tfBento.tfPegs.tfPhonePegs .wbItem:is([data-xl],[data-size="tile"]){grid-row:span 3}
-#app.tfWeatherOpen .tfBento.tfPhonePegs .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
-#app.tfWeatherOpen .tfBento.tfPhonePegs .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
+/* on a phone the Weather page's widgets keep their full scale, XL with their zone and lines (Matt, 10 Nov: at M they
+   lost their scale and their data) */
 #app.tfBoard .tfDashBento:not([data-rows="5"]) .wbItem[data-xl] .wbCallouts{display:none}
 #app.tfBoard .tfDashBento:is([data-rows="2"],[data-rows="3"]) .wbZone{flex:1;height:auto;background:none;box-shadow:none;padding:0;align-items:flex-start}
 #app.tfBoard .tfDashBento[data-rows="3"] .wbItem[data-xl] .wbCallouts{display:flex;margin-top:0}
@@ -1062,3 +1102,41 @@ button.tfAreaIcon{cursor:pointer}
 /* Edit Home page in tabs, as the dashboard's tray: the note, the tabs, then the open tab's settings */
 .hcHeTabBody{display:flex;flex-direction:column;gap:8px}
 .hcHomeTray .hcTrayTabs{margin:0 0 8px}
+
+/* =========================================================
+   A device's popup is one height on every screen (Matt, 11 Nov; Figma Popup · Sheet, rules popup.device and
+   popup.sheet): 600 (85% of the screen at most), whatever it holds, so its controls are always in the same reach. The
+   data and action space takes the room there is and the controls sit at the bottom, the dots under them; a page with
+   more than fits scrolls inside. A device with no data or action space (a lock, an alarm, a valve) shows its icon,
+   big, as the switch there: the tile's icon button at 240, the same shape (corner 40%, 96: styles.css lets it past
+   the buttons' 16), the glyph keeping its share of the room (26 in 40), toggling like the tile's in the head's colour.
+   Summaries and the favourites list stay as tall as what they hold.
+   ========================================================= */
+#app .tfMoreBackdrop:not(.wide) .tfMore{height:min(600px,85dvh)}
+#app .tfMoreBackdrop:not(.wide) .tfMorePages{flex:1 1 auto;min-height:0;height:auto!important;align-items:stretch}
+#app .tfMoreBackdrop:not(.wide) .tfMorePage{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+#app .tfMoreBackdrop:not(.wide) .tfMorePage[aria-label="Control"]>:first-child{margin-top:auto}
+#app .tfMoreBackdrop:not(.wide) .tfMoreSpace{flex:1 1 auto;height:auto;min-height:224px}
+/* a drawing fits the room both ways (Matt, 11 Nov: the curtains were cut top and bottom on a wider phone): the square
+   cover drawing takes the smaller of the room's width and height; the room is a size container for that */
+#app .tfMoreBackdrop:not(.wide) .tfMoreSpace.tfMoreFill{min-height:0;container-type:size}
+#app .tfMoreBackdrop:not(.wide) .tfMoreSpace.tfMoreFill>.tfCoverArt{width:min(100%,100cqh);height:auto}
+/* a popup's control rows sit 28 apart, twice the page's 14 (Matt, 11 Nov); the space keeps its 14 to the first row */
+.tfMorePage[aria-label="Control"]>:not(.tfMoreSpace,.tfPlantProblem,.tfMoreLink)+:not(.tfMoreSpace,.tfPlantProblem,.tfMoreLink){margin-top:14px}
+.tfMoreSwitch{display:flex;align-items:center;justify-content:center;min-height:0;padding:0;border-radius:0;background:none}
+.tfMoreSwitch .tfIcon{width:min(240px,100%);height:min(240px,100%);aspect-ratio:1;min-height:0;border:0;padding:0;border-radius:40%;background:var(--hc-icon);color:var(--hc-icon-ink);cursor:pointer;--mdc-icon-size:204px}
+.tfMoreSwitch.on[data-light] .tfIcon{background:var(--light-soft);color:var(--light-ink)}
+.tfMoreSwitch.on[data-tone="alarm"] .tfIcon{background:#e53935;color:#ffffff}
+/* phones (Matt, 11 Nov; rule popup.sheet): the popup is a sheet that floats above the bottom of the screen, 16 from
+   the sides and the bottom, every corner 34, with a soft shadow on the dim. A handle 36 × 5 at the top, 10 down, and
+   no Close: flick the handle, the head or the page (at its top) down to hide it */
+@media(max-width:620px){
+  #app .tfMoreBackdrop{place-items:end center;padding:0 16px max(16px,env(safe-area-inset-bottom,0px))}
+  #app .tfMoreBackdrop .tfMorePair{width:100%;max-height:85dvh}
+  #app .tfMoreBackdrop :is(.tfMore,.tfMoreSideInner){width:100%;border-radius:34px;box-shadow:inset 0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.28)}
+  #app .tfMoreBackdrop .tfMore{padding-top:10px;outline:none}
+  #app .tfMoreBackdrop .tfMore::before{content:"";display:block;position:sticky;top:10px;z-index:2;flex:none;width:36px;height:5px;margin:0 auto;border-radius:3px;background:var(--line)}
+  #app .tfMoreBackdrop .tfMore [data-more-close]{display:none}
+}
+/* the demo's own popups (Oops, Search) aren't a device's: they stay as tall as what they hold */
+#app .tfMoreBackdrop:is(.hcOops,.hcSearchPop) .tfMore{height:auto}
