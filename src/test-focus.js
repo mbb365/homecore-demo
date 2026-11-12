@@ -1253,7 +1253,8 @@ export function mountTestFocus(root, { config, getHass }) {
   function dashFavourites() {
     const hidden = new Set(overview ? [] : prefs.favHidden || []), stars = starred().filter((id) => !hidden.has(id));
     const fill = suggestOn() ? suggestionIds().filter((id) => !hidden.has(id) && dashLight(id)) : [];
-    return [...stars, ...fill].slice(0, DASH_FAVOURITES);
+    // Home's card grows with its favourites, so every one shows there (as Move Assistant v0.85.0); as a strip, ten
+    return overview && !favsStrip() ? [...stars, ...fill] : [...stars, ...fill].slice(0, DASH_FAVOURITES);
   }
   // starred first, then suggestions up to 8
   function favouriteIds(most = 8) {
@@ -2137,8 +2138,11 @@ export function mountTestFocus(root, { config, getHass }) {
       it.el.classList.add('tfBoardItem');
       it.el.dataset.rows = 5; it.el.dataset.cols = 2; it.el.toggleAttribute('data-narrow', false);
       if (x && x + tw > W) { top += rowH + gap; x = 0; rowH = 0; }
+      // Favourites (as a card) is as tall as its favourites need: whole rows of tiles, two across, so one is one row and
+      // nine are five, nothing to fade or scroll (Matt, 12 Nov, as Move Assistant v0.85.0; it was 337 whatever the count).
+      // The others 337 as drawn; on a phone each as tall as it needs
       let h = th;
-      if (phone) { Object.assign(it.el.style, { width: tw + 'px', height: '' }); h = it.el.offsetHeight; }
+      if (phone || it.key === 'favs') { Object.assign(it.el.style, { width: tw + 'px', height: '' }); h = it.el.offsetHeight; }
       put(it, { x, y: top, w: tw, h });
       x += tw + gap; rowH = Math.max(rowH, h);
     });
