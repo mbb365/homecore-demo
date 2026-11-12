@@ -3088,14 +3088,19 @@ trailLifeInput.addEventListener('change',()=>saveSetting('trailMaxAge',trailMaxA
 upcomingCountSetting.addEventListener('change',()=>saveSetting('upcomingCount',upcomingVisibleCount));
 
 /* appearance */
+/* Dynamic, the default (Matt, 12 Nov): light while the sun is up, dark after it sets (Home Assistant's sun.sun); without
+   a sun, the device's own light or dark */
+const darkScheme=window.matchMedia?.('(prefers-color-scheme: dark)');
+const sunUp=()=>{let st;try{st=lastStates?.['sun.sun']?.state}catch(_e){/* before the states arrive */}return st?st==='above_horizon':!darkScheme?.matches};
 function applyTheme(theme){
   root.querySelectorAll('.themeBtn').forEach(b=>b.classList.toggle('active',b.dataset.theme===theme));
-  const isLight=theme==='light';
+  const isLight=theme==='light'||(theme==='dynamic'&&sunUp());
   $('app').classList.toggle('light',isLight);
   bridge.setLight(isLight);
   paintWx(root);
 }
-applyTheme(settings().theme||'dark');
+applyTheme(settings().theme||'dynamic');
+darkScheme?.addEventListener?.('change',()=>{if((settings().theme||'dynamic')==='dynamic')applyTheme('dynamic')});
 root.querySelectorAll('.themeBtn').forEach(btn=>btn.addEventListener('click',()=>{
   applyTheme(btn.dataset.theme);
   saveSetting('theme',btn.dataset.theme);
@@ -3732,7 +3737,9 @@ return {
   updateStates(states){
     const weatherChanged=!lastStates||lastStates[sensorEntities.weather]!==states[sensorEntities.weather]
       ||lastStates['sun.sun']?.state!==states['sun.sun']?.state;
+    const sunMoved=lastStates?.['sun.sun']?.state!==states['sun.sun']?.state;
     lastStates=states;
+    if(sunMoved&&(settings().theme||'dynamic')==='dynamic')applyTheme('dynamic');
     renderSensorPickers(states);
     renderActivity(states);
     if(weatherChanged)renderWeather();
