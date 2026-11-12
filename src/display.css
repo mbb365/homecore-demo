@@ -900,12 +900,12 @@ button.tfAreaIcon{cursor:pointer}
 #homeView .grid.tfStack>*{align-self:start}
 
 /* ---------- Home, the overview (Matt, 12 Nov, from his Figma "Home (overview)") ----------
-   Its own cards and spacing, never the custom dashboards' (Dashboards keeps the board's). The greeting lines up with the
-   logo (its middle at the logo's, 40 down), the summaries spread across the cards' width with no chip behind their
+   Its own cards and spacing, never the custom dashboards' (Dashboards keeps the board's). The greeting sits on the
+   logo's foot (its baseline at the bottom of the logo's mark, 50 down: Matt's reference, 12 Nov), the summaries spread across the cards' width with no chip behind their
    icons, Favourites has no title and its tiles 25 apart, an area is its Living Room card and the weather card is the
    refined one */
 @media (min-width:621px){
-  #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,28px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
+  #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,31px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
 }
 #app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
 #app.tfOverview.tfDash #homeView .card.tfDash-bar{width:100%;max-width:none}
@@ -967,6 +967,7 @@ button.tfAreaIcon{cursor:pointer}
 .hcHeRow.moving{background:var(--card);box-shadow:var(--hc-hair-all)}
 .hcHeGrip{color:var(--muted);cursor:grab;touch-action:none}
 .hcHeSum .tfIcon{color:var(--sum-ink,var(--hc-icon-ink))}
+#app .hcHeRow.hcHeSum .tfIcon{background-color:transparent} /* no chip, as on Home (Matt, 12 Nov) */
 #app.house .hcHeSum{--sum-ink:var(--sum-d,var(--hc-icon-ink))}
 #app.house.light .hcHeSum{--sum-ink:var(--sum-l,var(--hc-icon-ink))}
 /* a setting's (i) and its popover (OpenHomeFoundation/roadmap#57): what it does, in a few formatted lines, and Learn more */
