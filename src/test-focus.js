@@ -1938,7 +1938,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (pen && overview) { pen.hidden = !board; if (!homeEditing) { pen.classList.remove('active'); pen.setAttribute('aria-pressed', 'false'); pen.setAttribute('aria-label', 'Edit Home page'); pen.title = 'Edit'; pen.innerHTML = PENCIL; } }
     else if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit custom dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
-    if (!board || !overview) grid.querySelectorAll(':scope > .hcFloor').forEach((el) => el.remove()); // Home's floor names
+    if (!board || !overview) grid.querySelectorAll(':scope > :is(.hcFloor,.hcFloorBox)').forEach((el) => el.remove()); // Home's floor names and boxes
     if (!board) {
       grid.style.height = '';
       grid.querySelectorAll('.tfBoardItem').forEach((el) => { el.classList.remove('tfBoardItem', 'tfBoardHidden'); el.style.left = el.style.top = el.style.width = el.style.height = ''; });
@@ -2028,6 +2028,7 @@ export function mountTestFocus(root, { config, getHass }) {
      Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
   const AREA_SIZES = { s: { w: 160, h: 192 }, m: { w: 200, h: 240 }, l: { w: 252, h: 337 } };
   const areaSize = () => (AREA_SIZES[prefs.home?.areaSize] ? prefs.home.areaSize : 'm');
+  const areaLayout = () => (['rows', 'columns', 'bento'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
   // Home's areas by floor, top floor first, as Home Assistant's Areas dashboard groups them; an area with no floor goes
   // last, under Other areas (with no floors at all, the areas without a name over them)
   const FLOOR_ICON = { 0: 'mdi:home-floor-0', 1: 'mdi:home-floor-1', 2: 'mdi:home-floor-2', 3: 'mdi:home-floor-3', '-1': 'mdi:home-floor-negative-1' };
@@ -2142,45 +2143,111 @@ export function mountTestFocus(root, { config, getHass }) {
       x += tw + gap; rowH = Math.max(rowH, h);
     });
     if (tops.length) top += rowH + gap;
-    const size = areaSize(), dims = AREA_SIZES[size];
+    /* the areas (Edit Home page, Matt, 12 Nov): grouped by floor or not, laid out as Rows (each floor's name, then its
+       areas a row at a time), Columns (a column per floor, side by side) or Bento, where each floor can be a box the
+       boxes fitting together, and each floor's first area can be big (two by two, its devices by name) */
+    const size = areaSize(), dims = AREA_SIZES[size], lay = areaLayout(), byFloor = prefs.home?.byFloor !== false;
     const cw = phone ? Math.floor((W - gap) / 2) : Math.round(dims.w * k), ch = Math.round(dims.h * k);
     const n = phone ? 2 : Math.max(1, Math.floor((W + gap) / (cw + gap)));
     const roomEls = new Map(shown.filter((it) => isRoomKey(it.key)).map((it) => [it.key, it]));
-    const floors = floorGroups().map((f) => ({ ...f, cards: f.rooms.map((r) => roomEls.get('room:' + r.id)).filter(Boolean) })).filter((f) => f.cards.length);
-    const oldHeads = new Map([...grid.querySelectorAll(':scope > .hcFloor')].map((el) => [el.dataset.floor, el]));
-    const floorHeads = [];
-    floors.forEach((f, fi) => {
-      if (f.name) {
-        if (fi || tops.length) top += HOME.floorTop;
-        let head = oldHeads.get(f.id);
-        oldHeads.delete(f.id);
-        if (!head) { head = Object.assign(document.createElement('div'), { className: 'hcFloor' }); head.dataset.floor = f.id; grid.appendChild(head); }
-        const sig = f.name + '|' + f.icon;
-        if (head.dataset.sig !== sig) {
-          head.dataset.sig = sig;
-          head.innerHTML = '<span class="tfIcon hcFloorIcon" aria-hidden="true"><span class="tfAreaGlyph"' + iconSlot('floor:' + f.id, f.icon, f.name) + '></span></span><h2 class="hcFloorName">' + esc(f.name) + '</h2>';
-          fillIcons(head);
-        }
-        Object.assign(head.style, { left: '0px', top: top + 'px', width: W + 'px' });
-        floorHeads.push(head);
-        top += HOME.floorHead + HOME.floorGap;
-      }
-      f.cards.forEach((it) => {
-        it.el.classList.add('tfBoardItem');
-        it.el.classList.remove('hcAreaS', 'hcAreaM', 'hcAreaL');
+    const groupsAll = byFloor ? floorGroups() : [{ id: '', name: '', icon: '', rooms: overviewRooms() }];
+    const floors = groupsAll.map((f) => ({ ...f, cards: f.rooms.map((r) => roomEls.get('room:' + r.id)).filter(Boolean) })).filter((f) => f.cards.length);
+    const bento = lay === 'bento', mixed = bento && prefs.home?.bentoMixed !== false, boxes = bento && byFloor && prefs.home?.bentoBoxes !== false;
+    const columns = lay === 'columns' && byFloor && !phone;
+    const BOX = 12; // a floor's box: 12 around its name and areas, its corners the cards' and 12 (they nest)
+    const headH = (f) => (f.name ? HOME.floorHead + HOME.floorGap : 0);
+    // a group's cards in its own columns (c), each in the first free cell from the top left; a big one two by two (on a
+    // phone the whole width). Gives each card's place inside the group, and the group's height
+    const pack = (f, c, w) => {
+      const taken = new Set(), at = [];
+      f.cards.forEach((it, i) => {
+        const big = mixed && i === 0 && c >= 2 && f.cards.length > 1, sc = big ? 2 : 1, sr = big && !phone ? 2 : 1;
+        it.el.classList.remove('hcAreaS', 'hcAreaM', 'hcAreaL', 'hcAreaBig');
         it.el.classList.add('hcArea' + size.toUpperCase());
+        it.el.classList.toggle('hcAreaBig', big);
         it.el.style.setProperty('--hc-k', String(k));
-        it.el.dataset.rows = 5; it.el.dataset.cols = 1; it.el.toggleAttribute('data-narrow', false);
-        Object.assign(it.el.style, { width: cw + 'px', height: phone ? '' : ch + 'px' });
+        it.el.classList.add('tfBoardItem');
+        it.el.dataset.rows = sr > 1 ? 10 : 5; it.el.dataset.cols = sc; it.el.toggleAttribute('data-narrow', false);
+        for (let r = 0; ; r++) {
+          const c0 = [...Array(Math.max(0, c - sc + 1)).keys()].find((x0) => [...Array(sc).keys()].every((dx) => [...Array(sr).keys()].every((dy) => !taken.has((r + dy) + ',' + (x0 + dx)))));
+          if (c0 != null) { [...Array(sc).keys()].forEach((dx) => [...Array(sr).keys()].forEach((dy) => taken.add((r + dy) + ',' + (c0 + dx)))); at.push({ it, r, c: c0, sc, sr }); break; }
+        }
       });
-      // a phone's row is as tall as its tallest area, measured once they've all let go of their old height
-      const rowHs = [];
-      if (phone) f.cards.forEach((it, i) => { const r = Math.floor(i / n); rowHs[r] = Math.max(rowHs[r] || 0, it.el.offsetHeight); });
-      const rowTop = [];
-      for (let r = 0; r < Math.ceil(f.cards.length / n); r++) { rowTop[r] = top; top += (phone ? rowHs[r] : ch) + gap; }
-      f.cards.forEach((it, i) => { const r = Math.floor(i / n); put(it, { x: (i % n) * (cw + gap), y: rowTop[r], w: cw, h: phone ? rowHs[r] : ch }); });
-    });
+      const rowsN = Math.max(0, ...at.map((p) => p.r + p.sr));
+      // in Bento a card with nothing under it grows down to the group's foot, so the box has no hole (not on a phone,
+      // where each row is as tall as it needs)
+      if (bento && !phone) at.forEach((p) => { while (p.r + p.sr < rowsN && !taken.has((p.r + p.sr) + ',' + p.c) && p.sc === 1) { taken.add((p.r + p.sr) + ',' + p.c); p.sr++; } });
+      at.forEach((p) => Object.assign(p.it.el.style, { width: (p.sc * w + (p.sc - 1) * gap) + 'px', height: phone ? '' : (p.sr * ch + (p.sr - 1) * gap) + 'px' }));
+      // a phone's row as tall as its tallest card, measured once they've all let go of their old height
+      const rowH = [...Array(rowsN)].map(() => (phone ? 0 : ch));
+      if (phone) at.forEach((p) => { rowH[p.r] = Math.max(rowH[p.r], p.it.el.offsetHeight); });
+      const rowY = []; let y = headH(f);
+      rowH.forEach((h, r) => { rowY[r] = y; y += h + gap; });
+      return { h: y - (rowsN ? gap : 0), places: at.map((p) => ({ it: p.it, x: p.c * (w + gap), y: rowY[p.r], w: p.sc * w + (p.sc - 1) * gap, h: rowH.slice(p.r, p.r + p.sr).reduce((a, b) => a + b, 0) + (p.sr - 1) * gap })) };
+    };
+    const oldHeads = new Map([...grid.querySelectorAll(':scope > .hcFloor')].map((el) => [el.dataset.floor, el]));
+    const oldBoxes = new Map([...grid.querySelectorAll(':scope > .hcFloorBox')].map((el) => [el.dataset.floor, el]));
+    const floorHeads = [];
+    const headAt = (f, x, y, w) => {
+      if (!f.name) return;
+      let head = oldHeads.get(f.id);
+      oldHeads.delete(f.id);
+      if (!head) { head = Object.assign(document.createElement('div'), { className: 'hcFloor' }); head.dataset.floor = f.id; grid.appendChild(head); }
+      const sig = f.name + '|' + f.icon;
+      if (head.dataset.sig !== sig) {
+        head.dataset.sig = sig;
+        head.innerHTML = '<span class="tfIcon hcFloorIcon" aria-hidden="true"><span class="tfAreaGlyph"' + iconSlot('floor:' + f.id, f.icon, f.name) + '></span></span><h2 class="hcFloorName">' + esc(f.name) + '</h2>';
+        fillIcons(head);
+      }
+      Object.assign(head.style, { left: x + 'px', top: y + 'px', width: w + 'px' });
+      floorHeads.push(head);
+    };
+    const boxAt = (f, x, y, w, h) => {
+      let box = oldBoxes.get(f.id);
+      oldBoxes.delete(f.id);
+      if (!box) { box = Object.assign(document.createElement('div'), { className: 'hcFloorBox' }); box.dataset.floor = f.id; box.setAttribute('aria-hidden', 'true'); grid.prepend(box); }
+      Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    };
+    const place = (f, g, x0, y0) => { headAt(f, x0, y0, g.w ?? W); g.places.forEach((p) => put(p.it, { x: x0 + p.x, y: y0 + p.y, w: p.w, h: p.h })); };
+    if (floors.length && tops.length) top += HOME.floorTop;
+    if (columns) {
+      // a column per floor, as wide as a card, side by side; more floors than fit go on under the tallest
+      let x = 0, rowB = top;
+      floors.forEach((f) => {
+        const g = { ...pack(f, 1, cw), w: cw };
+        if (x && x + cw > W) { top = rowB + gap + HOME.floorTop; x = 0; }
+        place(f, g, x, top);
+        rowB = Math.max(rowB, top + g.h); x += cw + gap;
+      });
+      top = rowB + gap;
+    } else if (boxes) {
+      // each floor a box, as many cards wide as suits it (two rows for more than three), the boxes fitting together:
+      // each where it sits highest, from the left
+      const colTop = Array(n).fill(top);
+      floors.forEach((f) => {
+        const cells = f.cards.length + (mixed && f.cards.length > 1 ? 3 : 0);
+        const c = phone ? 2 : Math.min(n, Math.max(mixed && f.cards.length > 1 ? 2 : 1, cells <= 3 ? cells : Math.ceil(cells / 2)));
+        const outer = c * (cw + gap) - gap, inner = Math.floor((outer - 2 * BOX - (c - 1) * gap) / c);
+        const g = { ...pack(f, c, inner), w: outer - 2 * BOX };
+        let s0 = 0, best = Infinity;
+        for (let s = 0; s + c <= n; s++) { const t = Math.max(...colTop.slice(s, s + c)); if (t < best) { best = t; s0 = s; } }
+        const x = s0 * (cw + gap), h = g.h + 2 * BOX;
+        boxAt(f, x, best, outer, h);
+        place(f, g, x + BOX, best + BOX);
+        for (let s = s0; s < s0 + c; s++) colTop[s] = best + h + gap;
+      });
+      top = Math.max(...colTop);
+    } else {
+      // Rows: each floor's name, then its areas a row at a time (Bento's big first area too)
+      floors.forEach((f, i) => {
+        if (i) top += HOME.floorTop;
+        const g = pack(f, n, cw);
+        place(f, { ...g, w: W }, 0, top);
+        top += g.h + gap;
+      });
+    }
     oldHeads.forEach((el) => el.remove());
+    oldBoxes.forEach((el) => el.remove());
     if (!homeDrag?.on) homeLand(null);
     grid.style.height = Math.max(0, top - gap) + 'px';
     readingOrder([...shown.filter((it) => HEAD.includes(it.key)).map((it) => it.el), ...tops.map((it) => it.el), ...floorHeads, ...floors.flatMap((f) => f.cards.map((it) => it.el))]);
@@ -2639,6 +2706,11 @@ export function mountTestFocus(root, { config, getHass }) {
         '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>' +
         '<hr class="hcHeRule">' +
+        // the areas: by floor or not, their layout, Bento's two ways, their size (Matt, 12 Nov)
+        '<div class="hcHeLine"><span class="activityRowName">Group by floor</span>' + sw(prefs.home?.byFloor !== false, 'Group by floor', 'data-he-flag="byFloor"') + '</div>' +
+        homeSeg('Layout', 'data-he-area-layout', areaLayout(), [['rows', 'Rows'], ['columns', 'Columns'], ['bento', 'Bento']]) +
+        (areaLayout() === 'bento' ? '<div class="hcHeLine"><span class="activityRowName">Floors as boxes</span>' + sw(prefs.home?.bentoBoxes !== false, 'Floors as boxes', 'data-he-flag="bentoBoxes"') + '</div>' +
+          '<div class="hcHeLine"><span class="activityRowName">Mixed sizes</span>' + sw(prefs.home?.bentoMixed !== false, 'Mixed sizes', 'data-he-flag="bentoMixed"') + '</div>' : '') +
         homeSeg('Area cards', 'data-he-area-size', areaSize(), [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]),
       // Favourites on Home at all (Matt, 12 Nov: "a show favourites toggle")
       favs: '<div class="hcHeLine"><span class="activityRowName">Show favourites</span>' + sw(prefs.home?.favs !== false, 'Show favourites', 'data-he-card="favs"') + '</div>' +
@@ -2746,6 +2818,8 @@ export function mountTestFocus(root, { config, getHass }) {
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     const as = t.closest('[data-he-area-size]'); if (as) { homePrefs({ areaSize: as.dataset.heAreaSize }); return; }
+    const al = t.closest('[data-he-area-layout]'); if (al) { homePrefs({ areaLayout: al.dataset.heAreaLayout }); return; }
+    const fl = t.closest('[data-he-flag]'); if (fl) { const key = fl.dataset.heFlag; homePrefs({ [key]: prefs.home?.[key] === false }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
     const sm = t.closest('[data-he-sum]');
     if (sm) {

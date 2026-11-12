@@ -1023,6 +1023,8 @@ button.tfAreaIcon{cursor:pointer}
 /* Home's floors (Matt, 12 Nov), as Home Assistant's Areas dashboard groups areas: each floor's icon and name over its
    areas */
 #app.tfOverview.tfBoard #homeView .hcFloor{position:absolute;z-index:1;display:flex;align-items:center;gap:12px;height:40px;margin:0;box-sizing:border-box}
+/* Bento's floor boxes (Matt, 12 Nov): a faint panel 12 around a floor's name and areas, its corners the cards' and 12 */
+#app.tfOverview.tfBoard #homeView .hcFloorBox{position:absolute;z-index:0;border-radius:40px;background:color-mix(in srgb,var(--text) 5%,transparent);box-sizing:border-box;pointer-events:none}
 #app.tfOverview #homeView .hcFloorIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
 #app.light.tfOverview #homeView .hcFloorIcon{background-color:#acacac;color:#ffffff}
 #app.tfOverview #homeView .hcFloorName{margin:0;font:500 20px/28px var(--font);color:var(--title,var(--text));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1043,6 +1045,12 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaM,.hcAreaS):not(:has(.tfRoomDevices :nth-child(4))) .tfRoomDevices{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:0 8px;height:var(--chip-size);overflow:hidden;padding-top:0;margin-top:auto}
 #app.tfOverview.tfDash #homeView .tfRoomTile.hcAreaS .tfRoomReading{flex:none}
 #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-bottom:12px} /* the devices at least 12 under it (on a phone the card is only as tall as it needs) */
+/* Bento's big area (two by two): the reading as Large's, its devices by name, two to a row, as Dashboards' wide area tile */
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaS,.hcAreaM,.hcAreaL).hcAreaBig .tfRoomBig{font-size:calc(64px * var(--hc-k,1));line-height:calc(80px * var(--hc-k,1));letter-spacing:-2.56px}
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaS,.hcAreaM,.hcAreaL).hcAreaBig .tfRoomReading{margin-top:calc(35px * var(--hc-k,1))}
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaS,.hcAreaM,.hcAreaL).hcAreaBig .tfRoomSub{display:block}
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaS,.hcAreaM,.hcAreaL).hcAreaBig .tfRoomDevices{display:none!important}
+#app.tfOverview.tfDash #homeView .tfRoomTile:is(.hcAreaS,.hcAreaM,.hcAreaL).hcAreaBig .tfRoomHeads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:auto}
 /* Edit Home page open: the cards above the floors move by dragging, as Dashboards' do; the areas keep the areas page's
    order (Matt, 12 Nov) */
 #app.hcHomeEditing.tfOverview #homeView .tfBoardItem.tfRoomTile{cursor:default;outline:0}
