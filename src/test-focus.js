@@ -1778,12 +1778,13 @@ export function mountTestFocus(root, { config, getHass }) {
   function overviewPrefs() {
     const rooms = overviewRooms().map((r) => 'room:' + r.id), cells = { favs: { col: 3, row: 0 } };
     rooms.forEach((k, i) => { cells[k] = i < 3 ? { col: i, row: 0 } : i < 6 ? { col: i - 3, row: 5 } : { col: (i - 6) % 6, row: 10 + 5 * Math.floor((i - 6) / 6) }; });
-    return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', 'sums', 'favs', ...(prefs.home?.schedule === false ? [] : ['sched']), ...(prefs.home?.weather ? ['wx'] : []), ...(prefs.home?.energy ? ['energy'] : [])].includes(k)),
+    return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', ...(prefs.home?.sums === false ? [] : ['sums']), 'favs', ...(prefs.home?.schedule === false ? [] : ['sched']), ...(prefs.home?.weather ? ['wx'] : []), ...(prefs.home?.energy ? ['energy'] : [])].includes(k)),
       opts: { favs: { h: 5 }, ...Object.fromEntries(rooms.map((k) => [k, { h: 5 }])) }, tiles: rooms, known: NEW_CARDS, areasOff: [] };
   }
   const dashPrefs = () => (overview ? overviewPrefs() : boardPrefs());
   const boardPrefs = () => {
     let d = { cells: {}, spans: {}, hidden: [], opts: {}, ...(prefs.dash || {}) };
+    if (d.sumsOff) d = { ...d, hidden: [...d.hidden, 'sums'] }; // the summaries switched off in the edit tray
     const alt = d.byPegs?.[dashCols()];
     if (alt) d = { ...d, cells: alt.cells || d.cells, spans: alt.spans || d.spans };
     const fresh = NEW_CARDS.filter((k) => !(d.known || []).includes(k) && !d.hidden.includes(k));
@@ -2456,10 +2457,31 @@ export function mountTestFocus(root, { config, getHass }) {
      tile. The tray lies over the board rather than squeezing it, so the board edited is the board shown, and the tab
      on its edge tucks it away */
   const PICK_DOMAINS = /^(light|switch|cover|climate|fan|lock|valve|media_player|humidifier|vacuum|scene|script|alarm_control_panel|water_heater|input_boolean)\./;
+  const TRAY_TABS = [['page', 'Page'], ['cards', 'Cards'], ['areas', 'Areas'], ['favs', 'Favourites']];
+  let trayTab = 'page';
+  // which tab each of the tray's sections sits under
+  const trayTabOf = (sec) => (sec.matches('.hcTraySums,[data-tray="welcome"],[data-tray="phone"]') ? 'page'
+    : sec.querySelector('[data-room-add]') ? 'areas' : sec.querySelector('[data-tray="favs"]') ? 'favs' : 'cards');
+  function showTrayTab(animate = false) {
+    const inner = tray.querySelector('.tfTrayInner'), bar = tray.querySelector('.hcTrayTabs'), mark = bar.querySelector('.rubberIndicator');
+    const head = inner.querySelector('.tfTrayHead');
+    if (head.nextElementSibling !== bar) head.after(bar); // the tabs straight under the head (Summaries is added after it)
+    let first = true;
+    inner.querySelectorAll(':scope>.tfTraySection').forEach((sec) => { sec.hidden = trayTabOf(sec) !== trayTab; sec.classList.toggle('hcFirst', !sec.hidden && first); if (!sec.hidden) first = false; });
+    bar.querySelectorAll('[data-tray-tab]').forEach((b) => { const on = b.dataset.trayTab === trayTab; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+    const on = bar.querySelector('.tab.active');
+    if (!on?.offsetWidth) return;
+    mark.style.transition = 'none';
+    if (animate) stretchTo(mark, mark.offsetLeft, mark.offsetWidth, on.offsetLeft, on.offsetWidth);
+    else { mark.style.left = on.offsetLeft + 'px'; mark.style.width = on.offsetWidth + 'px'; }
+  }
   const tray = Object.assign(document.createElement('aside'), { className: 'tfEditTray' });
   tray.setAttribute('aria-label', 'Edit the dashboard');
   tray.innerHTML = '<button class="tfTrayTuck" type="button" data-tray-tuck></button>' +
     '<div class="tfTrayInner"><div class="tfTrayHead"><div class="activityTitle">Edit dashboard</div><button class="pill" type="button" data-tray-done>Done</button></div>' +
+    // tabs instead of one long scroll (Matt, 12 Nov), HomeCore settings' tabs
+    '<div class="tabs rubberTabs hcTrayTabs" role="tablist" aria-label="Edit dashboard"><div class="rubberIndicator" aria-hidden="true"></div>' +
+      TRAY_TABS.map(([k, t], i) => '<button class="tab segBtn' + (i ? '' : ' active') + '" type="button" role="tab" aria-selected="' + !i + '" data-tray-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
     '<section class="tfTraySection" data-tray="welcome"></section>' +
     '<section class="tfTraySection" data-tray="cards"></section>' +
     '<section class="tfTraySection" data-tray="weather"></section>' +
@@ -2545,6 +2567,8 @@ export function mountTestFocus(root, { config, getHass }) {
       '<span class="tfIcon" data-icon-for="" data-icon-name="' + icon + '"></span><span class="tfTrayName"><span class="hcHeSecTitle"><span class="activityRowName">' + title + '</span>' + info + '</span><span class="activityRowMeta">' + sub + '</span></span>' +
       '<button class="hcHeChevron" type="button" aria-expanded="' + !homeFolded.has(key) + '" aria-label="' + (homeFolded.has(key) ? 'Open ' : 'Fold ') + title + '">' + CHEVRON + '</button></div><div class="hcHeSecBody"' + (homeFolded.has(key) ? ' hidden' : '') + '>' + body + '</div></section>';
     homeTray.querySelector('[data-he-body]').innerHTML =
+      // the note about the areas page first (Matt, 12 Nov: "to the top of the rollover"), as Home Assistant's dialog has it
+      '<p class="tfTrayNote hcHeAreasNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>' +
       sec('personal', 'mdi:palette', 'Personalize', 'Customize the top of your Home page.',
         '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') + sw(welcomeOn(), 'Welcome message', 'data-he-welcome') + '</div>' +
         '<hr class="hcHeRule">' +
@@ -2561,10 +2585,11 @@ export function mountTestFocus(root, { config, getHass }) {
         '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>') +
       sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
+        '<div class="hcHeLine"><span class="activityRowName">Show summaries</span>' + sw(prefs.home?.sums !== false, 'Show summaries', 'data-he-card="sums"') + '</div>' +
         homeSeg('Width', 'data-he-sums-width', sumsFit() ? 'fit' : 'match', [['match', 'Match the cards'], ['fit', 'Fit the summaries']]) +
         '<hr class="hcHeRule">' +
         '<ul class="tfTrayList hcHeList" data-he-list="sums">' + homeSumOrder().map(sumLi).join('') + '</ul>', infoBtn('sums')) +
-      '<p class="tfTrayNote">You can rearrange your floors and areas in the order that best represents your house on the <button type="button" class="hcHeLink" data-oops>areas page</button>.</p>';
+      '';
     fillIcons(homeTray);
   }
   const homeSave = (next) => { prefs = { ...prefs, ...next }; savePrefs(); refresh(); drawHomeTray(); };
@@ -2643,7 +2668,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const info = t.closest('[data-info]'); if (info) { openInfo(info); return; }
     const fold = t.closest('[data-he-fold]'); if (fold && !t.closest('.hcInfoBtn')) { const k = fold.dataset.heFold; if (homeFolded.has(k)) homeFolded.delete(k); else homeFolded.add(k); closeInfo(); drawHomeTray(); return; }
     if (t.closest('[data-he-welcome]')) { homePrefs({ welcome: !welcomeOn() }); return; }
-    const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = k === 'schedule' ? prefs.home?.schedule !== false : !!prefs.home?.[k]; homePrefs({ [k]: !on }); return; }
+    const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = ['schedule', 'sums'].includes(k) ? prefs.home?.[k] !== false : !!prefs.home?.[k]; homePrefs({ [k]: !on }); return; }
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
@@ -2670,13 +2695,15 @@ export function mountTestFocus(root, { config, getHass }) {
     tuck.innerHTML = trayTucked ? BACK : CHEVRON;
     tuck.setAttribute('aria-expanded', String(!trayTucked));
     tuck.setAttribute('aria-label', trayTucked ? 'Show the edit tray' : 'Tuck the edit tray away');
-    const hiddenCards = dashPrefs().hidden.filter((k) => boardItems().some((it) => it.key === k));
+    const hiddenCards = dashPrefs().hidden.filter((k) => !HEAD.includes(k) && boardItems().some((it) => it.key === k));
     const trayCard = (k, verb) => '<button class="tfTrayCard" type="button" data-tray-card="' + esc(k) + '" aria-label="' + esc(boardName(k)) + ': drag it onto the board, or press to ' + verb + '">' +
       '<span class="tfTrayGrip" aria-hidden="true">' + GRIP + '</span>' + esc(boardName(k)) + '</button>';
     const cardsOff = hiddenCards.filter((k) => !WIDGETS.includes(k)), widgetsOff = WIDGETS.filter((k) => hiddenCards.includes(k));
     // the welcome message, as on Home (Matt, 12 Nov: "a greeting option to the custom dashboard"); off to start with
     trayPut('welcome', '<div class="hcHeLine"><span class="activityRowName">Welcome message</span>' + infoBtn('welcome') +
-      '<button class="switch' + (dashPrefs().welcome ? ' on' : '') + '" type="button" role="switch" aria-checked="' + !!dashPrefs().welcome + '" aria-label="Welcome message" data-dash-welcome></button></div>');
+      '<button class="switch' + (dashPrefs().welcome ? ' on' : '') + '" type="button" role="switch" aria-checked="' + !!dashPrefs().welcome + '" aria-label="Welcome message" data-dash-welcome></button></div>' +
+      '<div class="hcHeLine"><span class="activityRowName">Show summaries</span><button class="switch' + (prefs.dash?.sumsOff ? '' : ' on') + '" type="button" role="switch" aria-checked="' + !prefs.dash?.sumsOff + '" aria-label="Show summaries" data-dash-sums></button></div>');
+    requestAnimationFrame(() => showTrayTab(false));
     trayPut('cards', '<div class="sectionLabel">Hidden and new cards</div>' + (cardsOff.length ? '<div class="tfTrayCards">' + cardsOff.map((k) => trayCard(k, 'put it back')).join('') + '</div>' : '<p class="tfTrayNote">Cards you hide, and new ones, wait here.</p>'));
     // the Weather page's widgets that aren't on the board (Matt, 11 Nov); one hidden from its ⋯ comes back here
     trayPut('weather', '<div class="sectionLabel">Weather</div>' + (widgetsOff.length ? '<p class="tfTrayNote">The Weather page\'s widgets. Drag one onto the board, or press to add it.</p><div class="tfTrayCards">' +
@@ -2716,8 +2743,10 @@ export function mountTestFocus(root, { config, getHass }) {
   tray.addEventListener('click', (ev) => {
     const t = ev.target.closest('button');
     if (!t) return;
+    if (t.hasAttribute('data-tray-tab')) { trayTab = t.dataset.trayTab; showTrayTab(true); tray.querySelector('.tfTrayInner').scrollTop = 0; return; }
     if (t.hasAttribute('data-tray-done')) setEditing(false);
     else if (t.hasAttribute('data-info')) openInfo(t);
+    else if (t.hasAttribute('data-dash-sums')) { saveDash({ ...boardPrefs(), hidden: boardPrefs().hidden.filter((k) => k !== 'sums'), sumsOff: !prefs.dash?.sumsOff }); refresh(); renderTray(); }
     else if (t.hasAttribute('data-dash-welcome')) { const d = dashPrefs(); saveDash({ ...d, welcome: !d.welcome }); refresh(); renderTray(); }
     else if (t.hasAttribute('data-tray-tuck')) { trayTucked = !trayTucked; renderTray(); }
     else if (t.hasAttribute('data-phone-toggle')) { phoneShown = !phoneShown; renderTray(); if (phoneShown) phone.querySelector('[data-phone-key]')?.focus({ preventScroll: true }); }
