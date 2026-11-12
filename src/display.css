@@ -899,49 +899,77 @@ button.tfAreaIcon{cursor:pointer}
 #homeView .grid.tfStack{grid-auto-rows:1px;row-gap:0}
 #homeView .grid.tfStack>*{align-self:start}
 
-/* ---------- Home, the overview (Matt, 12 Nov) ----------
-   Its own spacing, never the custom dashboards' (Dashboards keeps the board's): the page further off the corner, as
-   Matt's reference (the name 87 down, 44 in from the rail), Favourites' rows further apart and the summaries' icons
-   without their chip */
+/* ---------- Home, the overview (Matt, 12 Nov, from his Figma "Home (overview)") ----------
+   Its own cards and spacing, never the custom dashboards' (Dashboards keeps the board's). The greeting lines up with the
+   logo (its middle at the logo's, 40 down), the summaries spread across the cards' width with no chip behind their
+   icons, Favourites has no title and its tiles 25 apart, an area is its Living Room card and the weather card is the
+   refined one */
 @media (min-width:621px){
-  #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,87px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
+  #app.tfOverview.tfDash:not(.hcOnPage) #homeView{padding-top:var(--home-top,28px);padding-left:var(--home-side,44px);padding-right:var(--home-side,44px)}
 }
-#app.tfOverview.tfDash #homeView .tfDash-favs{padding:24px 18px 18px}
-#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{padding-left:23px;padding-right:23px}
 #app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar{width:100%;max-width:none}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows{display:flex;justify-content:space-between}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRow{flex:none}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows.hcBarRows{display:grid;grid-template-columns:repeat(var(--bar-cols,3),minmax(0,1fr))}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows.hcBarRows>.activityRow{min-width:0}
+@media (max-width:620px){#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Favourites: no title, two columns of tiles 60 tall and 25 apart */
+#app.tfOverview.tfDash #homeView .tfDash-favs{padding:10px;border-radius:var(--r-card)}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityHeader{display:none}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:60px;row-gap:25px;max-height:none;margin:0;overflow:hidden}
+#app.tfOverview.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{height:60px;min-height:0;padding:10px;box-sizing:border-box}
+/* an area: the Living Room card (Figma 1063:13192). 18 in, its reading under its name, its devices in one row along
+   the foot */
+#app.tfOverview.tfDash #homeView .tfRoomTile{padding:18px;gap:0;border-radius:28px}
+#app.tfOverview.tfDash #homeView .tfRoomTile>.tfActionHead{margin-bottom:0}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfActionHead .activityRowMeta{display:none}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomReading{margin-top:31px;gap:0}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomBig{font:400 64px/64px var(--font-tile);letter-spacing:-1.92px}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomSub{display:block;font:400 16px/19px var(--font)}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:flex;justify-content:space-between;margin-top:auto;padding-top:16px}
+#app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomHeads{display:none}
+#app.tfOverview.tfDash #homeView .tfRoomTile:not(:has(.tfRoomDevices :nth-child(4))) .tfRoomDevices{justify-content:flex-start;gap:18.67px}
+#app.light.tfOverview.tfDash #homeView .tfRoomTile .tfRoomIcon{background-color:#acacac;color:#ffffff}
+/* the weather: the refined card (Figma 1063:13647). Now (its picture, temperature and place), the forecast in a
+   sentence, then the days, each 159 tall without a tile behind it */
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbCard.wbWeather{gap:0;padding:18px}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbCondition,#app.tfOverview.tfDash #homeView .tfDash-wx .wbNextHours,#app.tfOverview.tfDash #homeView .tfDash-wx .wbHalves{display:none!important}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbSummary{flex:none;height:auto;margin:18px 0 0;container:none}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbSummaryText{position:static;-webkit-line-clamp:1}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbColumns{display:flex!important;height:159px;margin-top:auto;border-radius:var(--r-tile)}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn{padding:8px 0;background:none}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn:hover{background:var(--tile)}
+#app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn .wbWx.wbS60{width:60px;height:60px;border-radius:20px}
 
-/* Edit Home page: Home Assistant's Edit Overview page, in HomeCore's popup */
-.hcHomeEdit{z-index:300}
-.hcHomeEditCard{width:560px;max-height:calc(100dvh - 32px);padding:20px;gap:14px;overflow:hidden}
-.hcHeHead{display:flex;align-items:flex-start;gap:10px}
-.hcHeTitle{font:500 28px/1.15 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
-.hcHeSub{margin:4px 0 0;font:400 14px/1.4 var(--font);color:var(--muted)}
-.hcHeInfo{margin:0;padding:12px 16px;border-radius:var(--r-inner);background:var(--tile);font:400 14px/1.45 var(--font);color:var(--text)}
+/* Edit Home page: a tray at the side, as the dashboard's editor; its rows as the tray's */
+.hcHeBody{display:flex;flex-direction:column;gap:32px}
+.hcHeLabel{display:flex;align-items:center;gap:4px}
+.hcHeLine{display:flex;align-items:center;gap:4px;min-height:44px}
+.hcHeLine>.activityRowName{min-width:0}
+.hcHeLine>.switch{margin-left:auto}
 .hcHeLink{display:inline;min-height:0;padding:0;border:0;background:none;font:inherit;color:var(--primary);text-decoration:underline;cursor:pointer}
-.hcHeScroll{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;margin:0 -4px;padding:0 4px}
-.hcHeSec{border-radius:var(--r-inner);background:var(--tile)}
-.hcHeSecHead{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr) 24px;align-items:center;gap:12px;width:100%;min-height:0;padding:10px 14px 10px 10px;border:0;background:none;color:var(--text);text-align:start;cursor:pointer}
-.hcHeSec .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
-.hcHeChevron{display:grid;place-items:center;color:var(--muted);transform:rotate(-90deg);transition:transform .18s ease}
-.hcHeChevron svg{width:20px;height:20px}
-.hcHeSecHead[aria-expanded="false"] .hcHeChevron{transform:rotate(90deg)}
-.hcHeSecBody{display:flex;flex-direction:column;gap:8px;padding:0 10px 14px}
-.hcHeSecBody[hidden]{display:none}
-.hcHeSecBody>.sectionLabel{padding:4px 6px 0}
 .hcHeList{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
 .hcHeRow{display:grid;grid-template-columns:36px var(--chip-size) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:var(--tile-min);padding:0 4px;border-radius:var(--r-tile)}
+.hcHeRow .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
 .hcHeRow.moving{background:var(--card);box-shadow:var(--hc-hair-all)}
 .hcHeGrip{color:var(--muted);cursor:grab;touch-action:none}
 .hcHeSum .tfIcon{color:var(--sum-ink,var(--hc-icon-ink))}
 #app.house .hcHeSum{--sum-ink:var(--sum-d,var(--hc-icon-ink))}
 #app.house.light .hcHeSum{--sum-ink:var(--sum-l,var(--hc-icon-ink))}
-.hcHeToggle{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 6px 0}
-.hcHeToggle .activityRowMeta{white-space:normal}
-@media(max-width:620px){#app .hcHomeEditCard{width:100%;max-height:calc(100dvh - 16px)}}
-.hcHeSecHead .tfTrayName>*{white-space:normal}
+/* a setting's (i) and its popover (OpenHomeFoundation/roadmap#57): what it does, in a few formatted lines, and Learn more */
+.hcInfoBtn{display:grid;place-items:center;flex:none;width:28px;height:28px;min-height:0;padding:0;border:0;border-radius:var(--r-fine,12px);background:none;color:var(--muted);cursor:pointer}
+.hcInfoBtn svg{width:18px;height:18px;fill:currentColor}
+.hcInfoBtn:hover,.hcInfoBtn[aria-expanded="true"]{background:var(--tile);color:var(--text)}
+.hcInfoPop{position:fixed;z-index:320;width:280px;max-width:calc(100vw - 16px);display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:var(--r-inner);box-shadow:var(--hc-hair-all),0 8px 28px rgba(0,0,0,.18)}
+.hcInfoPop[hidden]{display:none}
+.hcInfoTitle{font:600 14px/20px var(--font-tile);color:var(--text)}
+.hcInfoText{font:400 14px/1.45 var(--font);color:var(--text)}
+.hcInfoText p{margin:0}
+.hcInfoText ul{margin:6px 0 0;padding-left:18px}
+.hcInfoMore{align-self:flex-start;font:600 14px/20px var(--font-tile);color:var(--primary);text-decoration:underline}
 /* Home's welcome message: a line above the home's name (Matt, 12 Nov) */
 .tfDashTitle .tfGreeting{display:block;margin-bottom:6px;font:500 20px/1.2 var(--font-tile);letter-spacing:0;color:var(--muted)}
-.hcHeWelcome{padding-top:0;padding-bottom:6px}
 /* titles in light mode (Matt, 12 Nov): card titles and tile and row names, everywhere, in #55504A; not the big titles
    (a page's name, a popup's) or the areas' names, which keep the text colour */
 #app.light{--title:#55504a}

@@ -6,7 +6,7 @@
 .hcI{display:block;width:var(--glyph-size);height:var(--glyph-size);fill:currentColor;flex:none}
 
 /* ---------- the rail (desktop): logo, search, the pages in the middle, you at the bottom ---------- */
-.hcRail{position:fixed;z-index:90;inset:0 auto 0 0;width:var(--hc-rail);display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px 0;background:var(--bg);box-shadow:inset -.4px 0 0 var(--line)}
+.hcRail{position:fixed;z-index:90;inset:0 auto 0 0;width:var(--hc-rail);display:flex;flex-direction:column;align-items:center;gap:22px;padding:20px 0;background:var(--bg)} /* no line between it and the page (Matt, 12 Nov) */
 .hcRailMain{flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px}
 /* the logo, half its size (Matt, 9 Nov: 20), is the Home button: full colour on Home, dimmed elsewhere */
 .hcLogo{display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size)}
