@@ -794,7 +794,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const key = 'readings:' + r.id;
     const rows = r.readings.map((id) => readingRow(key, id));
     if (r.power != null) rows.push(sumRow('Power now', watts(r.power), 'mdi:flash'));
-    return card(key, order, 'Readings', rows.concat(r.plugs.map(plugRow)));
+    return card(key, order, 'Readings', rows); // its plugs are tiles now, with the other devices (Matt, 12 Nov)
   }
   function energyCard(r, order) {
     const key = 'energy:' + r.id;
@@ -872,7 +872,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const s = specFor(id), dac = id.startsWith('light.') && dacFor(id) && !(only && sizeOf(id) < 3), keep = only || (inDialog && id.startsWith('light.') ? ['bright'] : null);
     const sections = dac ? ['<div class="tfDacPad" data-dac="' + (inDialog ? 'more:' : only ? 'dash:' : 'tile:') + esc(id) + '"></div>']
       : s.sections.map((sec, i) => (sec && (!keep || keep.includes((s.parts || [])[i])) ? sec : '')).filter(Boolean);
-    return '<div class="tfAction' + (dac ? ' tfDac' : '') + (s.on ? ' on' : '') + '" data-k="' + esc(id) + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' +
+    return '<div class="tfAction' + (dac ? ' tfDac' : '') + (s.on ? ' on' : '') + (!dac && !sections.length ? ' tfHeadOnly' : '') + '" data-k="' + esc(id) + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' +
       '<div class="tfActionHead">' + iconButton(id, s) + nameButton(id) + '</div>' + sections.join('') + '</div>';
   }
   /* the Dual Axis Controller (Matt's HACS card, custom:dual-controller-v3): when Settings picks it, every light is its
@@ -1041,6 +1041,12 @@ export function mountTestFocus(root, { config, getHass }) {
           { label: 'Close', act: act('valve', 'close_valve', id), pressed: !isOpen },
         ]),
       ] };
+    }
+    // a switch, plug, input boolean or fan: a tile of its own, its icon the switch (Matt, 12 Nov: plugs as tiles on the
+    // area page, beside the other devices)
+    if (TOGGLES.includes(d)) {
+      const on = st.state === 'on';
+      return { on, button: toggle(d, 'Turn ' + nameOf(id) + (on ? ' off' : ' on')), parts: [], sections: [] };
     }
     return { on: false, button: { act: '', label: nameOf(id) }, sections: [] };
   }
@@ -3103,9 +3109,10 @@ export function mountTestFocus(root, { config, getHass }) {
     // the section: a room's energy, readings and plants, then its tiles
     const ids = page.ids, name = page.room ? page.room.id : page.key, r = page.room;
     if (r?.solar.length) out.push({ key: 'energy:' + r.id, html: energyCard(r, ++order) });
-    if (r && (r.readings.length || r.plugs.length || r.power != null)) out.push({ key: 'readings:' + r.id, html: roomCard(r, ++order) });
+    if (r && (r.readings.length || r.power != null)) out.push({ key: 'readings:' + r.id, html: roomCard(r, ++order) });
     r?.plants.forEach((p) => out.push({ key: 'plant:' + p.id, html: plantCard(p, ++order) }));
-    if (ids.length) out.push({ key: 'block:' + name, order: ++order, tiles: ids.map((id) => ({ key: id, html: actionTile(id) })) });
+    const tileIds = [...ids, ...(r?.plugs || []).filter((x) => !ids.includes(x))];
+    if (tileIds.length) out.push({ key: 'block:' + name, order: ++order, tiles: tileIds.map((id) => ({ key: id, html: actionTile(id) })) });
     return out;
   }
   /* HomeCore demo (9 Nov): the Activity page the site's ⋯ opens (Matt: "I want it to be the Activity page basically";
