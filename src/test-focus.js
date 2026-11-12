@@ -3633,7 +3633,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const track = ev.target;
     if (!track.matches?.('[data-more-pages]') || !more) return;
     clearTimeout(pageTimer);
-    pageTimer = setTimeout(() => { const page = Math.round(track.scrollLeft / Math.max(1, track.clientWidth)); if (page !== (more.page || 0)) { more.page = page; markPage(); fitPage(track); } }, 80);
+    pageTimer = setTimeout(() => { if (!more) return; /* closed meanwhile */ const page = Math.round(track.scrollLeft / Math.max(1, track.clientWidth)); if (page !== (more.page || 0)) { more.page = page; markPage(); fitPage(track); } }, 80);
   }, true);
   // "5 minutes ago" moves on while it's open
   setInterval(() => { if (more) renderMore(); }, 15 * 1000);

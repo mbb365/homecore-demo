@@ -301,9 +301,10 @@ export function mountDemoShell(root, { getHass, homecore }) {
     pop.querySelector('[data-oops-add]').focus();
   }
   ctx.oops = oops;
-  /* one level down only (Matt, 10 Nov): a popup's own tiles (Maintenance's Monstera, a summary's devices) don't open
-     another page in it; they say it isn't designed yet */
-  root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops], .tfMoreBackdrop:not(.hcOops) [data-more]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
+  /* what isn't designed yet says so (data-oops). A popup's own tiles (Maintenance's Monstera, a summary's devices) now
+     open the device over the popup, with Back to it, as Move Assistant v0.79 (Matt, 12 Nov: "open over it"; was one
+     level down only, 10 Nov) */
+  root.addEventListener('click', (ev) => { const t = ev.target.closest('[data-oops]'); if (t) { ev.preventDefault(); ev.stopPropagation(); oops(); } }, true);
   const topRight = shell.querySelector('.hcTopRight');
   /* the edit tick lives in the edit tray's head while editing (Matt, 9 Nov: the tray covered it), in place of Done */
   const trayHead = root.querySelector('.tfTrayHead');
