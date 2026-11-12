@@ -1254,7 +1254,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const hidden = new Set(overview ? [] : prefs.favHidden || []), stars = starred().filter((id) => !hidden.has(id));
     const fill = suggestOn() ? suggestionIds().filter((id) => !hidden.has(id) && dashLight(id)) : [];
     // Home's card grows with its favourites, so every one shows there (as Move Assistant v0.85.0); as a strip, ten
-    return overview && !favsStripNow() ? [...stars, ...fill] : [...stars, ...fill].slice(0, DASH_FAVOURITES);
+    return overview && !favsStrip() ? [...stars, ...fill] : [...stars, ...fill].slice(0, DASH_FAVOURITES);
   }
   // starred first, then suggestions up to 8
   function favouriteIds(most = 8) {
@@ -2029,7 +2029,9 @@ export function mountTestFocus(root, { config, getHass }) {
      Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
   const AREA_SIZES = { s: { w: 160, h: 192 }, m: { w: 200, h: 240 }, l: { w: 252, h: 337 } };
   const areaSize = () => (AREA_SIZES[prefs.home?.areaSize] ? prefs.home.areaSize : 'm');
-  const areaLayout = () => (['rows', 'columns', 'bento', 'side'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
+  const areaLayout = () => (['rows', 'columns', 'bento'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
+  // the cards that aren't areas: Stacked down the left beside the areas, or in Rows across the top over them (Matt, 12 Nov)
+  const cardsAs = () => (prefs.home?.cardsAs === 'rows' ? 'rows' : 'stacked');
   // Home's areas by floor, top floor first, as Home Assistant's Areas dashboard groups them; an area with no floor goes
   // last, under Other areas (with no floors at all, the areas without a name over them)
   const FLOOR_ICON = { 0: 'mdi:home-floor-0', 1: 'mdi:home-floor-1', 2: 'mdi:home-floor-2', 3: 'mdi:home-floor-3', '-1': 'mdi:home-floor-negative-1' };
@@ -2097,7 +2099,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // the summaries (and Favourites as a strip) as wide as five of Matt's columns, or the page where it's narrower
     const gridW = Math.min(W, HOME.full);
     let top = 0;
-    const strip = favsStripNow();
+    const strip = favsStrip();
     app.classList.toggle('hcSumsFit', sumsFit());
     app.classList.toggle('hcFavStrip', strip);
     const heads = shown.filter((it) => HEAD.includes(it.key) || (strip && it.key === 'favs'));
@@ -2133,10 +2135,11 @@ export function mountTestFocus(root, { config, getHass }) {
       Object.assign(it.el.style, { left: box.x + 'px', top: box.y + 'px' });
     };
     const tw = phone ? W : Math.round((2 * HOME.col + HOME.inner) * k), th = Math.round(HOME.row * k);
-    // Side (Matt, 12 Nov, as Move Assistant v0.86.0): the cards that aren't areas stacked down the left, a column 520
-    // wide, and the areas in rows to its right, each floor under the last; the page as tall as the taller side. On a
-    // phone, or with nothing but areas, as Rows
-    const side = areaLayout() === 'side' && !phone && tops.length > 0;
+    /* the cards that aren't areas (Favourites as a card, Schedule, Weather, Energy): Stacked (the start) down the left,
+       a column 520 wide, one under another, the areas to their right in whichever layout (Matt, 12 Nov, his Figma "Home
+       (overview)": the weather under Favourites, the areas beside them), the page as tall as the taller side; or Rows,
+       across the top a row at a time, the areas under them. On a phone everything runs down the page */
+    const side = cardsAs() === 'stacked' && !phone && tops.length > 0;
     let x = 0, rowH = 0, colB = top;
     tops.forEach((it) => {
       it.el.classList.add('tfBoardItem');
@@ -2152,7 +2155,7 @@ export function mountTestFocus(root, { config, getHass }) {
       x += tw + gap; rowH = Math.max(rowH, h);
     });
     if (tops.length && !side) top += rowH + gap;
-    // the areas' part of the page: all of it, or in Side what's right of the column
+    // the areas' part of the page: what's right of the column (all of it on a phone)
     const aX = side ? tw + gap : 0, aW = side ? W - tw - gap : W;
     /* the areas (Edit Home page, Matt, 12 Nov): grouped by floor or not, laid out as Rows (each floor's name, then its
        areas a row at a time), Columns (a column per floor, side by side) or Bento, where each floor can be a box the
@@ -2224,8 +2227,8 @@ export function mountTestFocus(root, { config, getHass }) {
       let x = 0, rowB = top;
       floors.forEach((f) => {
         const g = { ...pack(f, 1, cw), w: cw };
-        if (x && x + cw > W) { top = rowB + gap + HOME.floorTop; x = 0; }
-        place(f, g, x, top);
+        if (x && x + cw > aW) { top = rowB + gap + HOME.floorTop; x = 0; }
+        place(f, g, aX + x, top);
         rowB = Math.max(rowB, top + g.h); x += cw + gap;
       });
       top = rowB + gap;
@@ -2240,7 +2243,7 @@ export function mountTestFocus(root, { config, getHass }) {
         const g = { ...pack(f, c, inner), w: outer - 2 * BOX };
         let s0 = 0, best = Infinity;
         for (let s = 0; s + c <= n; s++) { const t = Math.max(...colTop.slice(s, s + c)); if (t < best) { best = t; s0 = s; } }
-        const x = s0 * (cw + gap), h = g.h + 2 * BOX;
+        const x = aX + s0 * (cw + gap), h = g.h + 2 * BOX;
         boxAt(f, x, best, outer, h);
         place(f, g, x + BOX, best + BOX, cardPad(f));
         for (let s = s0; s < s0 + c; s++) colTop[s] = best + h + gap;
@@ -2696,10 +2699,6 @@ export function mountTestFocus(root, { config, getHass }) {
   // a strip under the summaries, the same pattern as theirs
   const sumsFit = () => prefs.home?.sumsWidth === 'fit';
   const favsStrip = () => prefs.home?.favsAs === 'strip';
-  // Side stacks every card that isn't an area down the left, so there Favourites is always its card (Matt, 12 Nov: "it
-  // should be stacking the non area elements to the left"); on a phone Side is Rows, and the strip stays
-  const homeSide = () => overview && areaLayout() === 'side' && !!grid && grid.clientWidth >= 2 * PEG + PEG_GAP;
-  const favsStripNow = () => favsStrip() && !homeSide();
   const homeSeg = (label, attr, value, opts) => '<div class="hcHeLine hcHeChoiceLine"><span class="activityRowName">' + label + '</span><div class="themeChoice hcHeChoice" role="group" aria-label="' + esc(label) + '">' +
     opts.map(([v, text]) => '<button class="wxLayoutBtn" type="button" ' + attr + '="' + v + '" aria-pressed="' + (value === v) + '">' + text + '</button>').join('') + '</div></div>';
   const homeSumOrder = () => summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key);
@@ -2719,10 +2718,11 @@ export function mountTestFocus(root, { config, getHass }) {
         '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>' +
+        homeSeg('Cards', 'data-he-cards-as', cardsAs(), [['stacked', 'Stacked'], ['rows', 'Rows']]) +
         '<hr class="hcHeRule">' +
         // the areas: by floor or not, their layout, Bento's two ways, their size (Matt, 12 Nov)
         '<div class="hcHeLine"><span class="activityRowName">Group by floor</span>' + sw(prefs.home?.byFloor !== false, 'Group by floor', 'data-he-flag="byFloor"') + '</div>' +
-        homeSeg('Layout', 'data-he-area-layout', areaLayout(), [['rows', 'Rows'], ['columns', 'Columns'], ['bento', 'Bento'], ['side', 'Side']]) +
+        homeSeg('Layout', 'data-he-area-layout', areaLayout(), [['rows', 'Rows'], ['columns', 'Columns'], ['bento', 'Bento']]) +
         (areaLayout() === 'bento' ? '<div class="hcHeLine"><span class="activityRowName">Floors as boxes</span>' + sw(prefs.home?.bentoBoxes !== false, 'Floors as boxes', 'data-he-flag="bentoBoxes"') + '</div>' +
           '<div class="hcHeLine"><span class="activityRowName">Mixed sizes</span>' + sw(prefs.home?.bentoMixed !== false, 'Mixed sizes', 'data-he-flag="bentoMixed"') + '</div>' : '') +
         homeSeg('Area cards', 'data-he-area-size', areaSize(), [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]),
@@ -2752,7 +2752,8 @@ export function mountTestFocus(root, { config, getHass }) {
     fillIcons(homeTray);
   }
   const homeSave = (next) => { prefs = { ...prefs, ...next }; savePrefs(); refresh(); drawHomeTray(); };
-  const homePrefs = (next) => homeSave({ home: { ...(prefs.home || {}), ...next } });
+  // and the page lays itself out again at once (a choice like Stacked or Rows changes no card, so nothing else would)
+  const homePrefs = (next) => { homeSave({ home: { ...(prefs.home || {}), ...next } }); layoutBoard(); };
   function setHomeEditing(on) {
     closeInfo();
     homeEditing = on;
@@ -2832,6 +2833,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     const as = t.closest('[data-he-area-size]'); if (as) { homePrefs({ areaSize: as.dataset.heAreaSize }); return; }
+    const ca = t.closest('[data-he-cards-as]'); if (ca) { homePrefs({ cardsAs: ca.dataset.heCardsAs }); return; }
     const al = t.closest('[data-he-area-layout]'); if (al) { homePrefs({ areaLayout: al.dataset.heAreaLayout }); return; }
     const fl = t.closest('[data-he-flag]'); if (fl) { const key = fl.dataset.heFlag; homePrefs({ [key]: prefs.home?.[key] === false }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
