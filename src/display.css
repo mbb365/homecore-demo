@@ -958,6 +958,16 @@ button.tfAreaIcon{cursor:pointer}
 .hcHeChoice.themeChoice{display:inline-flex;flex-wrap:nowrap;height:32px;padding:3px;gap:3px;box-sizing:border-box;border-radius:16px;background:var(--control-2,var(--hc-icon))}
 #app .hcHeChoice>button{height:26px!important;min-height:0;padding:0 12px;border:0;border-radius:13px!important;background:none;color:var(--text);font:600 12px/16px var(--font-tile)!important;white-space:nowrap}
 #app .hcHeChoice>button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all)}
+/* Schedule: its title, then each day's events, scrolling if there are more */
+#app.tfOverview.tfDash #homeView .tfDash-sched{display:flex;flex-direction:column;padding:18px 18px 10px}
+#app.tfOverview.tfDash #homeView .tfDash-sched>.activityHeader{padding:0;margin-bottom:8px}
+.hcSchedList{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;gap:12px}
+.hcSchedLabel{padding:4px 0;font:600 14px/20px var(--font-tile);color:var(--muted)}
+.hcSchedDay ul{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.hcSchedRow{display:grid;grid-template-columns:64px 4px minmax(0,1fr);align-items:center;gap:12px;min-height:52px}
+.hcSchedRow.past{opacity:.5}
+.hcSchedTime{font:600 14px/20px var(--font-tile);color:var(--text);white-space:nowrap}
+.hcSchedBar{align-self:stretch;margin:6px 0;border-radius:2px;background:var(--cal)}
 /* phones: an area card is half the width, so its devices sit two to a row (the 48 reading fits as it is) (Matt, 12 Nov) */
 @media (max-width:620px){
   #app.tfOverview.tfDash #homeView .tfRoomTile .tfRoomDevices{display:grid;grid-template-columns:repeat(2,max-content);gap:12px;justify-content:start}

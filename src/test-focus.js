@@ -1657,6 +1657,32 @@ export function mountTestFocus(root, { config, getHass }) {
       || states['person.wembely']?.attributes.friendly_name || ''; // the demo: you are Wembely
   };
   const greeting = () => { const h = new Date().getHours(), name = myName(); return (h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 18 ? 'Good afternoon' : 'Good evening') + (name ? ', ' + name : ''); };
+  /* Schedule (Matt, 12 Nov: "replace the weather with a schedule calendar", his pick of the agenda list): Home Assistant's
+     calendar card in HomeCore's parts, today's and tomorrow's events under their day, each with its time and its
+     calendar's colour. The made-up house's calendars (Home and each Fraggle), as its made-up thermostat; an event that's
+     over is quieter */
+  const CALENDARS = { home: ['Home', '#03a9f4'], wembely: ['Wembely', '#7cb342'], red: ['Red', '#e53935'], gobo: ['Gobo', '#fb8c00'] };
+  function scheduleEvents() {
+    const day = (d, h = 0, m = 0) => { const t = new Date(); t.setDate(t.getDate() + d); t.setHours(h, m, 0, 0); return t; };
+    return [
+      { day: 0, start: day(0, 9), end: day(0, 10), name: 'Doozer delivery', cal: 'home' },
+      { day: 0, start: day(0, 13), end: day(0, 14), name: 'Radish harvest', cal: 'wembely' },
+      { day: 0, start: day(0, 17, 30), end: day(0, 19), name: 'Gobo\'s band practice', cal: 'gobo' },
+      { day: 1, allDay: true, name: 'Bin day', cal: 'home' },
+      { day: 1, start: day(1, 12), end: day(1, 13), name: 'Lunch with Red', cal: 'wembely' },
+      { day: 1, start: day(1, 18), end: day(1, 20), name: 'Swimming in the Fraggle Pond', cal: 'red' },
+    ];
+  }
+  function scheduleCard() {
+    const now = Date.now(), evs = scheduleEvents();
+    const row = (e) => { const [cal, colour] = CALENDARS[e.cal], past = !e.allDay && e.end.getTime() < now;
+      return '<li class="hcSchedRow' + (past ? ' past' : '') + '" style="--cal:' + colour + '"><span class="hcSchedTime">' + (e.allDay ? 'All day' : esc(clock(e.start))) + '</span>' +
+        '<span class="hcSchedBar" aria-hidden="true"></span><span class="tfRoomDevName"><span class="activityRowName">' + esc(e.name) + '</span><span class="activityRowMeta">' +
+        esc((e.allDay ? '' : clock(e.start) + ' – ' + clock(e.end) + ' · ') + cal) + '</span></span></li>'; };
+    const dayList = (d, label) => { const list = evs.filter((e) => e.day === d); return list.length ? '<div class="hcSchedDay"><div class="hcSchedLabel">' + label + '</div><ul>' + list.map(row).join('') + '</ul></div>' : ''; };
+    return '<section class="card tfCard tfDashCard tfDash-sched" data-tf data-k="dash:sched" aria-label="Schedule"><div class="activityHeader"><div class="activityTitle">Schedule</div></div>' +
+      '<div class="hcSchedList">' + dayList(0, 'Today') + dayList(1, 'Tomorrow') + '</div></section>';
+  }
   const dashWrap = (cls, key, label, titled) => (inner) => '<section class="card tfCard tfDashCard ' + cls + '" data-tf data-k="' + key + '" aria-label="' + label + '">' +
     (titled ? '<div class="activityHeader">' + (key === 'favs' ? '<button class="activityTitle tfTitleBtn" type="button" data-more="favourites" aria-label="Favourites. More info">' + label + '</button>' : '<div class="activityTitle">' + label + '</div>') + '</div>' : '') + '<div class="activityRows">' + inner + '</div></section>';
   function dashboard(out, sums) {
@@ -1672,6 +1698,7 @@ export function mountTestFocus(root, { config, getHass }) {
       // Energy today, as on Dashboards (Matt, 12 Nov: "add energy stuff"), once switched on in Edit Home page (off to start
       // with: "by default do not show the energy")
       if (prefs.home?.energy) { out.push({ key: 'dash:energy', html: energyGlance() }); loadEnergy(); }
+      if (prefs.home?.schedule !== false) out.push({ key: 'dash:sched', html: scheduleCard() });
       dashTileIds(0).forEach((id) => out.push({ key: 'dash:tile:' + id, wrap: (inner) => '<div class="tfDashTiles" data-tf data-k="dash:tile:' + esc(id) + '">' + inner + '</div>',
         tiles: [{ key: id, html: roomTile(roomOf(id), id) }] }));
       return out;
@@ -1704,7 +1731,7 @@ export function mountTestFocus(root, { config, getHass }) {
      cells, sizes, what's hidden, options). Phones keep one column */
   const PEG = 252, PEG_GAP = 16, PEG_MIN = 200, PEG_MAX = Math.round(PEG * 1.25), ROW = 60, ROW_PITCH = ROW + PEG_GAP, EXTRA_ROWS = 3;
   const BOARD_NAMES = { title: 'The name', sums: 'Summaries', wx: 'Weather', areas: 'Areas', favs: 'Favourites', act: 'Activity', energy: 'Energy today', avg: 'Compared to average', aq: 'Air quality', pollen: 'Pollen', radar: 'Rain radar',
-    hourly: 'Next hours', sun: 'Sun', moon: 'Moon', uv: 'UV index', humidity: 'Humidity', pressure: 'Pressure', wind: 'Wind', visibility: 'Visibility' };
+    sched: 'Schedule', hourly: 'Next hours', sun: 'Sun', moon: 'Moon', uv: 'UV index', humidity: 'Humidity', pressure: 'Pressure', wind: 'Wind', visibility: 'Visibility' };
   // the new cards are two columns, as Compared to average (Matt, 1 Nov: one was too narrow), a tile in their ⋯
   const RESIZABLE = ['wx', 'favs', 'act', 'energy', 'avg'];
   // five heights, picked in an element's ⋯ (Matt, 2 Nov), each a whole number of rows: XS 1 (60, one tile), S 2 (136),
@@ -1746,7 +1773,7 @@ export function mountTestFocus(root, { config, getHass }) {
   function overviewPrefs() {
     const rooms = overviewRooms().map((r) => 'room:' + r.id), cells = { favs: { col: 3, row: 0 } };
     rooms.forEach((k, i) => { cells[k] = i < 3 ? { col: i, row: 0 } : i < 6 ? { col: i - 3, row: 5 } : { col: (i - 6) % 6, row: 10 + 5 * Math.floor((i - 6) / 6) }; });
-    return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', 'sums', 'favs', ...(prefs.home?.weather === false ? [] : ['wx']), ...(prefs.home?.energy ? ['energy'] : [])].includes(k)),
+    return { pegs: 6, cells, spans: { favs: 2 }, hidden: Object.keys(BOARD_NAMES).filter((k) => !['title', 'sums', 'favs', ...(prefs.home?.schedule === false ? [] : ['sched']), ...(prefs.home?.weather ? ['wx'] : []), ...(prefs.home?.energy ? ['energy'] : [])].includes(k)),
       opts: { favs: { h: 5 }, ...Object.fromEntries(rooms.map((k) => [k, { h: 5 }])) }, tiles: rooms, known: NEW_CARDS, areasOff: [] };
   }
   const dashPrefs = () => (overview ? overviewPrefs() : boardPrefs());
@@ -1763,7 +1790,7 @@ export function mountTestFocus(root, { config, getHass }) {
   function boardItems() {
     const q = (sel) => grid.querySelector(sel);
     return [['title', q('.tfDashTitle'), 'full'], ['sums', q('.tfDashBarRow'), 'full'], ['wx', dashBoxes.wx, 2], ['areas', q('.tfAreas'), 'areas'],
-      ['favs', q('.tfDash-favs'), 2], ['act', q('.tfDash-act'), 2], ['energy', q('.tfDash-energy'), 2], ['avg', dashBoxes.avg, 2],
+      ['favs', q('.tfDash-favs'), 2], ['sched', q('.tfDash-sched'), 2], ['act', q('.tfDash-act'), 2], ['energy', q('.tfDash-energy'), 2], ['avg', dashBoxes.avg, 2],
       ...NEW_CARDS.map((k) => [k, dashBoxes[k], WIDGET_COLS[k] || 1]),
       ...[...grid.querySelectorAll('.tfDashTiles > [data-k]')].map((el) => [el.dataset.k, el, 1, true])]
       .filter(([, el]) => el?.isConnected).map(([key, el, span, tile = false]) => ({ key, el, span, tile }));
@@ -2046,7 +2073,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const rooms = overviewRooms().map((r) => 'room:' + r.id);
     // the weather starts the second row (after as many areas as fit beside Favourites); on a phone after four areas, so
     // no area is left alone in its row
-    const k = phone ? 4 : Math.max(1, n - 2), own = ['favs', ...rooms.slice(0, k), 'wx', ...rooms.slice(k), 'energy'];
+    const k = phone ? 4 : Math.max(1, n - 2), own = ['favs', ...rooms.slice(0, k), 'sched', ...rooms.slice(k), 'wx', 'energy'];
     // the order you dragged them into (Edit Home page), new cards after it; while one is dragged, where it would land
     const saved = homeDrag?.order || prefs.home?.order;
     const order = saved ? [...saved.filter((x) => own.includes(x)), ...own.filter((x) => !saved.includes(x))] : own;
@@ -2055,7 +2082,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // each card in the first free cell from the top left, a row at a time
     const taken = new Set(), at = new Map();
     cards.forEach((it) => {
-      const cols = Math.min(n, ['favs', 'wx', 'energy'].includes(it.key) ? 2 : 1);
+      const cols = Math.min(n, ['favs', 'sched', 'wx', 'energy'].includes(it.key) ? 2 : 1);
       for (let r = 0; ; r++) {
         const c = [...Array(n - cols + 1).keys()].find((c0) => [...Array(cols).keys()].every((k) => !taken.has(r + ',' + (c0 + k))));
         if (c != null) { [...Array(cols).keys()].forEach((k) => taken.add(r + ',' + (c + k))); at.set(it.key, { r, c, cols }); break; }
@@ -2472,6 +2499,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const HOME_INFO = {
     welcome: ['Welcome message', '<p>Shows a <strong>greeting</strong> above your home\'s name: good morning, afternoon or evening, then your name.</p>'],
     favs: ['Favourite entities', '<p>The devices you use most, at the top of Home.</p><ul><li><strong>Drag</strong> one to change the order</li><li>Press <strong>×</strong> to take it off</li></ul>'],
+    schedule: ['Schedule', '<p>Today\'s and tomorrow\'s events from your calendars, each in its calendar\'s colour.</p>'],
     weather: ['Weather', '<p>The forecast card: now, the next hours in a sentence and the week ahead. Its <strong>Now</strong> opens the Weather page.</p>'],
     energy: ['Energy today', '<p>What your home has used and made today, hour by hour, with <strong>Electricity</strong>, <strong>Solar</strong>, <strong>Gas</strong> and <strong>Water</strong> under it.</p>'],
     suggest: ['Suggested entities', '<p>Fills Favourites with devices you often use, after your own. They change as you use your home.</p>'],
@@ -2515,7 +2543,8 @@ export function mountTestFocus(root, { config, getHass }) {
         '<div class="tfTrayPick" data-he-pick' + (homePicking ? '' : ' hidden') + '><input class="addInput" type="search" placeholder="Search devices" aria-label="Search devices" autocomplete="off" data-he-search value="' + esc(search) + '">' +
         '<ul class="tfTrayList">' + (homePicking ? pickHtml(search, (id) => PICK_DOMAINS.test(id), new Set(favs), 'data-he-pick-id') : '') + '</ul></div>' +
         '<div class="hcHeLine"><span class="activityRowName">Suggested entities</span>' + infoBtn('suggest') + sw(suggestOn(), 'Suggested entities', 'data-he-suggest') + '</div>' +
-        '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(prefs.home?.weather !== false, 'Weather', 'data-he-card="weather"') + '</div>' +
+        '<div class="hcHeLine"><span class="activityRowName">Schedule</span>' + infoBtn('schedule') + sw(prefs.home?.schedule !== false, 'Schedule', 'data-he-card="schedule"') + '</div>' +
+        '<div class="hcHeLine"><span class="activityRowName">Weather</span>' + infoBtn('weather') + sw(!!prefs.home?.weather, 'Weather', 'data-he-card="weather"') + '</div>' +
         '<div class="hcHeLine"><span class="activityRowName">Energy today</span>' + infoBtn('energy') + sw(!!prefs.home?.energy, 'Energy today', 'data-he-card="energy"') + '</div>') +
       sec('sums', 'mdi:view-dashboard', 'Summaries', 'Customise the summaries of your Home page.',
         homeSeg('Width', 'data-he-sums-width', sumsFit() ? 'fit' : 'match', [['match', 'Match the cards'], ['fit', 'Fit the summaries']]) +
@@ -2599,7 +2628,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const info = t.closest('[data-info]'); if (info) { openInfo(info); return; }
     const fold = t.closest('[data-he-fold]'); if (fold && !t.closest('.hcInfoBtn')) { const k = fold.dataset.heFold; if (homeFolded.has(k)) homeFolded.delete(k); else homeFolded.add(k); closeInfo(); drawHomeTray(); return; }
     if (t.closest('[data-he-welcome]')) { homePrefs({ welcome: !welcomeOn() }); return; }
-    const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = k === 'energy' ? !!prefs.home?.energy : prefs.home?.weather !== false; homePrefs({ [k]: !on }); return; }
+    const cardSw = t.closest('[data-he-card]'); if (cardSw) { const k = cardSw.dataset.heCard, on = k === 'schedule' ? prefs.home?.schedule !== false : !!prefs.home?.[k]; homePrefs({ [k]: !on }); return; }
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     if (t.closest('[data-he-suggest]')) { homeSave({ suggest: !suggestOn() }); return; }
