@@ -744,7 +744,7 @@ button.tfAreaIcon{cursor:pointer}
 /* the edit tray (Matt, 28 Oct): edit mode's side panel from the right, over the board (the board isn't squeezed, so the
    board edited is the board shown); its tab tucks it away. It holds the hidden cards (drag one onto the board) and the
    favourites, edited as on Home Assistant's home view. Its look follows the cards: card colour, corner 34, padding 20 */
-.tfEditTray{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px));right:0;bottom:0;z-index:160;display:flex;width:360px;max-width:calc(100vw - 56px);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
+.tfEditTray{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px));right:0;bottom:0;z-index:160;display:flex;width:608px;max-width:calc(100vw - 56px);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
 .tfEditTray.open{transform:none}
 .tfEditTray.open.tucked{transform:translateX(100%)}
 .tfEditTray.open :is(.tfTrayInner,.tfTrayTuck){pointer-events:auto}
@@ -783,7 +783,7 @@ button.tfAreaIcon{cursor:pointer}
 /* the mini phone (Matt, 28 Oct): beside the edit tray (and its tab), opened from the tray's Phone section only when
    asked. A phone frame in the card colour; inside, the phone's cards as simple blocks at 80% of their phone size, 16 × .8
    apart, edge to edge like a phone's; drag a block (or the arrow keys) to set the phone's order */
-.tfMiniPhone{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px) + 20px);bottom:20px;left:max(16px,calc(100vw - min(360px,100vw - 56px) - 380px));z-index:160;display:flex;flex-direction:column;gap:8px;width:324px;padding:12px;border-radius:44px;background:var(--card);box-shadow:var(--hc-hair-all),0 0 40px rgba(0,0,0,.3);opacity:0;transform:translateX(16px);transition:opacity .2s ease,transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
+.tfMiniPhone{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px) + 20px);bottom:20px;left:max(16px,calc(100vw - min(608px,100vw - 56px) - 380px));z-index:160;display:flex;flex-direction:column;gap:8px;width:324px;padding:12px;border-radius:44px;background:var(--card);box-shadow:var(--hc-hair-all),0 0 40px rgba(0,0,0,.3);opacity:0;transform:translateX(16px);transition:opacity .2s ease,transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
 .tfMiniPhone.open{opacity:1;transform:none;pointer-events:auto}
 .tfPhoneHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 4px 0 12px}
 .tfMiniPhone>.tfTrayNote{padding:0 12px 4px}
@@ -995,7 +995,7 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfOverview.tfDash #homeView .tfDash-wx .wbColumn .wbWx.wbS60{width:60px;height:60px;border-radius:20px}
 
 /* Edit Home page: a tray at the side, as the dashboard's editor; its rows as the tray's */
-.hcHomeTray{width:608px} /* 30% wider than the dashboard's, then 30% again: 360, 468, 608 (Matt, 12 Nov) */
+/* both edit trays 608 wide (Matt, 12 Nov: 360, then 30% wider twice for breathing room, then the dashboard's the same) */
 .hcHeBody{display:flex;flex-direction:column;gap:12px}
 .hcHeSec{border-radius:var(--r-inner);background:var(--tile)}
 .hcHeSecHead{display:grid;grid-template-columns:var(--chip-size) minmax(0,1fr) 32px;align-items:center;gap:12px;padding:12px 10px 12px 12px;color:var(--text);cursor:pointer}

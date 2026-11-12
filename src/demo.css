@@ -331,7 +331,7 @@
 .hcActivityTime{font:500 13px/1 var(--font-tile);color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* the summaries' popout beside the edit tray (Matt, 9 Nov) */
-.hcSumsPop{position:fixed;z-index:260;right:calc(360px + 12px);width:300px;display:grid;gap:2px;padding:10px!important;background:var(--card);box-shadow:var(--hc-hair-all),0 10px 30px rgba(0,0,0,.35)}
+.hcSumsPop{position:fixed;z-index:260;right:calc(min(608px,100vw - 56px) + 12px);width:300px;display:grid;gap:2px;padding:10px!important;background:var(--card);box-shadow:var(--hc-hair-all),0 10px 30px rgba(0,0,0,.35)}
 .hcSumsPop[hidden]{display:none}
 .hcSumsPop>.hcCardTitle{padding:4px 8px 8px;font:500 18px/1.2 var(--font-tile);color:var(--text)}
 .hcSumRow{display:flex;align-items:center;gap:12px;min-height:var(--tile-min);padding:0 8px}
