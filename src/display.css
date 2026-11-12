@@ -532,7 +532,7 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfDash .tfDash-sched{order:var(--o,6)!important} /* Home's Schedule, in its place on phones too */
 #app.tfDash .tfDash-energy{order:var(--o,7)!important}
 #app.tfDash .tfDash-avg{order:var(--o,8)!important}
-#app.tfDash :is(.tfDash-aq,.tfDash-pollen,.tfDash-radar){order:var(--o,8)!important}
+#app.tfDash :is(.tfDash-aq,.tfDash-pollen,.tfDash-radar,.tfDash-hourly,.tfDash-sun,.tfDash-moon,.tfDash-uv,.tfDash-humidity,.tfDash-pressure,.tfDash-wind,.tfDash-visibility){order:var(--o,8)!important} /* every weather card after the name and summaries on a phone (Sun, UV and Moon came first) */
 #app.tfDash .tfDashTiles>*{order:var(--o,9)}
 /* drawn sizes: never wider than drawn; a card may give up to 12% (520 down to 460) so two sit side by side on a
    tablet, and takes the whole width only on a phone */
