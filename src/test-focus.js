@@ -1279,7 +1279,9 @@ export function mountTestFocus(root, { config, getHass }) {
     const button = plain ? null : spec ? spec.button
       : TOGGLES.includes(d) ? { act: act(d, 'toggle', id), label: 'Turn ' + nameOf(id) + (on ? ' off' : ' on') }
         : d === 'scene' || d === 'script' ? { act: act(d, 'turn_on', id), label: 'Run ' + nameOf(id) } : null;
-    const meta = (say ?? valueOf(id)) + (area && whereIs.get(id) ? ' · ' + whereIs.get(id) : '');
+    // a favourite's line is two things at most, its state and its room (Matt, 14 Nov: "the sub data points to only two,
+    // so we can keep the side scrolling to a minimum"): "74% · Living Room", not "74% · 2,538k · Living Room"
+    const meta = area ? [String(say ?? valueOf(id)).split(' · ')[0], whereIs.get(id)].filter(Boolean).join(' · ') : (say ?? valueOf(id));
     const icon = spec?.icon || iconFor(id);
     return '<div class="activityRow' + (button ? ' tfPlug' : '') + (on ? ' on' : '') + (star ? ' tfPick' : '') + (alert ? ' alert' : '') + '" data-k="' + esc((area ? 'fav:' : 'row:') + id) + '" data-tone="' + (d === 'light' ? 'light' : spec?.tone || 'blue') + '"' + lightAttrs(id) + '>' +
       (button && !star ? '<button class="tfIcon" type="button" data-act="' + button.act + '" aria-label="' + esc(button.label) + '"' + iconSlot(id, icon) + '></button>' : '<div class="tfIcon" aria-hidden="true"' + iconSlot(id, icon) + '></div>') +
@@ -2109,10 +2111,10 @@ export function mountTestFocus(root, { config, getHass }) {
       it.el.toggleAttribute('data-narrow', false);
       Object.assign(it.el.style, { width: (it.key === 'title' ? W : gridW) + 'px', height: '', left: '0px', top: top + 'px' });
       // a bar's tiles in one row while they fit, else in even rows (halves, thirds…)
-      const bar = it.key !== 'title' && !phone && (it.el.querySelector('.tfDash-bar>.activityRows') || (it.key === 'favs' && it.el.querySelector(':scope>.activityRows'))), count = bar ? bar.children.length : 0;
+      const bar = it.key !== 'title' && (it.el.querySelector('.tfDash-bar>.activityRows') || (it.key === 'favs' && it.el.querySelector(':scope>.activityRows'))), count = bar ? bar.children.length : 0;
       if (bar) {
-        bar.classList.remove('hcBarRows');
-        if (bar.scrollWidth > bar.clientWidth + 1) for (let rows = 2; rows <= count; rows++) { bar.classList.add('hcBarRows'); bar.style.setProperty('--bar-cols', String(Math.ceil(count / rows))); if (bar.scrollWidth <= bar.clientWidth + 1) break; }
+        bar.classList.remove('hcBarRows'); // a phone has its own two columns (a window narrowed to one lost the wider rows' columns)
+        if (!phone && bar.scrollWidth > bar.clientWidth + 1) for (let rows = 2; rows <= count; rows++) { bar.classList.add('hcBarRows'); bar.style.setProperty('--bar-cols', String(Math.ceil(count / rows))); if (bar.scrollWidth <= bar.clientWidth + 1) break; }
       }
       top += it.el.offsetHeight + (it.key === 'title' ? HOME.nameGap : HOME.sumsGap);
     });

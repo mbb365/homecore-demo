@@ -23,11 +23,12 @@ const S = { h: 2 }, L = { h: 4 };
 
 export const USER_DATA = {
   move_assistant_house: {
+    // six to start with (Matt, 14 Nov: "only have 6 favourites in the favourites box for the default start"), and no
+    // suggestions after them
     favourites: ['climate.made_up_living_room', 'cover.made_up_living_room_curtains', 'valve.made_up_balcony_watering', 'lock.openable_lock',
-      'light.green_wavy_light', 'light.fire_place_lamp', 'light.living_room', 'light.office_2',
-      // and two more (Matt, 12 Nov): Home's Favourites card shows four rows, the fifth under a fade
-      'light.kitchen_spots', 'humidifier.made_up_bedroom'],
+      'light.green_wavy_light', 'light.fire_place_lamp'],
     favSeeded: true,
+    suggest: false,
     shownSums: ['covers', 'people'],
     // Home's first look (Matt, 12 Nov, his screenshot: "push this as the default layout"): Favourites as a strip under the
     // summaries, no Schedule, the areas grouped by floor in Bento, each floor a box, every area card Small
