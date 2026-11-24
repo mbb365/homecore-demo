@@ -25,6 +25,9 @@ const SURFACES = [
 // screen; their text follows the page. (#hcPageInk.hcA.hcB matches nothing: it only lifts the rule
 // to the same weight as the cards' one, which has an id and two classes in it, so this one, coming after, wins)
 // the settings page keeps the theme's cards, so its controls always read (Matt, 11 Nov); the Style tab's preview doesn't
+// popups and more info: never more see-through than 75% (Matt, 24 Nov: "more infos and popups remain at the lowest 75%
+// opacity as well"), however far the cards are turned down
+const POPS = ['.tfMore:not(.wide)', '.tfMorePair:not(.over) .tfMoreSideInner', '.hcInfoPop', '.hcSumsPop', '.hcMoreMenu', '.tfBoardMenu', '.modal', '.modalStatic', '.sheet', '.confirmCard'].join(','), POP_MIN = 0.75;
 const SCOPE = ':where(:not(#settingsView *),.hcLookPreview *)';
 const ON_PAGE = ['#hcPageInk.hcA.hcB', '.tfMore.wide', '.tfMorePair.over .tfMore.wide+.tfMoreSide .tfMoreSideInner', '.tfPhoneScreen'].join(',');
 
@@ -74,8 +77,13 @@ export function mountLook(root, { toast }) {
     const ON = '#app.hcDemo.hcLook:not(.hcLookOff)', PV = '#app.hcDemo.hcLook .hcLookPreview';
     const both = (sel) => ON + ' ' + sel + SCOPE + ',' + PV + ' ' + sel;
     // a popup's pinned head, or one of its pseudo-elements (which must come after the scope)
-    const HEAD = ':is(.tfMore:not(.wide),.tfMoreSideInner)>.tfMoreHead';
+    // (at rest: once something scrolls under it the head and its cover take the popup's colour again, as at 100%)
+    const HEAD = ':is(.tfMore:not(.wide),.tfMoreSideInner):not(.hcScrolled)>.tfMoreHead';
+    // a popup's own colour and ink, at 75% or more
+    const pa = Math.max(a, POP_MIN), popSeen = s.bg === 'image' && s.imgLum != null ? lum(card) * pa + s.imgLum * (1 - pa) : lum(mix(ground, card, pa));
+    const [popText, popMuted] = inkFor(popSeen);
     const popHead = (pe) => ON + ' ' + HEAD + SCOPE + pe + ',' + PV + ' ' + HEAD + pe;
+    const popScrolled = ON + ' :is(.tfMore:not(.wide),.tfMoreSideInner).hcScrolled' + SCOPE;
     style.textContent =
       ON + '{--card:' + rgba(card, a) + ';--group-bg:' + rgba(card, a) + ';--line:' + rgba(line, lineA) + ';--lineb:' + rgba(line, lineA) + ';' +
         (s.bg !== 'theme' ? '--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) + ';--text:' + pageText + ';--muted:' + pageMuted + ';--tile:' + pageTile + ';color:var(--text);' : '') + '}' +
@@ -83,16 +91,14 @@ export function mountLook(root, { toast }) {
         ON + ' .hcRail{background:transparent;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}' : '') +
       both(':is(' + SURFACES + ')') + '{--text:' + text + ';--muted:' + muted + ';--tile:' + rgba(tile, Math.max(a, 0.6)) + ';color:var(--text)}' +
       ON + ' :is(' + ON_PAGE + '){--text:' + pageText + ';--muted:' + pageMuted + (s.bg !== 'theme' ? ';--tile:' + pageTile : '') + ';color:var(--text)}' +
-      // frosted while there's any card at all; at 0% it's clear
+      // frosted while there's any card at all; at 0% it's clear (a popup always, as it's never under 75%)
       (a < 1 && a > 0 ? both(':is(' + SURFACES + ')') + '{-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
-      // a see-through popup's pinned head paints no colour (a second coat of the card's see-through colour showed as bands
-      // over the popup, Matt, 24 Nov): it and the cover above it frost what scrolls under them instead
-      // (only once something has scrolled under them: a frost over the bare popup shows as a band too)
-      // (one frosted layer behind the head, from 80 above it to its foot and out to the popup's sides, inside its 20 padding so it never scrolls sideways)
-      (a < 1 ? popHead('') + '{background:transparent}' +
-        popHead('::before') + '{z-index:-1;bottom:0;height:calc(100% + 80px);left:-20px;right:-20px;background:transparent;box-shadow:none;-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);animation:hcHeadFrost linear both;animation-timeline:scroll(nearest block);animation-range:0 24px}' +
-        popHead('::after') + '{display:none}' +
-        '@keyframes hcHeadFrost{from{opacity:0}to{opacity:1}}' : '') +
+      (a < POP_MIN ? both(':is(' + POPS + '):not(#hcA):not(#hcB)') + '{--card:' + rgba(card, pa) + ';--group-bg:' + rgba(card, pa) + ';--text:' + popText + ';--muted:' + popMuted + ';--tile:' + rgba(mix(card, hexRgb(popText), 0.07), pa) + ';color:var(--text);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}' : '') +
+      // a see-through popup's pinned head paints no colour at rest (a second coat of the card's see-through colour showed
+      // as a band over the popup, Matt, 24 Nov); once something scrolls under it, it and its cover hide it as at 100%
+      // (then in the popup's colour as it looks over the dimmed page and its cards, solid, so what's under it doesn't show through)
+      (a < 1 ? popHead('') + '{background:transparent}' + popHead('::before') + ',' + popHead('::after') + '{display:none}' +
+        popScrolled + '{--hc-pop-bg:' + rgbHex(mix(mix(mix(ground, card, a), [0, 0, 0], 0.45), card, pa)) + '}' : '') +
       // the settings page: the theme's card, line and text; the preview: the look again
       '#app.hcDemo.hcLook #settingsView{--card:var(--color-bg-card);--group-bg:var(--color-bg-card);--line:var(--color-line);--lineb:var(--color-line)}' +
       '#app.hcDemo.hcLook #settingsView :is(.toggleList,.integrationList,.helpSteps){--text:var(--color-text-primary);--muted:var(--color-text-muted);--tile:var(--color-bg-tile);color:var(--text)}' +

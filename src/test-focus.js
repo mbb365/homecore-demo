@@ -3705,6 +3705,9 @@ export function mountTestFocus(root, { config, getHass }) {
   under.className = 'tfMoreBackdrop tfMoreUnder';
   under.hidden = true;
   app.insertBefore(under, sheet);
+  // a popup knows when something has scrolled under its pinned head (hcScrolled), so a see-through one can leave its
+  // head clear until then (look.js; Matt, 24 Nov)
+  app.addEventListener('scroll', (ev) => { const t = ev.target; if (t.classList?.contains('tfMore') || t.classList?.contains('tfMoreSideInner')) t.classList.toggle('hcScrolled', t.scrollTop > 0); }, true);
   // while a popup is open the page behind it stays still (Matt, 28 Oct): a swipe or wheel only scrolls what's inside
   // the popup, and nothing once that's at its end; on the dark round it, nothing at all. Sideways swipes and the
   // popup's own controls are left alone
