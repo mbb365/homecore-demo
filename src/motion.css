@@ -30,8 +30,8 @@
 #app .mvSegInd{position:absolute;z-index:0;pointer-events:none}
 #app .mvSegMoving>button{position:relative;z-index:1;background-color:transparent!important;box-shadow:none!important;transition:none!important}
 
-/* 8 · dialogs: the dim (45%, as it was) with a 12 blur behind it */
-#app .tfMoreBackdrop{-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+/* 8 · dialogs: the dim (45%, as it was) with a 2.4 blur (80% less than the 12 it was) behind it */
+#app .tfMoreBackdrop{-webkit-backdrop-filter:blur(2.4px);backdrop-filter:blur(2.4px)}
 
 /* 9 · confirmations: the toast's message at 18, a tick in a green 40 room at its start */
 #app .toast.tfToast{min-height:58px;box-sizing:border-box;padding:9px 18px 9px 9px;gap:14px;border-radius:29px;font-size:18px;line-height:1.2}

@@ -1,8 +1,7 @@
 // The load-in (Matt, 17 Nov: "lets try something quite silly… a fade in load"), from his Figma frames 1158:22778:
 // the page opens on the blue sky ("Start on this", 1158:22498), and after 0.4 s it fades into the page's own light
 // background ("fade to this BG", 1158:22518) while the words spin in letter by letter: the greeting first, then the
-// house's name, then the cards fade up in turn (Matt, 17 Nov), their names rising in with them. About 3.2 s in all, at his values. Once per load; with Reduce motion on it doesn't run. Its timings are INTRO's (the dev tweaker,
-// intro-tweaker.js, changes them live).
+// house's name, then the cards fade up in turn (Matt, 17 Nov), their names rising in with them. About 3.2 s in all, at his values. Once per load; with Reduce motion on it doesn't run. Its timings are INTRO's.
 import { reduced } from './motion.js';
 
 export const EASES = { soft: 'cubic-bezier(.4,0,.2,1)', standard: 'cubic-bezier(.2,0,0,1)', land: 'cubic-bezier(.34,1.46,.64,1)', spring: 'cubic-bezier(.2,1.2,.4,1)', linear: 'linear' };
@@ -14,9 +13,7 @@ export const INTRO_DEFAULTS = Object.freeze({ // Matt's values from the tweaker 
   words: 'names', // 'names': titles and names spin; 'all': every word in the cards spins too
 });
 export const INTRO = { ...INTRO_DEFAULTS };
-// a tweak saved in this browser while trying it out (dev only)
-if (import.meta.env?.DEV) try { Object.entries(JSON.parse(localStorage.getItem('homecore-demo-intro') || '{}')).forEach(([k, x]) => { if (k in INTRO) INTRO[k] = x; }); } catch (_e) { /* the defaults */ }
-// when the parts begin and the whole ends, from INTRO (the tweaker shows the total)
+// when the parts begin and the whole ends, from INTRO
 export function introTimes(c = INTRO, greetLen = 23, nameLen = 12) {
   const greetEnd = c.greetStart + Math.max(0, greetLen - 1) * c.greetStagger;
   const nameStart = greetEnd + c.nameGap, nameEnd = nameStart + Math.max(0, nameLen - 1) * c.nameStagger;
@@ -105,9 +102,13 @@ export function playIntro(root, app, c = INTRO) {
     const at = (el) => el.getBoundingClientRect();
     cards = [...root.querySelectorAll(CARDS)].filter(inView).sort((a, b) => at(a).top - at(b).top || at(a).left - at(b).left);
     cards.forEach((el, i) => el.style.setProperty('--intro-d', Math.round(t.cardStart + Math.min(i * c.cardStagger, c.cardSpread)) + 'ms'));
+    // Home's weather icon fades in with the summaries' icons, not with the title (Matt, 26 Nov: "the same time as the other icons")
+    const sums = cards.find((el) => el.matches('[data-k="sums"]'));
+    if (title && sums) title.style.setProperty('--intro-icons-d', sums.style.getPropertyValue('--intro-d'));
     // each card's words spin in with it
     root.querySelectorAll(c.words === 'all' ? ALL : NAMES).forEach((el) => {
       const card = el.closest(CARDS);
+      if (card?.matches('[data-k="sums"],[data-k="favs"]')) return; // the summaries' and Favourites' words don't spin: they only fade in
       if (!card || !inView(el) || el.closest('.hcIntroWord') || el.querySelector('.hcIntroWord')) return;
       spin(textsOf(el), (parseInt(card.style.getPropertyValue('--intro-d'), 10) || t.cardStart) + c.letterAfter, c.letterStagger, c.letterSpread);
     });

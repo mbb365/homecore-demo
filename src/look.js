@@ -40,6 +40,13 @@ const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? 
 const mix = (a, b, t) => a.map((v, i) => v * (1 - t) + b[i] * t);
 // light text on dark, dark text on light: whichever reads better
 const inkFor = (l) => ((l + 0.05) / (lum(hexRgb(INK.dark[0])) + 0.05) > (lum(hexRgb(INK.light[0])) + 0.05) / (l + 0.05) ? INK.dark : INK.light);
+// one card's own colour (Edit card, Matt, 20 Nov): its text, quieter text and tiles for that colour at that opacity over
+// the background, as the cards' are worked out above
+export const cardInk = (card, a, ground) => {
+  const [text, muted] = inkFor(lum(mix(ground, card, a))), tile = mix(card, hexRgb(text), 0.07);
+  return { text, muted, tile: 'rgba(' + tile.map(Math.round).join(',') + ',' + +Math.max(a, 0.6).toFixed(3) + ')' };
+};
+export { parseColour, hexRgb, rgbHex };
 
 export function mountLook(root, { toast }) {
   const app = root.getElementById('app');
@@ -106,7 +113,8 @@ export function mountLook(root, { toast }) {
         (s.bg !== 'theme' ? ';--bg:' + rgbHex(ground) + ';--page:' + rgbHex(ground) : '') + '}' +
       (s.bg === 'image' && img ? '#app.hcDemo.hcLook .hcLookPreview{background-image:url("' + img + '");background-size:cover;background-position:center;background-attachment:fixed}' : '') +
       // every card's own line, drawn over whatever the system gives it; edit mode's outline and a focus ring come first
-      (s.strokes === 'all' ? '#app.hcDemo.hcLook:not(.tfEditing):not(.hcLookOff) :is(' + SURFACES + ')' + SCOPE + ':not(:focus-visible),' + PV + ' :is(' + SURFACES + '):not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
+      // (one card being edited shows the lines as they'll be)
+      (s.strokes === 'all' ? '#app.hcDemo.hcLook:is(:not(.tfEditing),.hcCardEditing):not(.hcLookOff) :is(' + SURFACES + ')' + SCOPE + ':not(:focus-visible),' + PV + ' :is(' + SURFACES + '):not(:focus-visible){outline:' + s.strokeWidth + 'px solid ' + rgba(line, lineA) + ';outline-offset:-' + s.strokeWidth + 'px}' : '');
     draw();
   }
   // Style: grey all over (the whole page, photos and art too), square corners and pixel icons

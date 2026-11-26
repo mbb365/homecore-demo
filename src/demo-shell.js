@@ -10,7 +10,7 @@ import { renderAccount } from './pages/account.js';
 import { renderActivity } from './pages/activity.js';
 import { openSearch } from './pages/search.js';
 import { renderConfig, renderAbout } from './pages/ha-settings.js';
-import { mountLook } from './look.js';
+import { renderSections } from './pages/sections.js';
 import { mountIntro } from './intro.js';
 import { closeDialog, toaster } from './motion.js';
 import { IMG } from './images.js';
@@ -21,9 +21,10 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Home is the logo at the top (Matt, 9 Nov); Map has Home's old place
 // Home (the house) is the overview, the simple default page, and Dashboards (Home Assistant's dashboard icon) the board
 // you edit, which was Home (Matt, 12 Nov)
-const BOARDS = new Set(['home', 'dashboards']);
+const BOARDS = new Set(['home']);
 // Home's own button went (Matt, 12 Nov): the logo opens Home
-const RAIL = [['dashboards', 'Dashboards', 'mdi:view-dashboard'], ['map', 'Map', 'mdi:tooltip-account'], ['weather', 'Weather', 'mdi:weather-partly-cloudy'], ['devices', 'Devices', 'mdi:devices']];
+// Dashboards is My Cool Dashboard now, Home Assistant's sections view (Matt, 26 Nov), with its own icon and name
+const RAIL = [['dashboards', 'My Cool Dashboard', 'mdi:sunglasses'], ['map', 'Map', 'mdi:tooltip-account'], ['devices', 'Devices', 'mdi:devices']];
 // behind ⋯: the rest of Home Assistant's sidebar today, in its order
 // (Energy, History and Media went: Matt, 9 Nov, "they confuse it")
 // HomeCore's own settings are HomeCore settings (Matt, 9 Nov); Home Assistant's Settings has the cog, above you
@@ -36,10 +37,11 @@ function renderMap(page, ctx) {
   import('./pages/map.js').then((m) => { if (!gone) off = m.renderMap(page, now); });
   return () => { gone = true; off?.(); };
 }
-const PAGES = { devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity, config: renderConfig, about: renderAbout };
+const PAGES = { dashboards: renderSections, devices: renderDevices, map: renderMap, account: renderAccount, activity: renderActivity, config: renderConfig, about: renderAbout };
 // Activity is the demo's own page now (Home Assistant's logbook with its filters: Matt, 9 Nov)
-const HOMECORE_PAGES = new Set(['weather']);
-const ROUTES = new Set(['home', 'dashboards', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
+// (the Weather page isn't in this version: Matt, 26 Nov, "remove the weather dashboard"; #/weather goes Home)
+const HOMECORE_PAGES = new Set([]);
+const ROUTES = new Set(['home', 'settings', ...HOMECORE_PAGES, ...Object.keys(PAGES)]);
 
 export function mountDemoShell(root, { getHass, homecore }) {
   const $ = (id) => root.getElementById(id);
@@ -273,8 +275,23 @@ export function mountDemoShell(root, { getHass, homecore }) {
       const KEY = 'homecore-demo-light-view';
       let view = 'cards';
       try { view = localStorage.getItem(KEY) || 'cards'; } catch (_e) { /* cards */ }
-      lights.insertAdjacentHTML('afterbegin', '<div class="hcLightView"><div class="themeChoice" role="group" aria-label="Show lights as">' +
-        '<button class="wxLayoutBtn" type="button" data-light-view="cards">Cards</button><button class="wxLayoutBtn" type="button" data-light-view="table">Table</button></div></div>');
+      // the Devices page's toolbar (Matt, 26 Nov): Filters, a search, grouping, sorting, then Table or Cards as icons
+      const LIST_KEY = 'homecore-demo-light-list';
+      let list = { q: '', group: 'area', sort: 'name' };
+      try { list = { ...list, ...JSON.parse(localStorage.getItem(LIST_KEY) || '{}') }; } catch (_e) { /* the defaults */ }
+      const count = Object.keys(getHass()?.states || {}).filter((id) => id.startsWith('light.')).length;
+      lights.insertAdjacentHTML('afterbegin', '<div class="hcToolbar hcLightView">' +
+        '<button class="hcBtn" type="button" data-oops>' + icon('mdi:filter-variant') + 'Filters</button>' +
+        '<label class="hcSearch">' + icon('mdi:magnify') + '<input class="addInput" type="search" placeholder="Search ' + count + ' lights" aria-label="Search lights" data-light-q></label>' +
+        '<select class="settingsSelect" data-light-group aria-label="Group by"><option value="area">Group by room</option><option value="none">No grouping</option></select>' +
+        '<select class="settingsSelect" data-light-sort aria-label="Sort by"><option value="name">Sort by name</option><option value="area">Sort by room</option><option value="on">On first</option></select>' +
+        '<div class="tfSeg hcViewSeg" role="group" aria-label="Show lights as">' +
+        '<button type="button" data-light-view="table" title="Table" aria-label="Table">' + icon('mdi:format-list-bulleted') + '</button><button type="button" data-light-view="cards" title="Cards" aria-label="Cards">' + icon('mdi:view-grid-outline') + '</button></div></div>');
+      const bar = lights.querySelector('.hcLightView');
+      bar.querySelector('[data-light-q]').value = list.q; bar.querySelector('[data-light-group]').value = list.group; bar.querySelector('[data-light-sort]').value = list.sort;
+      const keep = () => { try { localStorage.setItem(LIST_KEY, JSON.stringify(list)); } catch (_e) { /* this visit only */ } homecore.resync?.(); };
+      bar.addEventListener('input', (ev) => { if (ev.target.matches('[data-light-q]')) { list.q = ev.target.value; keep(); } });
+      bar.addEventListener('change', (ev) => { if (ev.target.matches('[data-light-group]')) { list.group = ev.target.value; keep(); } if (ev.target.matches('[data-light-sort]')) { list.sort = ev.target.value; keep(); } });
       const show = (v) => {
         view = v;
         pane.classList.toggle('hcLightCards', v === 'cards');
@@ -301,8 +318,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
     };
     pane.querySelector('.hcSetList').addEventListener('click', (ev) => { const b = ev.target.closest('[data-hc-set]'); if (b) setOpen(b.dataset.hcSet); });
   })();
-  // Appearance: the cards, the background and the stroke (Matt, 9 Nov)
-  mountLook(root, { toast: (msg) => toaster.show?.(msg) });
+  // the look stays the theme's: no settings for the cards, background or strokes (Matt, 26 Nov: "remove the edit look")
   /* anything that should go somewhere but isn't designed yet (data-oops) says so (Matt, 9 Nov; its illustration from Figma "Popup · Oops"): HomeCore's popup, Close
      or Add to the list (which says thanks in HomeCore's toast) */
   function oops() {
@@ -366,7 +382,5 @@ export function mountDemoShell(root, { getHass, homecore }) {
   document.fonts?.ready.then(() => homecore.refit());
   go(location.hash.replace(/^#\/?/, '') || 'home');
   mountIntro(root, app); // the load-in, once
-  // its tweaker, on the dev server only (never in the built site): delete this line and intro-tweaker.js to drop it
-  if (import.meta.env.DEV) import('./intro-tweaker.js').then((m) => m.mountIntroTweaker(root, app));
   return { go };
 }

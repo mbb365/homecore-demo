@@ -23,17 +23,19 @@ const S = { h: 2 }, L = { h: 4 };
 
 export const USER_DATA = {
   move_assistant_house: {
-    // four to start with, in Matt's order (17 Nov: the lock, the curtains, the watering, the thermostat), and no
-    // suggestions after them
-    favourites: ['lock.openable_lock', 'cover.made_up_living_room_curtains', 'valve.made_up_balcony_watering', 'climate.made_up_living_room'],
-    favSeeded: true,
+    // six to start with, in Matt's order (26 Nov: openable lock, alarm, curtains, thermostat, glass sphere, watering), and
+    // no suggestions after them
+    favourites: ['lock.openable_lock', 'alarm_control_panel.made_up_house', 'cover.made_up_living_room_curtains', 'climate.made_up_living_room', 'light.big_sphere', 'valve.made_up_balcony_watering'],
+    favSeed: 2,
     suggest: false,
     shownSums: ['covers', 'people'],
     // Home's first look (Matt, 17 Nov, his screenshots: "by default for the overview page, i want these settings"): the
     // welcome, Schedule (no Weather or Energy today), the cards stacked; the areas not by floor, in Bento with mixed sizes,
     // Small (a phone shows them Large whatever's picked, 17 Nov), fitted together; Favourites as its card; the summaries fitted to their tiles, the first six on
     home: { welcome: true, schedule: true, weather: false, energy: false, cardsAs: 'stacked', byFloor: false, areaLayout: 'bento', bentoBoxes: false, bentoMixed: true,
-      fitTogether: true, favs: true, favsAs: 'card', sums: true, sumsWidth: 'fit' },
+      // (26 Nov) the summaries Lights, Climate, Security, Media players, Energy and Leaks as a strip across the top, and
+      // Favourites as its card
+      fitTogether: true, favs: true, favsAs: 'card', sums: true, sumsWidth: 'match', hiddenSums: ['maintenance'], shownSums: ['leaks'] },
     dash: {
       pegs: 8,
       cells: CELLS,

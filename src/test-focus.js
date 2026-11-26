@@ -10,7 +10,9 @@
 import { createHouse, isMadeUp, solarHistory, PLANT_RANGE } from './house.js';
 import { ICONS as HC_ICONS, svg as hcSvg } from './hc-icons.js';
 import { mountWeatherBento } from './weather-bento.js';
+import { wbSmoothIcon } from './weather-bento-art.js';
 import { createCoverArt, coverKind } from './cover-art.js';
+import { cardInk, parseColour, hexRgb, rgbHex } from './look.js';
 import { M, EASE, smoothD, gridLines, drawLine, stretchTo, closeDialog, toastBody, toastIn, toaster, springStep, squash, reduced } from './motion.js';
 // HomeCore's icon for a Material Design one, by name (19 Nov); the demo's own inline icons use it too (demo-icons.js)
 export const HC_FROM_MDI = {
@@ -75,6 +77,9 @@ const SUMMARIES = {
   vacuum: { name: 'Vacuum', icon: 'mdi:robot-vacuum', colour: '#4caf50' },
 };
 const EXTRA_SUMS = ['covers', 'people', 'openings', 'leaks', 'vacuum'];
+// Home's summaries until they're changed in Edit Home page (Matt, 26 Nov): Lights, Climate, Security, Media players,
+// Energy and Leaks
+const HOME_SUMS = { hiddenSums: ['maintenance'], shownSums: ['leaks'] };
 const HOUSE_KEY = 'move_assistant_house'; // the house page's own saved data (its favourites), apart from the moves
 const USED_KEY = 'move-assistant-house-used'; // how often each device is used here, for suggested favourites
 const TOGGLES = ['switch', 'fan', 'input_boolean', 'automation'];
@@ -167,20 +172,16 @@ export function mountTestFocus(root, { config, getHass }) {
     const view = $('settingsView');
     view.querySelector('.settingsTitle').textContent = 'HomeCore settings'; // (Matt, 9 Nov)
     // one tab each (Matt, 27 Oct); the tab names the section, so the sections have no heading of their own
-    const tabs = [['look', 'Appearance'], ['style', 'Style'], ['lights', 'Lights'], ['sources', 'Sources'], ['sums', 'Summaries']];
+    const tabs = [['look', 'Appearance'], ['lights', 'Lights'], ['sums', 'Summaries']]; // (Sources went: Matt, 26 Nov)
     const tabPane = (k, html) => '<div class="houseTab' + (k === 'look' ? ' active' : '') + '" data-house-pane="' + k + '"><section class="card">' + html + '</section></div>';
     view.querySelector('.rubberTabs').insertAdjacentHTML('afterend', '<div class="settingsPane active" id="housePane">' +
       '<div class="tabs rubberTabs houseTabs"><div class="rubberIndicator" aria-hidden="true"></div>' +
         tabs.map(([k, t]) => '<button class="tab segBtn' + (k === 'look' ? ' active' : '') + '" type="button" data-house-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
       // Appearance in groups, each named above its card (Matt, 8 Nov)
       tabPane('look', LOOK_GROUPS.map(([k, t]) => '<div class="tfSetGroup"><div class="sectionLabel">' + t + '</div><div class="toggleList" data-look-group="' + k + '"></div></div>').join('')) +
-      // Style: the cards' look, filled in by the demo's Appearance controls (look.js), with a preview (Matt, 11 Nov)
-      tabPane('style', '') +
-      tabPane('lights', '<p class="note tfTableNote">This is an example of a table. It is not how to control features in lights.</p>' +
-        '<div class="metaTableWrap"><table class="metaTable tfLightTable"><thead><tr><th>Light</th><th>Room</th><th>Now</th><th class="metaSwitchCol">Favourite</th><th>Tile</th><th>Pad</th></tr></thead>' +
-        '<tbody id="lightRows"></tbody></table></div><div class="tfLightCards" id="lightCards"></div>') +
-      tabPane('sources', '<div class="toggleList">' +
-        SOURCES.map(([k, t, s]) => settingRow(t, s, '<select class="settingsSelect" data-source="' + k + '" aria-label="' + t + '"></select>')).join('') + '</div>') +
+      // Lights as the Devices page has its devices (Matt, 26 Nov: "match like the devices page"): a table, each light's chip by its
+      // name, or cards
+      tabPane('lights', '<div class="hcGroups" id="lightTables"></div><div class="tfLightCards hcGroups" id="lightCards"></div>') +
       tabPane('sums', '<div class="toggleList">' +
         Object.entries(SUMMARIES).map(([k, s]) => settingRow(s.name, '', '<button class="switch" type="button" role="switch" data-sum-toggle="' + k + '" aria-label="' + s.name + ' summary"></button>')).join('') + '</div>') + '</div>');
     const group = (k) => view.querySelector('[data-look-group="' + k + '"]'), rowOf = (el) => el?.closest('.toggleRow');
@@ -274,32 +275,46 @@ export function mountTestFocus(root, { config, getHass }) {
     pane.querySelectorAll('[data-sum-toggle]').forEach((b) => { const on = !(prefs.hiddenSums || []).includes(b.dataset.sumToggle); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
     // the lights table, by room, redrawn when something in it changed, but not while one of its lists is open. A switch
     // just pressed keeps its focus through the redraw (it used to stop the redraw, so a favourite never showed as set)
-    const body = $('lightRows'), cards = $('lightCards'), active = root.activeElement;
+    const body = $('lightTables'), cards = $('lightCards'), active = root.activeElement;
     const inside = body?.contains(active) || cards?.contains(active) ? active : null;
     if (!body || inside?.matches('select')) { fitChoices(); return; }
     const stars = new Set(starred()), opt = (v, t, cur, off) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + (off ? ' disabled' : '') + '>' + t + '</option>';
-    const html = Object.keys(states).filter((id) => id.startsWith('light.'))
-      .sort((a, b) => !whereIs.get(a) - !whereIs.get(b) || (whereIs.get(a) || '').localeCompare(whereIs.get(b) || '') || nameOf(a).localeCompare(nameOf(b))).map((id) => {
+    /* the lights as the Devices page lists its devices (Matt, 26 Nov: "the filtering and searching… grouping, sort by name"):
+       searched by name or room, grouped by room or not, sorted by name, room or on first; each group headed with its count */
+    let lv = { q: '', group: 'area', sort: 'name' };
+    try { lv = { ...lv, ...JSON.parse(localStorage.getItem('homecore-demo-light-list') || '{}') }; } catch (_e) { /* the defaults */ }
+    const words = String(lv.q || '').trim().toLowerCase();
+    const lightIds = Object.keys(states).filter((id) => id.startsWith('light.') && (!words || (nameOf(id) + ' ' + (whereIs.get(id) || '')).toLowerCase().includes(words)))
+      .sort((a, b) => (lv.sort === 'on' ? (states[b].state === 'on') - (states[a].state === 'on') : 0) || (lv.sort === 'area' ? (whereIs.get(a) || '~').localeCompare(whereIs.get(b) || '~') : 0) || nameOf(a).localeCompare(nameOf(b)));
+    const groups = lv.group === 'none' ? [{ name: '', ids: lightIds }] : [...lightIds.reduce((m, id) => { const k = whereIs.get(id) || 'No area'; if (!m.has(k)) m.set(k, []); m.get(k).push(id); return m; }, new Map())]
+      .sort(([a], [b]) => (a === 'No area') - (b === 'No area') || a.localeCompare(b)).map(([name, ids]) => ({ name, ids }));
+    // each group as the Devices page has its groups: its name and count above, its table in a card of its own (or its cards)
+    const groupHead = (g) => (g.name ? '<div class="sectionLabel">' + esc(g.name) + ' <span class="hcCount">' + g.ids.length + '</span></div>' : '');
+    const THEAD = '<thead><tr><th>Light</th><th>Room</th><th>Now</th><th class="metaSwitchCol">Favourite</th><th>Tile</th><th>Pad</th></tr></thead>';
+    const rowOfLight = (id) => {
         const style = look.lightStyles[id] || '', pad = look.lightPads[id] || '', fav = stars.has(id), name = esc(nameOf(id));
-        return '<tr><td><strong>' + name + '</strong></td><td>' + esc(whereIs.get(id) || '—') + '</td><td>' + esc(valueOf(id)) + '</td>' +
+        return '<tr><td><span class="hcNameCell"><span class="tfIcon"' + iconSlot(id, iconFor(id)) + lightAttrs(id) + '></span><strong>' + name + '</strong></span></td><td>' + esc(whereIs.get(id) || '—') + '</td><td>' + esc(valueOf(id)) + '</td>' +
           '<td class="metaSwitchCol"><button class="switch' + (fav ? ' on' : '') + '" type="button" role="switch" aria-checked="' + fav + '" data-light-fav="' + esc(id) + '" aria-label="' + name + ' is a favourite"></button></td>' +
           '<td><select class="settingsSelect" data-light-style="' + esc(id) + '" aria-label="' + name + ' tile">' + opt('', 'Default', style) + opt('tile', 'HomeCore tile', style) + opt('dac', 'Dual Axis Controller', style) + '</select></td>' +
           '<td><select class="settingsSelect" data-light-pad="' + esc(id) + '" aria-label="' + name + ' pad"' + (wantsDac(id) ? '' : ' disabled') + '>' + opt('', 'Default', pad) + opt('temperature', 'Temperature', pad) + opt('colour', 'Colour', pad) + '</select></td></tr>';
-      }).join('');
+    };
+    const html = groups.map((g) => '<section class="hcGroup">' + groupHead(g) + '<section class="card hcTableCard"><div class="metaTableWrap"><table class="metaTable tfLightTable hcDevTable">' + THEAD + '<tbody>' + g.ids.map(rowOfLight).join('') + '</tbody></table></div></section></section>').join('') ||
+      '<p class="note hcEmpty">No lights match</p>';
     // on a phone each light is a card (Matt, 8 Nov): its name and where it is, then Favourite with its switch, then its
     // tile, and its pad when it's the Dual Axis Controller, as choices
     const pickSeg = (field, id, label, opts, cur) => '<div class="themeChoice" role="group" aria-label="' + label + '">' + opts.map(([v, t]) =>
       '<button class="wxLayoutBtn" type="button" aria-pressed="' + (v === cur) + '" data-light-pick="' + field + '|' + esc(id) + '" data-v="' + v + '">' + t + '</button>').join('') + '</div>';
-    const cardsHtml = Object.keys(states).filter((id) => id.startsWith('light.'))
-      .sort((a, b) => !whereIs.get(a) - !whereIs.get(b) || (whereIs.get(a) || '').localeCompare(whereIs.get(b) || '') || nameOf(a).localeCompare(nameOf(b))).map((id) => {
+    const cardOfLight = (id) => {
         const fav = stars.has(id), name = esc(nameOf(id)), where = [whereIs.get(id), valueOf(id)].filter(Boolean).map(esc).join(' · ');
-        return '<div class="toggleList"><div class="toggleRow"><div><strong>' + name + '</strong><div class="status">' + where + '</div></div></div>' +
-          settingRow('Favourite', '', '<button class="switch' + (fav ? ' on' : '') + '" type="button" role="switch" aria-checked="' + fav + '" data-light-fav="' + esc(id) + '" aria-label="' + name + ' is a favourite"></button>') +
+        // each light the action card: its head (its chip, its name, where it is and how it is), then its settings inside
+        return '<div class="tfAction hcLightCard' + (states[id]?.state === 'on' ? ' on' : '') + '"' + lightAttrs(id) + ' data-tone="light"><div class="tfActionHead"><span class="tfIcon"' + iconSlot(id, iconFor(id)) + '></span><div class="tfName"><span class="activityRowName">' + name + '</span><span class="activityRowMeta">' + where + '</span></div></div>' +
+          '<div class="toggleList hcLightRows">' + settingRow('Favourite', '', '<button class="switch' + (fav ? ' on' : '') + '" type="button" role="switch" aria-checked="' + fav + '" data-light-fav="' + esc(id) + '" aria-label="' + name + ' is a favourite"></button>') +
           settingRow('Tile', '', pickSeg('lightStyles', id, name + ' tile', [['', 'Default'], ['tile', 'HomeCore tile'], ['dac', 'Dual Axis Controller']], look.lightStyles[id] || '')) +
-          (wantsDac(id) ? settingRow('Pad', '', pickSeg('lightPads', id, name + ' pad', [['', 'Default'], ['temperature', 'Temperature'], ['colour', 'Colour']], look.lightPads[id] || '')) : '') + '</div>';
-      }).join('');
-    if (body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; }
-    if (cards.dataset.html !== cardsHtml) { cards.innerHTML = cardsHtml; cards.dataset.html = cardsHtml; }
+          (wantsDac(id) ? settingRow('Pad', '', pickSeg('lightPads', id, name + ' pad', [['', 'Default'], ['temperature', 'Temperature'], ['colour', 'Colour']], look.lightPads[id] || '')) : '') + '</div></div>';
+    };
+    const cardsHtml = groups.map((g) => '<section class="hcGroup">' + groupHead(g) + '<div class="hcLightGrid">' + g.ids.map(cardOfLight).join('') + '</div></section>').join('') || '<p class="note hcEmpty">No lights match</p>';
+    if (body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; fillIcons(body); }
+    if (cards.dataset.html !== cardsHtml) { cards.innerHTML = cardsHtml; cards.dataset.html = cardsHtml; fillIcons(cards); }
     if (inside?.dataset.lightFav) (cards.contains(inside) ? cards : body).querySelector('[data-light-fav="' + CSS.escape(inside.dataset.lightFav) + '"]')?.focus({ preventScroll: true });
     fitChoices();
   }
@@ -559,12 +574,12 @@ export function mountTestFocus(root, { config, getHass }) {
     const off = new Set(dashPrefs().hidden);
     DASH_WEATHER.forEach(([k, cards]) => {
       if (dashBentos.has(k) || (off.has(k) && !(drag?.fromTray && drag.key === k))) return;
-      dashBentos.set(k, mountWeatherBento(dashBoxes[k], { getHass, entityId: dashBentoId, style: look.wxStyle, cards, onOpen: k === 'wx' ? () => openArea('weather') : undefined }));
+      dashBentos.set(k, mountWeatherBento(dashBoxes[k], { getHass, entityId: dashBentoId, style: look.wxStyle, cards, onOpen: undefined /* (no Weather page in this version) */ }));
     });
   }
 
   const attr = (id) => states[id]?.attributes || {};
-  const nameOf = (id) => attr(id).friendly_name || id;
+  const nameOf = (id) => prefs.entities?.[id]?.name || attr(id).friendly_name || id;
   const has = (id, bit) => isMadeUp(id) || (Number(attr(id).supported_features) & bit) === bit;
   const cap = (s) => { const t = String(s ?? '').replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); };
   const num = (v, d = 1) => Number(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -779,8 +794,10 @@ export function mountTestFocus(root, { config, getHass }) {
     if (el.dataset.fitted === key) return true;
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     for (const x of shapes) {
-      const b = x.getBBox(), cs = getComputedStyle(x), pad = cs.stroke !== 'none' ? (parseFloat(cs.strokeWidth) || 0) / 2 : 0;
-      if (!b.width && !b.height) continue;
+      const r = x.getBBox(), cs = getComputedStyle(x), pad = cs.stroke !== 'none' ? (parseFloat(cs.strokeWidth) || 0) / 2 : 0;
+      if (!r.width && !r.height) continue;
+      // a shape turned in place (a HomeCore fan's blades) is measured where it's drawn, not where it starts
+      const m = x.transform?.baseVal?.consolidate?.()?.matrix, b = m ? (() => { const c = [[r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height]].map(([u, v]) => [m.a * u + m.c * v + m.e, m.b * u + m.d * v + m.f]), xs = c.map((q) => q[0]), ys = c.map((q) => q[1]); return { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) }; })() : r;
       x1 = Math.min(x1, b.x - pad); y1 = Math.min(y1, b.y - pad); x2 = Math.max(x2, b.x + b.width + pad); y2 = Math.max(y2, b.y + b.height + pad);
     }
     if (!(x2 > x1)) return false;
@@ -803,7 +820,7 @@ export function mountTestFocus(root, { config, getHass }) {
   // every light the same solid bulb, on or off, its state in the chip's colour (Matt, 30 Oct); a light given its own
   // icon in Home Assistant keeps it
   const lightIcon = (id) => (id.startsWith('light.') && states[id] && !attr(id).icon && !getHass()?.entities?.[id]?.icon ? 'mdi:lightbulb' : '');
-  const iconSlot = (id, icon, letter) => { icon = icon || lightIcon(id); return ' data-icon-for="' + esc(id) + '"' + (icon ? ' data-icon-name="' + esc(icon) + '"' : '') + (letter ? ' data-letter="' + esc(letter) + '"' : ''); };
+  const iconSlot = (id, icon, letter) => { icon = prefs.entities?.[id]?.icon || icon || lightIcon(id); return ' data-icon-for="' + esc(id) + '"' + (icon ? ' data-icon-name="' + esc(icon) + '"' : '') + (letter ? ' data-letter="' + esc(letter) + '"' : ''); };
   const iconFor = (id) => (id.endsWith('_solar_power') ? 'mdi:solar-power-variant' : attr(id).rang ? 'mdi:doorbell' : '');
   // a service call on a button: domain|service|entity|data
   const act = (domain, service, id, data) => esc([domain, service, id, data ? JSON.stringify(data) : ''].join('|'));
@@ -855,10 +872,19 @@ export function mountTestFocus(root, { config, getHass }) {
   // was: where a light's brightness was before it went off, a faint line on its bar
   function bar(kind, id, frac, label, valueText, marker, was = null) {
     const f = frac == null ? null : Math.max(0, Math.min(1, frac)), pct = f == null ? 0 : Math.round(f * 100);
-    return '<div class="tfBar ' + kind + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"' + (valueText ? ' aria-valuetext="' + esc(valueText) + '"' : '') + ' data-drag="' + esc(kind + '|' + id) + '">' +
+    return '<div class="tfBar ' + kind + (!marker && pct >= 12 ? ' over' : '') + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"' + (valueText ? ' aria-valuetext="' + esc(valueText) + '"' : '') + ' data-drag="' + esc(kind + '|' + id) + '">' +
       (was != null ? '<span class="was" aria-hidden="true" style="left:' + was + '%"></span>' : '') +
-      (marker ? (f == null ? '' : '<b style="left:' + pct + '%"></b>') : '<i style="width:' + pct + '%"></i>') + '</div>';
+      (marker ? (f == null ? '' : '<b style="left:' + pct + '%"></b>') : '<i style="width:' + pct + '%"></i>') + barGlyph(kind) + '</div>';
   }
+  // what a slider sets, its icon in the bar's pocket at the left, as far in as it is from the top and bottom (Matt, 26 Nov:
+  // "add that icon in there… on the left-hand side… the same spacing away, so it sits nicely in that pocket")
+  const BAR_GLYPHS = {
+    bright: 'M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z',
+    vol: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
+    ct: 'M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z',
+    hue: 'M17.5,12A1.5,1.5 0 0,1 16,10.5A1.5,1.5 0 0,1 17.5,9A1.5,1.5 0 0,1 19,10.5A1.5,1.5 0 0,1 17.5,12M14.5,8A1.5,1.5 0 0,1 13,6.5A1.5,1.5 0 0,1 14.5,5A1.5,1.5 0 0,1 16,6.5A1.5,1.5 0 0,1 14.5,8M9.5,8A1.5,1.5 0 0,1 8,6.5A1.5,1.5 0 0,1 9.5,5A1.5,1.5 0 0,1 11,6.5A1.5,1.5 0 0,1 9.5,8M6.5,12A1.5,1.5 0 0,1 5,10.5A1.5,1.5 0 0,1 6.5,9A1.5,1.5 0 0,1 8,10.5A1.5,1.5 0 0,1 6.5,12M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A1.5,1.5 0 0,0 13.5,19.5C13.5,19.11 13.35,18.76 13.11,18.5C12.88,18.23 12.73,17.88 12.73,17.5A1.5,1.5 0 0,1 14.23,16H16A5,5 0 0,0 21,11C21,6.58 16.97,3 12,3Z',
+  };
+  const barGlyph = (kind) => (BAR_GLYPHS[kind] ? '<svg class="tfBarGlyph" viewBox="0 0 24 24" aria-hidden="true"><path d="' + BAR_GLYPHS[kind] + '"/></svg>' : '');
   // each light's brightness while it was last on, remembered in this browser, for its off line
   const LAST_BRIGHT_KEY = 'move-assistant-house-last-bright';
   const lastBright = (() => { try { return JSON.parse(local.get(LAST_BRIGHT_KEY)) || {}; } catch (_e) { return {}; } })();
@@ -900,7 +926,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const iconButton = (id, s) => '<button class="tfIcon' + (s.art ? ' art' : '') + '" type="button" data-act="' + s.button.act + '" aria-label="' + esc(s.button.label) + '"' +
     (s.art ? ' style="background-image:url(&quot;' + esc(s.art) + '&quot;)"' : iconSlot(id, s.icon)) + '></button>';
   // the name and value open more-info
-  const nameButton = (id) => '<button class="tfName" type="button" data-more="' + esc(id) + '" aria-label="' + esc(nameOf(id) + ', ' + valueOf(id) + '. More info') + '"><span class="activityRowName">' + esc(nameOf(id)) + '</span><span class="activityRowMeta">' + esc(valueOf(id)) + '</span></button>';
+  const nameButton = (id, state = true) => '<button class="tfName" type="button" data-more="' + esc(id) + '" aria-label="' + esc(nameOf(id) + ', ' + valueOf(id) + '. More info') + '"><span class="activityRowName">' + esc(nameOf(id)) + '</span>' + (state ? '<span class="activityRowMeta">' + esc(valueOf(id)) + '</span>' : '') + '</button>';
   // a tile shows the sections Matt kept (all but a cover's drawing to start with), at its size; small is the icon and
   // name only. In edit mode its controls rest under a bar of tools
   // in a summary's popup a tile keeps all its controls, except a light, which keeps only its brightness (Matt, 27 Oct:
@@ -911,11 +937,15 @@ export function mountTestFocus(root, { config, getHass }) {
     // it's just another action)
     // a Dual Axis Controller on the dashboard is its pad from M; at S its brightness only, as a light of bars, and at
     // XS its head (Matt, 2 Nov)
-    const s = specFor(id), dac = id.startsWith('light.') && dacFor(id) && !(only && sizeOf(id) < 3), keep = only || (inDialog && id.startsWith('light.') ? ['bright'] : null);
+    // in a popup's grid (the Lights summary) a light is its bars, brightness then warmth, never the Dual Axis Controller,
+    // which stays in its more info (Matt, 26 Nov)
+    const s = specFor(id), dac = id.startsWith('light.') && dacFor(id) && !inDialog && !(only && sizeOf(id) < 3), keep = only || (inDialog && id.startsWith('light.') ? ['bright', 'ct'] : null);
     const sections = dac ? ['<div class="tfDacPad" data-dac="' + (inDialog ? 'more:' : only ? 'dash:' : 'tile:') + esc(id) + '"></div>']
+      // on the board, in the order given (a light's main control first, Edit tile)
+      : only ? only.map((p) => s.sections[(s.parts || []).indexOf(p)]).filter(Boolean).map((sec, i) => sec.replace(/^<(\w+)/, '<$1 data-ce-item="' + esc(only[i]) + '"'))
       : s.sections.map((sec, i) => (sec && (!keep || keep.includes((s.parts || [])[i])) ? sec : '')).filter(Boolean);
     return '<div class="tfAction' + (dac ? ' tfDac' : '') + (s.on ? ' on' : '') + (!dac && !sections.length ? ' tfHeadOnly' : '') + '" data-k="' + esc(id) + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' +
-      '<div class="tfActionHead">' + iconButton(id, s) + nameButton(id) + '</div>' + sections.join('') + '</div>';
+      '<div class="tfActionHead">' + iconButton(id, s) + nameButton(id, inDialog || !(cardOf(id).hidden || []).includes('state')) + '</div>' + sections.join('') + '</div>';
   }
   /* the Dual Axis Controller (Matt's HACS card, custom:dual-controller-v3): when Settings picks it, every light is its
      tile, with its own pad and controller. It comes with HomeCore (Matt, 28 Oct: people install one thing): the first
@@ -1261,23 +1291,63 @@ export function mountTestFocus(root, { config, getHass }) {
      own, a room's lights or covers as a group), a device's icon beside its name turns it on and off, the reading opens its more-info, and the edge lights up */
   const isRoomKey = (key) => key.startsWith('room:');
   const roomOf = (key) => areaRooms.find((r) => 'room:' + r.id === key);
-  function roomTile(r, key, attrs = '') {
-    const keys = roomKeys(r), main = mainOf(r), h = main && headline(main), sub = main ? mainSub(r, main, keys) : '';
-    const big = h ? h.text + (h.unit ? ' ' + h.unit : '') : '';
-    const opens = (k) => { const ids = groupIds(r, k.key); return ids.length === 1 ? ids[0] : 'group:' + r.id + ':' + k.key; };
-    const controls = keys.filter((k) => k.kind === 'control').slice(0, 4), lit = (k) => (k.on && k.light ? ' data-light style="' + k.light + '"' : '');
+  /* Edit area card (Matt, 23 Nov: "a 'what you see is what you get' type design… Just for the area cards… all the entities
+     and devices available in that area, and then you'll drag them into the spaces available on the card. So there's 4
+     spaces available at the bottom of the card, and then there's one large main data point"): an area's card is its main
+     and four spaces, each one of its card's own keys (the lights, the covers…, kept as "key:lights") or one entity. Until
+     something's moved, what the card has always shown: its main and its first four controls */
+  const areaCard = (r) => {
+    const saved = prefs.areaCards?.[r.id];
+    if (saved) return { main: saved.main ?? null, slots: [0, 1, 2, 3].map((i) => saved.slots?.[i] ?? null) };
+    const ctl = roomKeys(r).filter((k) => k.kind === 'control').slice(0, 4).map((k) => 'key:' + k.key);
+    return { main: mainOf(r), slots: [0, 1, 2, 3].map((i) => ctl[i] || null) };
+  };
+  // what a space holds, as a key the card draws: one of the area's keys, or an entity as one (its icon, its name without
+  // the room's, its state; a switch where it can be turned on and off, else it only opens)
+  const SWITCHED = ['light', 'switch', 'fan', 'input_boolean', 'humidifier', 'climate'];
+  function slotKey(r, item, keys) {
+    if (item.startsWith('key:')) {
+      const k = keys.find((x) => x.key === item.slice(4)), ids = k ? groupIds(r, k.key) : [];
+      return k ? { ...k, group: true, more: ids.length === 1 ? ids[0] : 'group:' + r.id + ':' + k.key } : null;
+    }
+    const st = states[item];
+    if (!st) return null;
+    const d = item.split('.')[0], rgb = kindRgb(item), s0 = st.state;
+    const acts = SWITCHED.includes(d) ? [[d, 'toggle', item]] : d === 'cover' ? [['cover', s0 === 'closed' ? 'open_cover' : 'close_cover', item]] : d === 'lock' ? [['lock', s0 === 'locked' ? 'unlock' : 'lock', item]] : null;
+    const on = Boolean(rgb) || s0 === 'on';
+    return { key: 'ent:' + item, more: item, kind: 'control', tone: d === 'light' ? 'light' : 'blue', light: rgb ? colourVars(rgb) : '', icon: areaGlyph(item), label: inRoom(r, item), value: valueOf(item), on,
+      acts, aria: (on ? 'Turn off ' : 'Turn on ') + nameOf(item) };
+  }
+  function roomTile(r, key, attrs = '', edit = false, given = null) {
+    // a tile on the board keeps its own devices and main reading (Edit tile); the Areas card's open area doesn't
+    const own = key ? cardOf(key) : {}, off = new Set(own.hidden || []);
+    const keys = roomKeys(r), lit = (k) => (k.on && k.light ? ' data-light style="' + k.light + '"' : '');
+    // what the area's card was given in Edit area card (Matt, 23 Nov): its main and its four spaces, wherever it shows
+    const picked = given || (prefs.areaCards?.[r.id] || edit ? areaCard(r) : null); // given: a dashboard card's own main and spaces
+    const mainItem = picked ? picked.main : (states[own.main] && own.main) || mainOf(r);
+    const mainKey = mainItem && slotKey(r, mainItem, keys);
+    const main = mainKey ? mainKey.more : null;
+    const h = mainKey && !mainKey.group ? headline(main) : null;
+    const big = mainKey ? (mainKey.group ? mainKey.value : h ? h.text + (h.unit ? ' ' + h.unit : '') : '') : '';
+    const sub = mainKey ? (mainKey.group ? mainKey.label : mainSub(r, main, keys)) : '';
+    const opens = (k) => k.more || (() => { const ids = groupIds(r, k.key); return ids.length === 1 ? ids[0] : 'group:' + r.id + ':' + k.key; })();
+    const spaces = picked ? picked.slots.map((it) => (it ? slotKey(r, it, keys) : null)) : null;
+    const controls = spaces ? spaces.filter(Boolean) : inCardOrder(key || '', keys.filter((k) => k.kind === 'control' && !off.has(k.key)), (k) => k.key).slice(0, 4);
     /* the rule (Matt, 20 Nov: "If it is just an icon, it opens the panel or more info that controls that. if it is a tile
        with name and subtitle etc then it opens the more info and the icon in the tile becomes the binary toggle like it is
        (if defined by the device/entity)"): an icon on its own opens what it stands for (the room's lights panel, the
        thermostat); a tile (icon, name, state) opens it from anywhere on it, and its icon turns it on and off where it can
        be, else opens it too. The room's own head is as it was: its icon and name open the room's page */
-    const opener = (k) => '<button class="tfIcon' + (k.on ? ' on' : '') + '" type="button" data-tone="' + k.tone + '"' + lit(k) + ' data-more="' + esc(opens(k)) + '" aria-label="' + esc(r.name + ' ' + k.label.toLowerCase() + ', ' + k.value + '. Open') + '">' + k.icon + '</button>';
+    const opener = (k) => '<button class="tfIcon' + (k.on ? ' on' : '') + '" type="button" data-ce-item="' + esc(k.key) + '" data-tone="' + k.tone + '"' + lit(k) + ' data-more="' + esc(opens(k)) + '" aria-label="' + esc(r.name + ' ' + k.label.toLowerCase() + ', ' + k.value + '. Open') + '">' + k.icon + '</button>';
     const toggle = (k) => '<button class="tfIcon' + (k.on ? ' on' : '') + '" type="button" data-tone="' + k.tone + '"' + lit(k) + ' data-acts="' + acts(k.acts) + '" aria-label="' + esc(k.aria) + '" aria-pressed="' + k.on + '">' + k.icon + '</button>';
-    const devices = controls.map(opener);
+    const head = (k, i) => '<div class="tfRoomDev' + (k.on ? ' on' : '') + '" data-ce-item="' + esc(k.key) + '" data-more="' + esc(opens(k)) + '"' + (edit ? ' data-slot="' + i + '"' : '') + '>' + (k.acts?.length ? toggle(k) : '<span class="tfIcon' + (k.on ? ' on' : '') + '" data-tone="' + k.tone + '"' + lit(k) + ' aria-hidden="true">' + k.icon + '</span>') +
+      '<button class="tfName tfRoomDevName" type="button" data-more="' + esc(opens(k)) + '" aria-label="' + esc(r.name + ' ' + k.label.toLowerCase() + ', ' + k.value + '. Open') + '"><span class="activityRowName">' + esc(k.label) + '</span><span class="activityRowMeta">' + esc(k.value) + '</span></button></div>';
+    // Edit area card: all four spaces, an empty one a dashed outline to drop into
+    const empty = (i) => '<button class="tfRoomDev hcSlotEmpty" type="button" data-slot="' + i + '" aria-label="Empty space ' + (i + 1) + '"></button>';
+    const devices = edit ? [] : controls.map(opener); // (the editor shows the card wide: its spaces are the heads)
     // wide, the same devices as heads (icon, name, state), as the open room shows them (Matt, 6 Nov; Figma 954:6297): the
     // tile opens its control, its icon the switch
-    const heads = controls.map((k) => '<div class="tfRoomDev' + (k.on ? ' on' : '') + '" data-more="' + esc(opens(k)) + '">' + (k.acts?.length ? toggle(k) : '<span class="tfIcon' + (k.on ? ' on' : '') + '" data-tone="' + k.tone + '"' + lit(k) + ' aria-hidden="true">' + k.icon + '</span>') +
-      '<button class="tfName tfRoomDevName" type="button" data-more="' + esc(opens(k)) + '" aria-label="' + esc(r.name + ' ' + k.label.toLowerCase() + ', ' + k.value + '. Open') + '"><span class="activityRowName">' + esc(k.label) + '</span><span class="activityRowMeta">' + esc(k.value) + '</span></button></div>');
+    const heads = edit ? spaces.map((k, i) => (k ? head(k, i) : empty(i))) : controls.map((k, i) => head(k, i));
     // the room's icon opens the room's page (Matt, 18 Nov), bare as the summaries' are; it used to turn off everything in
     // the room, which "just shouldn't happen"
     const glyph = '<span class="tfAreaGlyph"' + iconSlot('area:' + r.id, r.icon || 'mdi:texture-box', r.name) + '></span>';
@@ -1287,8 +1357,9 @@ export function mountTestFocus(root, { config, getHass }) {
       '<button class="tfName" type="button" data-go="' + esc(r.id) + '" aria-label="Open ' + esc(r.name) + '"><span class="activityRowName">' + esc(r.name) + '</span>' +
       (big || sub ? '<span class="activityRowMeta">' + (big ? '<span class="tfRoomInline">' + esc(big) + (sub ? ' · ' : '') + '</span>' : '') + esc(sub) + '</span>' : '') + '</button></div>' +
       // the reading opens its more-info (the thermometer's, say)
-      (big ? '<button class="tfRoomReading" type="button" data-more="' + esc(main) + '" aria-label="' + esc(nameOf(main) + ', ' + valueOf(main) + '. More info') + '"><span class="tfRoomBig">' + esc(big) + '</span>' + (sub ? '<span class="tfRoomSub">' + esc(sub) + '</span>' : '') + '</button>' : '') +
-      (devices.length ? '<div class="tfRoomDevices">' + devices.join('') + '</div><div class="tfRoomHeads">' + heads.join('') + '</div>' : '') + '</div>';
+      (big ? '<button class="tfRoomReading" type="button" data-more="' + esc(main) + '"' + (edit ? ' data-slot="main"' : '') + ' aria-label="' + esc((mainKey.group ? mainKey.label : nameOf(main)) + ', ' + (mainKey.group ? mainKey.value : valueOf(main)) + '. More info') + '"><span class="tfRoomBig">' + esc(big) + '</span>' + (sub ? '<span class="tfRoomSub">' + esc(sub) + '</span>' : '') + '</button>'
+        : edit ? '<button class="tfRoomReading hcSlotEmpty hcSlotMain" type="button" data-slot="main" aria-label="Empty main space"></button>' : '') +
+      (devices.length || edit ? '<div class="tfRoomDevices">' + devices.join('') + '</div><div class="tfRoomHeads">' + heads.join('') + '</div>' : '') + '</div>';
   }
 
   /* sections: Home and each room, with their devices as Home Assistant has them (Security is a summary's popup, Matt
@@ -1311,19 +1382,20 @@ export function mountTestFocus(root, { config, getHass }) {
     const stars = starred();
     return suggested.filter((id) => states[id] && states[id].state !== 'unavailable' && !stars.includes(id));
   }
-  // the favourites start, once, with Home Assistant's home ones, then the made-up thermostat, curtains and watering, and
-  // a lock (Matt, 28 Oct); after that the list is his, edited in the dashboard's edit tray like Home Assistant's
+  // the favourites start, once, as Home's default (Matt, 26 Nov): Openable lock, Alarm, Curtains, Thermostat, Glass sphere
+  // and Watering; after that the list is his, edited in Edit Home page. Seeded again for anyone with the old start
+  const FAV_SEED = 2;
   let prefsReady = false;
   function seedFavourites() {
-    if (!prefsReady || prefs.favSeeded || !model.rooms.length) return;
+    if (!prefsReady || prefs.favSeed === FAV_SEED || !model.rooms.length) return;
     const first = (test) => Object.keys(states).find((id) => isMadeUp(id) && test(id));
-    const made = [first((id) => id.startsWith('climate.')), first((id) => id.startsWith('cover.') && /curtain/.test(id)), first((id) => id.startsWith('valve.')), model.security.locks[0]];
-    prefs = { ...prefs, favourites: [...new Set([...(prefs.favourites ?? haHome.favorite_entities ?? []), ...made.filter(Boolean)])], favSeeded: true };
+    const start = ['lock.openable_lock', model.security.alarms[0], first((id) => id.startsWith('cover.') && /curtain/.test(id)), first((id) => id.startsWith('climate.')), 'light.big_sphere', first((id) => id.startsWith('valve.') && /watering/.test(id))];
+    prefs = { ...prefs, favourites: [...new Set(start.filter((id) => id && states[id]))], favSeed: FAV_SEED };
     savePrefs();
   }
   // the dashboard's Favourites: the favourites in their order, less those hidden to the edit tray; then, with Show
   // suggestions on, suggestions from the dashboard's rooms to fill the card
-  const suggestOn = () => prefs.suggest ?? !haHome.hide_suggested_entities;
+  const suggestOn = () => prefs.suggest ?? false; // off until switched on: Home shows its six favourites (Matt, 26 Nov)
   // how many suggestions Home shows after the favourites, 1 to 12, 4 until one is picked (Matt, 23 Nov: "Number of
   // suggested entities")
   const SUGGEST_MAX = 12, suggestN = () => Math.min(SUGGEST_MAX, Math.max(1, prefs.home?.suggestN ?? 4));
@@ -1356,9 +1428,9 @@ export function mountTestFocus(root, { config, getHass }) {
     const button = plain ? null : spec ? spec.button
       : TOGGLES.includes(d) ? { act: act(d, 'toggle', id), label: 'Turn ' + nameOf(id) + (on ? ' off' : ' on') }
         : d === 'scene' || d === 'script' ? { act: act(d, 'turn_on', id), label: 'Run ' + nameOf(id) } : null;
-    // a favourite's line is two things at most, its state and its room (Matt, 14 Nov: "the sub data points to only two,
-    // so we can keep the side scrolling to a minimum"): "74% · Living Room", not "74% · 2,538k · Living Room"
-    const meta = area ? [String(say ?? valueOf(id)).split(' · ')[0], whereIs.get(id)].filter(Boolean).join(' · ') : (say ?? valueOf(id));
+    // a favourite's line is one thing, its state (Matt, 26 Nov: "thermostat should say heating. Curtains partially open…
+    // not have to have multiple lines going on"): "Heating", not "Heating · Living Room"
+    const meta = area ? String(say ?? valueOf(id)).split(' · ')[0] : (say ?? valueOf(id));
     const icon = spec?.icon || iconFor(id);
     return '<div class="activityRow' + (button ? ' tfPlug' : '') + (on ? ' on' : '') + (star ? ' tfPick' : '') + (alert ? ' alert' : '') + '" data-k="' + esc((area ? 'fav:' : 'row:') + id) + '" data-tone="' + (d === 'light' ? 'light' : spec?.tone || 'blue') + '"' + lightAttrs(id) + '>' +
       (button && !star ? '<button class="tfIcon" type="button" data-act="' + button.act + '" aria-label="' + esc(button.label) + '"' + iconSlot(id, icon) + '></button>' : '<div class="tfIcon" aria-hidden="true"' + iconSlot(id, icon) + '></div>') +
@@ -1424,7 +1496,7 @@ export function mountTestFocus(root, { config, getHass }) {
   // a summary shows when it's on: Home Assistant's own unless switched off, the demo's extras only once switched on
   // Home's summaries are its own (Matt, 12 Nov: "they shouldn't be linked"): which show and their order, set in Edit Home
   // page; Dashboards keeps the ones chosen in its edit tray
-  const sumPrefs = () => (overview ? prefs.home || {} : prefs);
+  const sumPrefs = () => (overview ? { ...HOME_SUMS, ...(prefs.home || {}) } : prefs);
   const sumOn = (k) => (EXTRA_SUMS.includes(k) ? (sumPrefs().shownSums || []).includes(k) : !(sumPrefs().hiddenSums || []).includes(k));
   function extraSums(rooms, groups, of) {
     const covers = rooms.flatMap((r) => of(r, /^cover\./)), open = covers.filter((id) => ['open', 'opening'].includes(states[id]?.state)).length;
@@ -1502,7 +1574,7 @@ export function mountTestFocus(root, { config, getHass }) {
     ]);
     // edit mode's old choices (sections, order, sizes…) are left behind: the page is laid out as Home Assistant has it
     const v = mine?.value || {};
-    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, home: v.home, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeeded: v.favSeeded, areaOrder: v.areaOrder, areaMains: v.areaMains };
+    prefs = { favourites: v.favourites ?? null, sources: v.sources, hiddenSums: v.hiddenSums, shownSums: v.shownSums, home: v.home, dash: v.dash, named: v.named, favHidden: v.favHidden, suggest: v.suggest, favSeed: v.favSeed, entities: v.entities, areaOrder: v.areaOrder, areaMains: v.areaMains, areaCards: v.areaCards };
     haHome = home?.value || {};
     haSecurity = security?.value || {};
     predicted = Array.isArray(usage?.entities) ? usage.entities : [];
@@ -1631,6 +1703,8 @@ export function mountTestFocus(root, { config, getHass }) {
   // Energy today's sources are a glance, and tapping one shows its day in the graph, in place: the card never moves
   // (Matt, 27 Oct; since 31 Oct its use by the hour, the bars rising as in the HomeCore motion lab)
   let energyPick = null, energyTiles = [];
+  // a source's amount today, as its tile shows it
+  const energyAmount = (t) => Number(t.value).toLocaleString(undefined, { maximumFractionDigits: t.value < 10 ? 2 : 1 }) + ' ' + t.unit;
   function energyGlance() {
     const tiles = energyTiles = energy?.length ? energy : MADE_UP_ENERGY.map(([key, name, value, unit]) => {
       if (key === 'solar') { const sun = Object.keys(states).find((x) => x.endsWith('_solar_today') && !x.includes('made_up_energy')); if (sun && Number.isFinite(Number(states[sun].state))) value = Number(states[sun].state); }
@@ -1639,15 +1713,17 @@ export function mountTestFocus(root, { config, getHass }) {
       return { key, name, id, value, unit };
     });
     energyText.clear();
-    if (!tiles.some((t) => t.id === energyPick)) energyPick = tiles[0].id;
-    const rows = tiles.map((t) => {
-      const text = Number(t.value).toLocaleString(undefined, { maximumFractionDigits: t.value < 10 ? 2 : 1 }) + ' ' + t.unit, icon = ENERGY_ICON[t.key], on = t.id === energyPick;
+    // the sources Edit card leaves on, the graph on its main one to start with
+    const own = cardOf('energy'), off = new Set(own.hidden || []), kept = inCardOrder('energy', tiles, (t) => t.id).filter((t) => !off.has(t.id)), shown = kept.length ? kept : tiles;
+    if (!shown.some((t) => t.id === energyPick)) energyPick = (shown.find((t) => t.id === own.main) || shown[0]).id;
+    const rows = shown.map((t) => {
+      const text = energyAmount(t), icon = ENERGY_ICON[t.key], on = t.id === energyPick;
       energyText.set(t.id, { name: t.name, text, icon });
-      return '<div class="activityRow tap' + (on ? ' picked' : '') + '" role="button" tabindex="0" data-energy-pick="' + esc(t.id) + '" aria-pressed="' + on + '" aria-label="' + esc(t.name + ', ' + text) + '. Show its day in the graph">' +
+      return '<div class="activityRow tap' + (on ? ' picked' : '') + '" role="button" tabindex="0" data-ce-item="' + esc(t.id) + '" data-energy-pick="' + esc(t.id) + '" aria-pressed="' + on + '" aria-label="' + esc(t.name + ', ' + text) + '. Show its day in the graph">' +
         '<div class="tfIcon" aria-hidden="true"' + iconSlot('', icon, t.name) + '></div><div><div class="activityRowName">' + esc(t.name) + '</div><div class="activityRowMeta">' + esc(text) + '</div></div></div>';
     });
     // the picked source's day as a graph, above the glance or below it (its ⋯ in edit mode)
-    const pick = tiles.find((t) => t.id === energyPick), below = (dashPrefs().opts.energy?.graph || 'above') === 'below';
+    const pick = shown.find((t) => t.id === energyPick), below = (dashPrefs().opts.energy?.graph || 'above') === 'below';
     const graph = '<div class="tfCardGraph tfDashGraph"><svg class="tfGraph" data-graph="' + esc(pick.id) + '" role="img" aria-label="' + esc(pick.name) + ', last 24 hours"></svg></div>';
     return card('dash:energy', 0, 'Energy today', rows, graph, summaryData().some((x) => x.key === 'energy') ? 'summary:energy' : null, 'tfDashCard tfDash-energy' + (below ? '' : ' graphAbove'));
   }
@@ -1735,7 +1811,12 @@ export function mountTestFocus(root, { config, getHass }) {
   // a tile on the dashboard shows one control more for each row past its head: at XS none, at S its first (a light's
   // brightness, a thermostat's target, a cover's position…), at M its first two, and so on
   const controlsOf = (id) => { const s = specFor(id); return s.sections.map((sec, i) => sec && (s.parts || [])[i]).filter(Boolean); };
-  const dashControl = (id) => controlsOf(id).slice(0, sizeOf(id) - 1);
+  const dashControl = (id) => cardControls(id).slice(0, sizeOf(id) - 1);
+  // a tile's controls on the board: a light's as Edit tile leaves them, its main one first; the rest all of theirs
+  function cardControls(id) {
+    const own = cardOf(id), off = new Set(own.hidden || []), shown = inCardOrder(id, controlsOf(id)).filter((p) => !off.has(p));
+    return !own.order && shown.includes(own.main) ? [own.main, ...shown.filter((p) => p !== own.main)] : shown;
+  }
   function dashTileIds(n) {
     const own = dashPrefs().tiles;
     if (own) return own.filter((id) => states[id] || roomOf(id));
@@ -1788,7 +1869,11 @@ export function mountTestFocus(root, { config, getHass }) {
     (titled ? '<div class="activityHeader">' + (key === 'favs' ? '<button class="activityTitle tfTitleBtn" type="button" data-more="favourites" aria-label="Favourites. More info">' + label + '</button>' : '<div class="activityTitle">' + label + '</div>') + '</div>' : '') + '<div class="activityRows">' + inner + '</div></section>';
   function dashboard(out, sums) {
     out.dash = true;
-    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + ((overview ? welcomeOn() : dashPrefs().welcome) ? '<span class="tfGreeting">' + esc(greeting()) + '</span>' : '') + esc(getHass()?.config?.location_name || 'Home') + '</h1>' });
+    // Home's head, from HomeCore Labs (Matt, 26 Nov: "steal the weather and the time and date"): the greeting, the name
+    // with the time and date at the end of its line, and the weather above them; Home only, not an area's page
+    const home = esc(getHass()?.config?.location_name || 'Home');
+    out.push({ key: 'dash:title', html: '<h1 class="settingsTitle tfDashTitle" data-tf data-k="dash:title">' + ((overview ? welcomeOn() : dashPrefs().welcome) ? '<span class="tfGreeting">' + esc(greeting()) + '</span>' : '') +
+      (overview ? '<span class="hcTitleLine"><span>' + home + '</span><span class="hcHomeClock" data-wx-clock>' + esc(wxClock()) + '</span></span>' + homeWxTile() : home) + '</h1>' });
     // the summaries: a row of their own, the bar only as wide as its tiles
     if (sums.length) out.push({ key: 'sums', wrap: (inner) => '<div class="tfDashBarRow" data-tf data-k="sums">' + dashWrap('tfDash-bar', 'sums-bar', 'Summaries', false)(inner).replace(' data-tf', '') + '</div>', tiles: sums.map((s) => ({ key: 'sum:' + s.key, html: summaryRow(s) })) });
     if (!overview && areasShown().length) out.push({ key: 'areas', html: areasHtml(0) });
@@ -1845,7 +1930,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const WIDTH_NAMES = ['Narrow', 'Wide', 'Really wide'];
   const SIZES = { wx: 5, areas: 5, favs: 5, act: 5, energy: 4, avg: 4, aq: 4, pollen: 4, radar: 4, hourly: 4, sun: 4, moon: 4, uv: 4, humidity: 4, pressure: 4, wind: 4, visibility: 4 };
   // a tile whose entity isn't in the states yet keeps its saved height (it can't be measured, and must never stop the board)
-  const mostRows = (key) => (!key.includes('.') || !states[key] || (key.startsWith('light.') && wantsDac(key)) ? ROWS_MOST : Math.min(ROWS_MOST, controlsOf(key).length + 1));
+  const mostRows = (key) => (!key.includes('.') || !states[key] || (key.startsWith('light.') && wantsDac(key)) ? ROWS_MOST : Math.min(ROWS_MOST, cardControls(key).length + 1));
   const sizeOf = (key) => {
     const o = dashPrefs().opts[key] || {}, most = mostRows(key), h = Number(o.h) || (o.tall ? 5 : SIZES[key] || TILE_ROWS);
     return Math.max(1, Math.min(most, h));
@@ -1856,6 +1941,14 @@ export function mountTestFocus(root, { config, getHass }) {
   const boardName = (key) => BOARD_NAMES[key] || (key.startsWith('room:') ? areaRooms.find((r) => 'room:' + r.id === key)?.name || 'Area' : nameOf(key));
   const AREA_FOLDED = 128;
   let editing = false, drag = null, boardOpen = null, fitQueued = false, lastPlaced = new Map(), boardRows = 0, boardTop = 0;
+  let cardEdit = null; // the card whose own page is open in the edit tray (Edit card), by its key
+  const cardStyle = document.createElement('style'); // each card's own look
+  root.appendChild(cardStyle);
+  const cardSel = (key) => '[data-hc-card="' + String(key).replace(/["\\]/g, '\\$&') + '"]';
+  // what's painted as the card: a card or tile itself; the weather widgets and Areas hold theirs
+  const FACES = ':is(.wbCard,.tfAreaPanel)';
+  const faceOf = (el) => (el?.matches('.tfDashBento,.tfAreas') ? el.querySelector('.wbCard,.tfAreaPanel') : el);
+  const rgbaOf = (c, a) => 'rgba(' + c.slice(0, 3).map(Math.round).join(',') + ',' + +a.toFixed(3) + ')';
   // the page's header, above the grid at its own size (the cards' rules: padding 10, tiles 60, so a bar of summaries is
   // 80 or 140 and never fits the grid's rows; Matt, 27 Oct: "we have rules to follow")
   const HEAD = ['title', 'sums'];
@@ -2040,6 +2133,9 @@ export function mountTestFocus(root, { config, getHass }) {
     if (pen && overview) { pen.hidden = !board; if (!homeEditing) { pen.classList.remove('active'); pen.setAttribute('aria-pressed', 'false'); pen.setAttribute('aria-label', 'Edit Home page'); pen.title = 'Edit'; pen.innerHTML = PENCIL; } }
     else if (pen) { pen.hidden = !board || phone; pen.classList.toggle('active', editing); pen.setAttribute('aria-pressed', String(editing)); pen.setAttribute('aria-label', overview ? 'Edit Home page' : editing ? 'Done editing' : 'Edit custom dashboard'); pen.title = editing ? 'Done' : 'Edit'; pen.innerHTML = editing ? TICK : PENCIL; }
     const items = board ? boardItems() : [];
+    // each card's own look (Edit card) finds it by its key
+    items.forEach((it) => { it.el.dataset.hcCard = it.key; it.el.classList.toggle('hcCardEdited', it.key === cardEdit); });
+    paintCards();
     if (!board || !overview) grid.querySelectorAll(':scope > :is(.hcFloor,.hcFloorBox)').forEach((el) => el.remove()); // Home's floor names and boxes
     if (!board) {
       grid.style.height = '';
@@ -2050,7 +2146,7 @@ export function mountTestFocus(root, { config, getHass }) {
       renderTray();
       return;
     }
-    if (overview) { layoutHome(items, W, phone); return; }
+    if (overview) { layoutHome(items, W, phone); alignHomeClock(); requestAnimationFrame(alignHomeClock); setTimeout(alignHomeClock, 450); return; }
     grid.style.setProperty('--peg-w', w + 'px');
     // a card being dragged out of the edit tray shows where it would land
     const hidden = new Set(dashPrefs().hidden), pitch = w + PEG_GAP;
@@ -2122,13 +2218,14 @@ export function mountTestFocus(root, { config, getHass }) {
     items.forEach((it) => itemSizes.observe(it.el));
     drawDashGraph();
     renderTray();
+    scaleBoard();
   }
   /* Home's own layout (Matt, 12 Nov, from his Figma "Home (overview)": "all these cards are for the DEFAULT homepage, not
      part of the rules for the wider system"). Columns up to 252 wide and 20 apart, five at most; every card 337 tall
      (on phones as tall as it needs), 20 apart; the summaries as wide as the cards. Favourites and the weather card are two
      columns, each area one: Favourites, three areas, the weather, three more, then the rest */
   // a two-column card is two columns and 16 (520 at 252), as Matt drew Favourites and the weather
-  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, row: 337, nameGap: 16, sumsGap: 16, full: 1336, floorTop: 12, floorHead: 24, floorGap: 16 };
+  const HOME = { gap: 20, phoneGap: 16, inner: 16, col: 252, row: 337, nameGap: 32, sumsGap: 32, /* doubled (Matt, 26 Nov: "double the space between the summaries and the rest… and between the title and the summaries") */ full: 1336, floorTop: 12, floorHead: 24, floorGap: 16 };
   /* the area cards' size, picked in Edit Home page (Matt, 12 Nov: "change the size of the area cards", Small, Medium or
      Large; Large is his Figma card). Each gives up to 15% on a smaller screen, its reading with it */
   // the dashboard's S, M and L (2, 3 and 4 rows) a peg wide, so an area card on Home is the dashboard's at the same size
@@ -2170,7 +2267,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const g = grid.getBoundingClientRect(), box = homePlaced.get(it.key);
     homeDrag = { key: it.key, el, on: false, x0: ev.clientX, y0: ev.clientY, left: box.x, top: box.y, order: [...homeOrderNow] };
     const move = (e) => {
-      const dx = e.clientX - homeDrag.x0, dy = e.clientY - homeDrag.y0;
+      const dx = (e.clientX - homeDrag.x0) / boardScale(), dy = (e.clientY - homeDrag.y0) / boardScale();
       if (!homeDrag.on && Math.hypot(dx, dy) < 5) return;
       // it lifts with a small bounce (Matt, 12 Nov: "the small bouncy effect")
       if (!homeDrag.on) { homeDrag.on = true; el.classList.add('tfDragging'); if (!reduced()) el.animate([{ scale: '1' }, { scale: '1.05' }, { scale: '1.02' }], { duration: 260, easing: 'cubic-bezier(.2,1.35,.4,1)' }); }
@@ -2205,8 +2302,6 @@ export function mountTestFocus(root, { config, getHass }) {
     // the dashboard's columns and gap (Matt, 17 Nov: Home's cards as wide as the custom dashboard's): as many columns as fit
     // at 200 or more, stretched to fill the page, 16 apart; two across on a phone
     const gap = PEG_GAP, cols = phone ? { n: 2, w: Math.floor((W - gap) / 2) } : pegsFor(W);
-    // the summaries (and Favourites as a strip) as wide as five of Matt's columns, or the page where it's narrower
-    const gridW = Math.min(W, HOME.full);
     let top = 0;
     const strip = favsStrip();
     app.classList.toggle('hcSumsFit', sumsFit());
@@ -2216,11 +2311,15 @@ export function mountTestFocus(root, { config, getHass }) {
     heads.forEach((it) => {
       it.el.classList.add('tfBoardItem');
       it.el.toggleAttribute('data-narrow', false);
-      Object.assign(it.el.style, { width: (it.key === 'title' ? W : gridW) + 'px', height: '', left: '0px', top: top + 'px' });
-      // a bar's tiles in one row while they fit, else in even rows (halves, thirds…)
+      // the summaries and Favourites each a strip across the page, one row, the tiles sharing it (Matt, 26 Nov: "just as
+      // strips across the top"); sideways where they can't all fit. A phone has its own two columns. As wide as the cards and
+      // areas under them (six of the page's columns), never stretched past them (Matt, 26 Nov)
+      Object.assign(it.el.style, { width: (it.key === 'title' || phone ? W : Math.min(W, 6 * cols.w + 5 * gap)) + 'px', height: '', left: '0px', top: top + 'px' });
+      // its tiles in one row while they fit at 200 or more, else in even rows (halves, thirds…), as HomeCore Labs has them
+      // (Matt, 26 Nov: "way too cramped… have a look at the home core lab size"): never squeezed or sideways
       const bar = it.key !== 'title' && (it.el.querySelector('.tfDash-bar>.activityRows') || (it.key === 'favs' && it.el.querySelector(':scope>.activityRows'))), count = bar ? bar.children.length : 0;
       if (bar) {
-        bar.classList.remove('hcBarRows'); // a phone has its own two columns (a window narrowed to one lost the wider rows' columns)
+        bar.classList.remove('hcBarRows');
         if (!phone && bar.scrollWidth > bar.clientWidth + 1) for (let rows = 2; rows <= count; rows++) { bar.classList.add('hcBarRows'); bar.style.setProperty('--bar-cols', String(Math.ceil(count / rows))); if (bar.scrollWidth <= bar.clientWidth + 1) break; }
       }
       top += it.el.offsetHeight + (it.key === 'title' ? HOME.nameGap : HOME.sumsGap);
@@ -2391,7 +2490,25 @@ export function mountTestFocus(root, { config, getHass }) {
         for (let c = 1; c <= n; c++) { const x = shape(c); if (x.h <= (besideH ?? x.w)) return c; }
         return n;
       };
-      floors.forEach((f, i) => {
+      /* not by floor, Bento with mixed sizes, fitted together (Matt, 26 Nov): four columns of the page's grid beside the
+         cards (each a column wide, never stretched to fill the page): the large areas down the left two, the next ones in the column beside them, the last
+         ones in the column beside that, the rest in rows underneath (Living Room, Bathroom, Dining room; Kitchen, Balcony,
+         Workshop; Bedroom, Office, Laundry; then Spare room, Storage, Hallway). Where four columns don't fit beside the cards, as before */
+      const quarter = cw; // each a column of the page's grid, the size the cards already are (Matt, 26 Nov: "sticking to those sizes")
+      if (!byFloor && mixed && prefs.home?.fitTogether && !phone && floors.length === 1 && n >= 4 && bigs(floors[0])) {
+        const f = floors[0], big = f.cards.filter(ranked), small = f.cards.filter((it) => !ranked(it)), k = big.length;
+        const nextCol = small.slice(0, k), lastCol = small.length > 2 * k ? small.slice(small.length - k) : small.slice(k), rest = small.slice(k, small.length - lastCol.length);
+        const at = [...big.map((it, r) => ({ it, r, c: 0, sc: 2 })), ...nextCol.map((it, r) => ({ it, r, c: 2, sc: 1 })), ...lastCol.map((it, r) => ({ it, r, c: 3, sc: 1 })),
+          ...rest.map((it, i) => ({ it, r: k + Math.floor(i / 4), c: i % 4, sc: 1 }))];
+        const rowsN = Math.max(0, ...at.map((q) => q.r + 1));
+        at.forEach((q) => {
+          q.it.el.classList.add('tfBoardItem');
+          q.it.el.dataset.cols = q.sc; q.it.el.dataset.rows = dims.rows; q.it.el.toggleAttribute('data-narrow', false);
+          Object.assign(q.it.el.style, { width: (q.sc * quarter + (q.sc - 1) * gap) + 'px', height: ch + 'px' });
+        });
+        place(f, { w: aW, places: at.map((q) => ({ it: q.it, x: q.c * (quarter + gap), y: q.r * (ch + gap), w: q.sc * quarter + (q.sc - 1) * gap, h: ch })) }, aX, top);
+        top += rowsN * (ch + gap);
+      } else floors.forEach((f, i) => {
         if (i) top += HOME.floorTop;
         const g = pack(f, fitCols(f), cw);
         place(f, { ...g, w: aW }, aX, top);
@@ -2478,10 +2595,11 @@ export function mountTestFocus(root, { config, getHass }) {
   let editStart = ''; // the page's settings when edit mode began
   function setEditing(on) {
     editing = on;
-    if (!on) { drag = null; trayPicking = tilePicking = false; closeBoardMenu(); }
+    if (!on) { drag = null; trayPicking = tilePicking = false; closeBoardMenu(); closeCardEditor(false); }
     layoutBoard();
     if (on) { editStart = JSON.stringify(prefs); trayPage(tray, 'Edit custom dashboard', null); } // a phone starts at the list
     else if (editStart && JSON.stringify(prefs) !== editStart) toast('Changes saved');
+    scaleBoard();
   }
   // a card's ⋯: its height (XS to XL), its width (a tile or a card), a cell left, right, up or down, Energy today's
   // graph, and hide; a tile is removed instead (Matt, 29 Oct), and added again from the edit tray
@@ -2503,12 +2621,13 @@ export function mountTestFocus(root, { config, getHass }) {
     // a room's tile too (Matt, 6 Nov): narrow, wide or really wide, like the cards
     const width = RESIZABLE.includes(key) || isRoomKey(key) ? '<div class="tfHeight tfWidth" role="group" aria-label="Width"><span class="tfHeightLabel" aria-hidden="true">Width</span><div class="tfHeightTabs">' +
       WIDTH_NAMES.map((name, i) => '<button type="button" role="menuitemradio" aria-checked="' + (i + 1 === Math.min(span, n)) + '" aria-label="' + name + ', ' + (i + 1) + (i ? ' columns' : ' column') + '" data-board-act="w:' + (i + 1) + '"' + (i < n ? '' : ' disabled') + '>' + name + '</button>').join('') + '</div></div>' : '';
-    menu.innerHTML = height + width +
+    // Edit card: the card's own page in the edit tray (Matt, 20 Nov), after its size
+    menu.innerHTML = height + width + item('edit', tile ? 'Edit tile' : 'Edit card') +
       (key === 'energy' ? item('graph', (dash.opts.energy?.graph || 'above') === 'above' ? 'Graph below' : 'Graph above') : '') +
       item('left', 'Move left', full || p.col === 0) + item('right', 'Move right', full || p.col + p.cols >= n) +
       item('up', 'Move up', p.row <= 0) + item('down', 'Move down') + (tile ? item('remove', 'Remove') : item('hide', 'Hide'));
     grid.appendChild(menu);
-    const left = Math.min(p.x + p.w - menu.offsetWidth, grid.clientWidth - menu.offsetWidth);
+    const left = Math.min(p.x + p.w - menu.offsetWidth, grid.clientWidth - menu.offsetWidth); // it scales up from its top right, so it stays in the card's corner
     Object.assign(menu.style, { left: Math.max(0, left) + 'px', top: (p.y + 28) + 'px' });
     boardOpen = { key, menu, opener };
     menu.querySelector('button:not([disabled])')?.focus();
@@ -2524,6 +2643,7 @@ export function mountTestFocus(root, { config, getHass }) {
   const cellsNow = () => Object.fromEntries([...lastPlaced].map(([k, p]) => [k, { col: p.col, row: p.row }]));
   function boardAct(key, act) {
     if (act === 'remove') { closeBoardMenu(); removeTile(key); return; }
+    if (act === 'edit') { closeBoardMenu(); openCardEditor(key); return; }
     const before = prefs, dash = dashPrefs(), cells = cellsNow(), here = cells[key] || { col: 0, row: 0 };
     if (act.startsWith('w:')) dash.spans = { ...dash.spans, [key]: act === 'w:full' ? 'full' : Number(act.slice(2)) };
     if (act.startsWith('h:')) dash.opts = { ...dash.opts, [key]: { ...(dash.opts[key] || {}), h: Number(act.slice(2)), tall: undefined } };
@@ -2719,7 +2839,7 @@ export function mountTestFocus(root, { config, getHass }) {
   function clearOfTray(key) {
     const p = lastPlaced.get(key);
     if (!p || !tray.classList.contains('open') || trayTucked) return false;
-    const { n, w } = pegsFor(grid.clientWidth), edge = tray.getBoundingClientRect().left - grid.getBoundingClientRect().left;
+    const { n, w } = pegsFor(grid.clientWidth), edge = (tray.getBoundingClientRect().left - grid.getBoundingClientRect().left) / boardScale();
     const clear = (c) => c * (w + PEG_GAP) + p.cols * w + (p.cols - 1) * PEG_GAP <= edge;
     if (clear(p.col)) return false;
     const taken = new Set();
@@ -2780,6 +2900,8 @@ export function mountTestFocus(root, { config, getHass }) {
     '<div class="tabs rubberTabs hcTrayTabs" role="tablist" aria-label="Edit custom dashboard"><div class="rubberIndicator" aria-hidden="true"></div>' +
       TRAY_TABS.map(([k, t], i) => '<button class="tab segBtn' + (i ? '' : ' active') + '" type="button" role="tab" aria-selected="' + !i + '" data-tray-tab="' + k + '">' + t + '</button>').join('') + '</div>' +
     trayListHtml(TRAY_TABS, 'data-tray-go') +
+    // a card's own page (Edit card), in place of the tabs while it's open
+    '<section class="hcCardEdit" data-tray="cardedit" aria-live="off"></section>' +
     '<section class="tfTraySection" data-tray="welcome"></section>' +
     '<section class="tfTraySection" data-tray="cards"></section>' +
     '<section class="tfTraySection" data-tray="weather"></section>' +
@@ -2857,7 +2979,7 @@ export function mountTestFocus(root, { config, getHass }) {
   // Matt, 12 Nov: the summaries as wide as the cards (as drawn) or as wide as their own tiles; Favourites as its card or
   // a strip under the summaries, the same pattern as theirs
   const sumsFit = () => prefs.home?.sumsWidth === 'fit';
-  const favsStrip = () => prefs.home?.favsAs === 'strip';
+  const favsStrip = () => prefs.home?.favsAs === 'strip'; // its card until Strip is picked (Matt, 26 Nov: "display as a card by default")
   const homeSeg = (label, attr, value, opts) => '<div class="hcHeLine hcHeChoiceLine"><span class="activityRowName">' + label + '</span><div class="themeChoice hcHeChoice" role="group" aria-label="' + esc(label) + '">' +
     opts.map(([v, text]) => '<button class="wxLayoutBtn" type="button" ' + attr + '="' + v + '" aria-pressed="' + (value === v) + '">' + text + '</button>').join('') + '</div></div>';
   const homeSumOrder = () => summaryData(true).filter((x) => SUMMARIES[x.key]).map((x) => x.key);
@@ -2932,7 +3054,7 @@ export function mountTestFocus(root, { config, getHass }) {
     homeTray.classList.toggle('open', on);
     homeTray.toggleAttribute('inert', !on);
     app.classList.toggle('hcHomeEditing', on);
-    if (testFocus && grid) layoutBoard();
+    if (testFocus && grid) { layoutBoard(); scaleBoard(); }
     const pen = $('dashEditNav'), head = homeTray.querySelector('.tfTrayHead');
     if (pen && on) { penHome = pen.parentElement; head.appendChild(pen); }
     if (pen && !on && penHome) penHome.appendChild(pen);
@@ -3007,7 +3129,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const ha = t.closest('[data-he-area]'); if (ha) { const off = new Set(prefs.home?.areasOff || []), id = ha.dataset.heArea; if (off.has(id)) off.delete(id); else off.add(id); homePrefs({ areasOff: [...off] }); return; }
     const sm = t.closest('[data-he-sum]');
     if (sm) {
-      const k = sm.dataset.heSum, on = !sumOn(k), h = prefs.home || {};
+      const k = sm.dataset.heSum, on = !sumOn(k), h = { ...HOME_SUMS, ...(prefs.home || {}) };
       homePrefs(EXTRA_SUMS.includes(k) ? { shownSums: on ? [...(h.shownSums || []), k] : (h.shownSums || []).filter((x) => x !== k) }
         : { hiddenSums: on ? (h.hiddenSums || []).filter((x) => x !== k) : [...(h.hiddenSums || []), k] });
       return;
@@ -3063,6 +3185,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (trayPicking) trayPut('pick', pickHtml(tray.querySelector('[data-fav-search]').value, (id) => PICK_DOMAINS.test(id), new Set(starred()), 'data-fav-pick'));
     trayPut('suggest', '<div><strong>Show suggestions</strong><div class="status">Fills the card after your favourites.</div></div>' +
       '<button class="switch' + (suggestOn() ? ' on' : '') + '" type="button" role="switch" aria-checked="' + suggestOn() + '" data-fav-suggest aria-label="Show suggestions"></button>');
+    if (cardEdit) drawCardEditor();
   }
   const saveFavs = (next) => { prefs = { ...prefs, ...next }; savePrefs(); refresh(); renderTray(); };
   function setFavShown(id, show) {
@@ -3077,17 +3200,314 @@ export function mountTestFocus(root, { config, getHass }) {
     toast(nameOf(id) + ' removed from favourites', undoTo(before));
   };
   const addFav = (id) => { saveFavs({ favourites: [...starred().filter((x) => x !== id), id], favHidden: (prefs.favHidden || []).filter((x) => x !== id) }); toast(nameOf(id) + ' added to favourites'); };
+  /* ---------- a card's own page (Matt, 20 Nov: "complete control over cards") ----------
+     Edit card (Edit tile on a tile) in a card's ⋯ opens the card's own page in the edit tray, ‹ back to the tray. Every
+     card and tile: its background (the theme's or a colour) and how much of it shows, and its stroke (the system's, none,
+     or 1 to 3 px) and the stroke's colour; text turns light or dark to suit, as Appearance's does. Some say what they
+     show and what leads: Favourites which favourites, an area's tile its devices and main reading, Energy today its
+     sources and the one its graph opens on, a light's tile its controls and the one first (a short tile shows only that).
+     The card stays live on the board, the rest faded; the board slides left if the tray's over it. Kept with the board,
+     prefs.dash.opts[key].card */
+  function cardOf(key) { return dashPrefs().opts[key]?.card || {}; }
+  // a card's parts in the order they were dragged into (card.order), the rest after in their own order
+  const inCardOrder = (key, items, idOf = (x) => x) => {
+    const o = cardOf(key).order || [], at = (x) => { const i = o.indexOf(idOf(x)); return i < 0 ? o.length + items.indexOf(x) : i; };
+    return [...items].sort((a, b) => at(a) - at(b));
+  };
+  // a drag on the card's own page, or on the card itself, sets the order: Favourites' is the favourites' own
+  const saveCardOrder = (key, ids) => { if (key === 'favs') { const stars = new Set(starred()); trayHtml.favs = null; saveFavs({ favourites: ids.filter((id) => stars.has(id)) }); layoutBoard(); } else setCard(key, { order: ids }, true); };
+  // each section of a device's tile, named for its page
+  const PART_NAMES = { bright: 'Brightness', ct: 'Warmth', hue: 'Colour', step: 'Target', modes: 'Modes', blocks: 'Position', tilt: 'Tilt', buttons: 'Open, stop and close',
+    playback: 'Playback', volume: 'Volume', controls: 'Buttons', rooms: 'Rooms to clean' };
+  const partName = (id, p) => (p === 'controls' ? { lock: 'Lock, unlock and open', alarm_control_panel: 'Arm and disarm', valve: 'Open and close', vacuum: 'Start, dock and locate' }[id.split('.')[0]] || 'Off and on' : PART_NAMES[p] || cap(p));
+  const cardKind = (key) => (key === 'favs' ? 'favs' : key === 'energy' ? 'energy' : isRoomKey(key) ? 'room' : key.includes('.') && states[key] && !(key.startsWith('light.') && wantsDac(key)) ? 'device' : null);
+  function paintCards() {
+    const opts = overview ? {} : boardPrefs().opts, cs = getComputedStyle(app);
+    const ground = parseColour(cs.getPropertyValue('--bg').trim() || cs.getPropertyValue('--color-bg-ground').trim() || '#000');
+    const css = Object.entries(opts).map(([key, o]) => {
+      const c = o?.card;
+      if (!c) return '';
+      // three ids outweigh Appearance's rules; its outline only out of edit mode, or while this page is open
+      const on = '#app#app#app:not(.tfOverview) ', seen = '#app#app#app:not(.tfOverview):is(:not(.tfEditing),.hcCardEditing) ', at = cardSel(key);
+      const faces = (pre) => pre + at + ':not(.tfDashBento,.tfAreas),' + pre + at + ' ' + FACES;
+      let out = '';
+      if (c.bg || c.opacity != null) {
+        const base = c.bg ? [...hexRgb(c.bg), 1] : parseColour(cs.getPropertyValue('--card').trim() || '#000'), a = c.opacity != null ? c.opacity / 100 : base[3];
+        const ink = cardInk(base.slice(0, 3), a, ground.slice(0, 3)), fill = rgbaOf(base, a);
+        // names and titles: light mode's title grey (#55504A) on a light card, the text colour on a dark one
+        // and the icons' chips as the light or dark theme has them, whichever suits (#app sets them from its own text)
+        const dark = ink.text === '#d9d9d9', title = dark ? ink.text : '#55504a', chips = dark ? ';--hc-icon:#3a3a3a;--hc-icon-ink:#d9d9d9' : ';--hc-icon:#e6e6e6;--hc-icon-ink:#55504a';
+        out += faces(on) + '{--card:' + fill + ';--group-bg:' + fill + ';--text:' + ink.text + ';--muted:' + ink.muted + ';--tile:' + ink.tile + ';--title:' + title + chips + ';color:var(--text)' +
+          (a > 0 && a < 1 ? ';-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)' : '') + '}' +
+          // what sits in it (the open area's tile, a weather card's insides) reads on it too
+          on + at + ' :is(.tfAction,.card,.workoutPanel,.wbCard){--text:' + ink.text + ';--muted:' + ink.muted + ';--tile:' + ink.tile + ';--title:' + title + chips + '}';
+      }
+      const line = c.line && c.stroke !== 'none' ? c.line : null;
+      if (line) out += faces(on) + '{--line:' + line + ';--lineb:' + line + ';--hc-hair:inset 0 0 0 .2px ' + line + ',inset 0 -.2px 0 ' + line + ';--hc-hair-all:inset 0 0 0 .4px ' + line + '}';
+      if (c.stroke === 'none') out += faces(on) + '{border-color:transparent!important;box-shadow:none!important}' + faces(seen) + '{outline:none!important}';
+      else if (c.stroke) out += faces(seen) + '{outline:' + c.stroke + 'px solid ' + (line || 'var(--line)') + '!important;outline-offset:-' + c.stroke + 'px!important}';
+      return out;
+    }).join('');
+    if (cardStyle.textContent !== css) cardStyle.textContent = css;
+  }
+  // the light or dark theme changing changes what's under a card that lets the background through
+  new MutationObserver(() => paintCards()).observe(app, { attributes: true, attributeFilter: ['class'] });
+  // saves a card's own settings; what it shows changing draws it again
+  function setCard(key, patch, redraw = false) {
+    const dash = dashPrefs(), { card: was, ...rest } = dash.opts[key] || {}, next = { ...(was || {}), ...patch };
+    Object.keys(next).forEach((k) => { if (next[k] == null) delete next[k]; });
+    saveDash({ ...dash, opts: { ...dash.opts, [key]: Object.keys(next).length ? { ...rest, card: next } : rest } });
+    if (redraw) { if (key === 'energy') units.delete('dash:energy'); refresh(); layoutBoard(); } else paintCards();
+    drawCardEditor();
+  }
+  // where the tray is over the card, the board slides left until it isn't (no further than the rail)
+  /* the board beside an open tray (Matt, 20 Nov: the trays "overtake a lot of the screen"): the whole board scales down,
+     from its top left, until it fits in the room left of the tray, every card keeping its place and proportion; the
+     tray closed or tucked, it's its size again. The page's scroll follows the scaled height. Pointer maths on the board
+     (drags) divides by the scale */
+  const boardScale = () => parseFloat(grid.style.scale) || 1;
+  function scaleBoard() {
+    const open = tray.classList.contains('open') && !trayTucked ? tray : homeTray.classList.contains('open') ? homeTray : null;
+    const phone = grid.clientWidth < 2 * PEG + PEG_GAP;
+    let k = 1;
+    if (open && !phone) {
+      // the tray at rest (it may still be sliding in): against the window's right edge
+      const left = grid.getBoundingClientRect().left, room = window.innerWidth - open.offsetWidth - 24 - left;
+      k = Math.max(0.35, Math.min(1, room / grid.clientWidth));
+    }
+    const was = boardScale();
+    grid.style.scale = k < 1 ? k.toFixed(4) : '';
+    grid.style.setProperty('--board-k', k < 1 ? k.toFixed(4) : '1'); // the handles and menus scale back up by it
+    grid.style.marginBottom = k < 1 ? -Math.round((1 - k) * grid.offsetHeight) + 'px' : '';
+  }
+  /* the card's parts dragged into place on the card itself (Matt, 20 Nov: "WYSIWYG"): a favourite, an area's device,
+     an energy source or a tile's control follows the pointer; the part nearest it marks where it'll go; let go, the card
+     is drawn again in that order. A press without a drag still does what the part does */
+  const ceItemsOf = (card) => [...card.querySelectorAll(cardEdit === 'favs' ? '[data-k^="fav:"]' : '[data-ce-item]')].filter((el) => el.offsetWidth);
+  const ceIdOf = (el) => (cardEdit === 'favs' ? el.dataset.k.slice(4) : el.dataset.ceItem);
+  function cardItemDown(ev) {
+    if (!cardEdit || ev.button !== 0) return;
+    const card = grid.querySelector(cardSel(cardEdit)), el = card && ev.target.closest(cardEdit === 'favs' ? '[data-k^="fav:"]' : '[data-ce-item]');
+    if (!el || !card.contains(el)) return;
+    ev.stopPropagation(); // not the part's own drag (a bar's), nor the board's
+    const items = ceItemsOf(card), from = items.indexOf(el);
+    if (from < 0 || items.length < 2) return;
+    const x0 = ev.clientX, y0 = ev.clientY, mids = items.map((x) => { const r = x.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    let started = false, to = from;
+    const move = (e) => {
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      if (!started) { if (Math.hypot(dx, dy) < 5) return; started = true; el.classList.add('hcCeDragging'); }
+      const k = boardScale();
+      el.style.transform = 'translate(' + (dx / k).toFixed(1) + 'px,' + (dy / k).toFixed(1) + 'px)';
+      let best = Infinity, near = from;
+      mids.forEach(([mx, my], i) => { const d = Math.hypot(e.clientX - mx, e.clientY - my); if (d < best) { best = d; near = i; } });
+      if (near !== to) { items[to]?.classList.remove('hcCeOver'); to = near; if (to !== from) items[to].classList.add('hcCeOver'); }
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      if (!started) return;
+      const eat = (e) => { e.preventDefault(); e.stopImmediatePropagation(); };
+      window.addEventListener('click', eat, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', eat, { capture: true }), 300);
+      items.forEach((x) => x.classList.remove('hcCeOver'));
+      el.classList.remove('hcCeDragging');
+      el.style.transform = '';
+      if (to === from) return;
+      const ids = items.map(ceIdOf);
+      ids.splice(to, 0, ids.splice(from, 1)[0]);
+      // the rest of the card's parts (hidden ones) keep their places after these
+      const all = [...ids, ...(cardEdit === 'favs' ? starred() : cardOf(cardEdit).order || []).filter((x) => !ids.includes(x))];
+      saveCardOrder(cardEdit, all);
+      const now = grid.querySelector(cardSel(cardEdit))?.querySelector(cardEdit === 'favs' ? '[data-k="fav:' + CSS.escape(ids[to]) + '"]' : '[data-ce-item="' + CSS.escape(ids[to]) + '"]');
+      if (now && !reduced()) squash(now);
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  }
+  function openCardEditor(key) {
+    cardEdit = key;
+    trayTucked = false;
+    tray.classList.add('hcTrayCard');
+    app.classList.add('hcCardEditing');
+    trayHtml.cardedit = null;
+    layoutBoard();
+    tray.querySelector('.tfTrayInner').scrollTop = 0;
+    grid.querySelector(cardSel(key))?.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
+    tray.querySelector('.hcTrayBack')?.focus({ preventScroll: true });
+  }
+  function closeCardEditor(refocus = true) {
+    if (!cardEdit) return;
+    const key = cardEdit;
+    cardEdit = null;
+    tray.classList.remove('hcTrayCard');
+    app.classList.remove('hcCardEditing');
+    grid.querySelectorAll('.hcCardEdited').forEach((el) => el.classList.remove('hcCardEdited'));
+    trayPage(tray, 'Edit custom dashboard', null);
+    if (!refocus) return;
+    layoutBoard();
+    grid.querySelector('[data-board-more="' + CSS.escape(key) + '"]')?.focus({ preventScroll: true });
+  }
+  const ceLine = (label, html, attr = '') => '<div class="hcHeLine hcCeLine"' + attr + '><span class="activityRowName">' + esc(label) + '</span><span class="hcCeEnd">' + html + '</span></div>';
+  const ceSeg = (label, attr, value, opts) => '<div class="themeChoice hcHeChoice" role="group" aria-label="' + esc(label) + '">' +
+    opts.map(([v, text]) => '<button class="wxLayoutBtn" type="button" ' + attr + '="' + esc(v) + '" aria-pressed="' + (String(value) === v) + '">' + esc(text) + '</button>').join('') + '</div>';
+  const ceSwatch = (k, label) => '<label class="hcSwatch"><input type="color" data-ce-colour="' + k + '" aria-label="' + esc(label) + '"></label>';
+  // a row that shows or hides something in the card; the last one shown can't go
+  const chip = (slot) => '<span class="tfIcon"' + slot + '></span>';
+  const ceShow = (icon, name, meta, on, attr, last, id = null) => '<li class="hcCeRow' + (icon ? '' : ' hcCeBare') + (id == null ? ' hcCeFixed' : '') + '"' + (id == null ? '' : ' data-ce-row="' + esc(id) + '"') + '>' +
+    (id == null ? '<span></span>' : '<button class="tfTrayBtn hcHeGrip" type="button" data-ce-grip aria-label="Move ' + esc(name) + '. Use the up and down arrows">' + GRIP + '</button>') + icon +
+    '<span class="tfTrayName"><span class="activityRowName">' + esc(name) + '</span>' + (meta ? '<span class="activityRowMeta">' + esc(meta) + '</span>' : '') + '</span>' +
+    '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="Show ' + esc(name) + '" ' + attr + (on && last ? ' disabled' : '') + '></button></li>';
+  // the main one: side by side when there are few, else a list to pick from
+  const ceMain = (label, value, opts) => (opts.length < 2 ? '' : opts.length <= 4 && opts.every(([, t]) => t.length <= 14)
+    ? '<div class="hcHeLine hcHeChoiceLine"><span class="activityRowName">' + esc(label) + '</span>' + ceSeg(label, 'data-ce-main', value, opts.map(([v, t]) => [v, t])) + '</div>'
+    : '<div class="sectionLabel hcCeSub">' + esc(label) + '</div><div class="hcHeList" role="radiogroup" aria-label="' + esc(label) + '">' + opts.map(([v, t, meta, icon]) =>
+      '<button class="hcCeRow hcCePick hcCeFixed' + (icon ? '' : ' hcCeBare') + '" type="button" role="radio" aria-checked="' + (v === value) + '" data-ce-main="' + esc(v) + '"><span></span>' + (icon || '') +
+      '<span class="tfTrayName"><span class="activityRowName">' + esc(t) + '</span>' + (meta ? '<span class="activityRowMeta">' + esc(meta) + '</span>' : '') + '</span><span class="hcCeTick" aria-hidden="true">' + TICK + '</span></button>').join('') + '</div>');
+  // what the card shows, and its main, for the cards that have them
+  function cardContent(key) {
+    const own = cardOf(key), off = new Set(own.hidden || []), kind = cardKind(key);
+    const group = (label, body, note = '') => '<div class="hcCeGroup"><div class="sectionLabel">' + label + '</div>' + (note ? '<p class="tfTrayNote">' + note + '</p>' : '') + body + '</div>';
+    const DRAG_NOTE = 'Drag to change the order, here or on the card.';
+    if (kind === 'favs') {
+      const hidden = new Set(prefs.favHidden || []), stars = starred(), shown = stars.filter((id) => !hidden.has(id)).length + (suggestOn() ? 1 : 0);
+      return group('Shown', '<ul class="hcHeList">' + stars.map((id) => ceShow(chip(iconSlot(id, iconFor(id))), nameOf(id), whereIs.get(id) || '', !hidden.has(id), 'data-ce-fav="' + esc(id) + '"', shown < 2, id)).join('') + '</ul>' +
+        ceLine('Suggestions', '<button class="switch' + (suggestOn() ? ' on' : '') + '" type="button" role="switch" aria-checked="' + suggestOn() + '" aria-label="Show suggestions" data-ce-suggest' + (suggestOn() && shown < 2 ? ' disabled' : '') + '></button>'));
+    }
+    if (kind === 'energy') {
+      const tiles = energyTiles.length ? energyTiles : [], shown = tiles.filter((t) => !off.has(t.id));
+      return group('Shown', '<ul class="hcHeList">' + inCardOrder(key, tiles, (t) => t.id).map((t) => ceShow(chip(iconSlot('', ENERGY_ICON[t.key], t.name)), t.name, energyAmount(t), !off.has(t.id), 'data-ce-hide="' + esc(t.id) + '"', shown.length < 2, t.id)).join('') + '</ul>', DRAG_NOTE) +
+        group('Main', ceMain('Graph', shown.some((t) => t.id === own.main) ? own.main : shown[0]?.id, shown.map((t) => [t.id, t.name, energyAmount(t), chip(iconSlot('', ENERGY_ICON[t.key], t.name))])));
+    }
+    if (kind === 'room') {
+      const r = roomOf(key);
+      if (!r) return '';
+      const keys = roomKeys(r), controls = keys.filter((k) => k.kind === 'control');
+      const reads = [...r.readings, ...r.actions.filter((id) => /^climate\./.test(id)), ...r.solar].filter((id, i, all) => states[id] && all.indexOf(id) === i);
+      const main = (states[own.main] && own.main) || mainOf(r);
+      return (controls.length ? group('Shown', '<ul class="hcHeList">' + inCardOrder(key, controls, (k) => k.key).map((k) => ceShow('<span class="tfIcon">' + k.icon + '</span>', k.label, k.value, !off.has(k.key), 'data-ce-hide="' + esc(k.key) + '"', false, k.key)).join('') + '</ul>', DRAG_NOTE) : '') +
+        (reads.length > 1 ? group('Main', ceMain('Main reading', main, reads.map((id) => [id, inRoom(r, id), valueOf(id), chip(iconSlot(id))]))) : '');
+    }
+    if (kind === 'device') {
+      // the state under its name, then each of its controls; the first of them comes first, and a short tile shows only it
+      // the first control shown comes first; a short tile shows only it
+      const all = inCardOrder(key, controlsOf(key));
+      return group('Shown', '<ul class="hcHeList">' + ceShow('', 'State under the name', valueOf(key), !off.has('state'), 'data-ce-hide="state"', false) +
+        all.map((p) => ceShow('', partName(key, p), '', !off.has(p), 'data-ce-hide="' + esc(p) + '"', false, p)).join('') + '</ul>',
+        (all.length > 1 ? DRAG_NOTE + ' The first comes first; a short tile shows only it. ' : '') + '<span class="hcCeWarn">Showing more makes the tile taller, which can move the cards under it.</span>');
+    }
+    return '';
+  }
+  function drawCardEditor() {
+    if (!cardEdit) return;
+    const key = cardEdit, c = cardOf(key), stroke = c.stroke == null ? 'system' : String(c.stroke);
+    tray.querySelector('.tfTrayHead .activityTitle').textContent = 'Edit ' + boardName(key);
+    trayPut('cardedit', '<div class="hcCeGroup"><div class="sectionLabel">Look</div>' +
+      ceLine('Background', ceSeg('Background', 'data-ce-bg', c.bg ? 'colour' : 'theme', [['theme', 'Theme'], ['colour', 'Colour']]) + (c.bg ? ceSwatch('bg', 'Background colour') : '')) +
+      ceLine('Opacity', '<span class="hcRangeWrap"><span class="hcRangeValue" data-ce-value="opacity"></span><span class="tfBar pos hcLookBar" role="slider" tabindex="0" aria-label="Background opacity" aria-valuemin="0" aria-valuemax="100" data-ce-bar="opacity"><i></i></span></span>') +
+      ceLine('Stroke', ceSeg('Stroke', 'data-ce-stroke', stroke, [['system', 'System'], ['none', 'None'], ['1', '1 px'], ['2', '2 px'], ['3', '3 px']])) +
+      (stroke === 'none' ? '' : ceLine('Stroke colour', ceSwatch('line', 'Stroke colour'))) + '</div>' +
+      cardContent(key) +
+      '<div class="hcCeGroup">' + ceLine('Back to how it was', '<button class="pill" type="button" data-ce-reset' + (Object.keys(c).length ? '' : ' disabled') + '>Reset</button>') + '</div>');
+    syncCardEditor();
+  }
+  // the values that change as they're dragged or picked, set on the controls rather than drawn again
+  function syncCardEditor() {
+    const sec = tray.querySelector('[data-tray="cardedit"]'), face = faceOf(grid.querySelector(cardSel(cardEdit)));
+    if (!sec || !face) return;
+    const fs = getComputedStyle(face), c = cardOf(cardEdit), bg = parseColour(fs.backgroundColor), line = parseColour(fs.getPropertyValue('--line').trim() || '#808080');
+    // the system's line is see-through: its swatch shows it as it looks on the card
+    const lineSeen = line.slice(0, 3).map((v, i) => v * line[3] + bg[i] * (1 - line[3]));
+    const val = { bg: c.bg || rgbHex(bg.slice(0, 3)), line: c.line || rgbHex(lineSeen), opacity: c.opacity ?? Math.round((parseColour(getComputedStyle(app).getPropertyValue('--card').trim() || '#000')[3]) * 100) };
+    sec.querySelectorAll('[data-ce-colour]').forEach((el) => { if (root.activeElement !== el) el.value = val[el.dataset.ceColour]; });
+    sec.querySelectorAll('[data-ce-bar]').forEach((el) => { const v = val[el.dataset.ceBar]; el.querySelector('i').style.width = v + '%'; el.setAttribute('aria-valuenow', v); el.setAttribute('aria-valuetext', v + '%'); });
+    sec.querySelectorAll('[data-ce-value]').forEach((el) => { el.textContent = val[el.dataset.ceValue] + '%'; });
+  }
+  function cardEditClick(t) {
+    const key = cardEdit, c = cardOf(key), off = new Set(c.hidden || []), mark = [...t.attributes].find((a) => a.name.startsWith('data-ce-'));
+    if (t.dataset.ceBg) {
+      // Colour starts from the colour it has, so nothing changes until one's picked
+      if (t.dataset.ceBg === 'colour' && !c.bg) { setCard(key, { bg: rgbHex(parseColour(getComputedStyle(faceOf(grid.querySelector(cardSel(key)))).backgroundColor).slice(0, 3)) }); try { tray.querySelector('[data-ce-colour="bg"]')?.showPicker(); } catch (_e) { /* a press on the swatch opens it */ } }
+      else if (t.dataset.ceBg === 'theme') setCard(key, { bg: null });
+    } else if (t.dataset.ceStroke) setCard(key, { stroke: t.dataset.ceStroke === 'system' ? null : t.dataset.ceStroke === 'none' ? 'none' : Number(t.dataset.ceStroke) });
+    else if (t.dataset.ceHide) {
+      const showing = off.has(t.dataset.ceHide);
+      if (showing) off.delete(t.dataset.ceHide); else off.add(t.dataset.ceHide);
+      setCard(key, { hidden: off.size ? [...off] : null }, true);
+      // a tile's control shown that its height can't hold: the tile grows a row for it (and shrinks again as one's hidden,
+      // sizeOf keeping to what it holds); the cards under it move down (the page says so)
+      if (showing && cardKind(key) === 'device' && t.dataset.ceHide !== 'state') {
+        const need = Math.min(ROWS_MOST, cardControls(key).length + 1), d = dashPrefs();
+        if (sizeOf(key) < need) { saveDash({ ...d, opts: { ...d.opts, [key]: { ...(d.opts[key] || {}), h: need, tall: undefined } } }); refresh(); layoutBoard(); toast(boardName(key) + ' is now ' + SIZE_NAMES[need - 1]); }
+      }
+    }
+    else if (t.dataset.ceMain) {
+      if (key === 'energy') energyPick = t.dataset.ceMain; // the graph moves to it now too
+      setCard(key, { main: t.dataset.ceMain }, true);
+    } else if (t.dataset.ceFav) { const hidden = new Set(prefs.favHidden || []), id = t.dataset.ceFav; if (hidden.has(id)) hidden.delete(id); else hidden.add(id); saveFavs({ favHidden: [...hidden] }); layoutBoard(); }
+    else if (t.hasAttribute('data-ce-suggest')) { saveFavs({ suggest: !suggestOn() }); layoutBoard(); }
+    else if (t.hasAttribute('data-ce-reset')) {
+      const before = prefs;
+      setCard(key, { bg: null, opacity: null, stroke: null, line: null, hidden: null, main: null, order: null }, true);
+      toast(boardName(key) + ' reset', undoTo(before));
+    }
+    // the control pressed was drawn again: focus goes back to it
+    if (mark && !t.isConnected) tray.querySelector('[data-tray="cardedit"] [' + mark.name + (mark.value ? '="' + CSS.escape(mark.value) + '"' : '') + ']')?.focus({ preventScroll: true });
+  }
+  tray.addEventListener('input', (ev) => {
+    const k = ev.target.dataset?.ceColour;
+    if (k && cardEdit) setCard(cardEdit, { [k]: ev.target.value });
+  });
+  // the opacity bar: dragged anywhere along it, or the arrow keys (Shift for tens), Home and End
+  const setCardBar = (bar, v) => setCard(cardEdit, { [bar.dataset.ceBar]: Math.max(0, Math.min(100, Math.round(v))) });
+  const ceRows = () => [...tray.querySelectorAll('[data-tray="cardedit"] [data-ce-row]')];
+  const ceFind = (id) => tray.querySelector('[data-tray="cardedit"] [data-ce-row="' + CSS.escape(id) + '"]');
+  tray.addEventListener('pointerdown', (ev) => {
+    const g = ev.target.closest('[data-ce-grip]');
+    if (g && cardEdit && ev.button === 0) { listDrag(ev, g.closest('[data-ce-row]'), 'ceRow', (ids) => saveCardOrder(cardEdit, ids), ceFind); return; }
+    const bar = ev.target.closest('[data-ce-bar]');
+    if (!bar || !cardEdit || ev.button > 0) return;
+    ev.preventDefault();
+    bar.focus({ preventScroll: true });
+    bar.setPointerCapture(ev.pointerId);
+    const at = (e) => { const r = bar.getBoundingClientRect(); setCardBar(bar, ((e.clientX - r.left) / r.width) * 100); };
+    at(ev);
+    const end = () => { bar.removeEventListener('pointermove', at); bar.removeEventListener('pointerup', end); bar.removeEventListener('pointercancel', end); };
+    bar.addEventListener('pointermove', at);
+    bar.addEventListener('pointerup', end);
+    bar.addEventListener('pointercancel', end);
+  });
+  tray.addEventListener('keydown', (ev) => {
+    if (!cardEdit) return;
+    if (ev.key === 'Escape' && !ev.target.matches?.('input')) { ev.preventDefault(); ev.stopPropagation(); closeCardEditor(); return; }
+    const g = ev.target.closest?.('[data-ce-grip]');
+    if (g && ['ArrowUp', 'ArrowDown'].includes(ev.key)) {
+      ev.preventDefault();
+      const ids = ceRows().map((x) => x.dataset.ceRow), id = g.closest('[data-ce-row]').dataset.ceRow, i = ids.indexOf(id), to = i + (ev.key === 'ArrowUp' ? -1 : 1);
+      if (to < 0 || to >= ids.length) return;
+      ids.splice(to, 0, ids.splice(i, 1)[0]);
+      saveCardOrder(cardEdit, ids);
+      ceFind(id)?.querySelector('[data-ce-grip]')?.focus({ preventScroll: true });
+      return;
+    }
+    const bar = ev.target.closest?.('[data-ce-bar]');
+    if (!bar) return;
+    const now = Number(bar.getAttribute('aria-valuenow')), step = ev.shiftKey ? 10 : 1;
+    const next = { ArrowRight: now + step, ArrowUp: now + step, ArrowLeft: now - step, ArrowDown: now - step, Home: 0, End: 100 }[ev.key];
+    if (next == null) return;
+    ev.preventDefault();
+    setCardBar(bar, next);
+  });
   tray.addEventListener('click', (ev) => {
     const t = ev.target.closest('button');
     if (!t) return;
     if (t.hasAttribute('data-tray-tab')) { trayTab = t.dataset.trayTab; showTrayTab(true); tray.querySelector('.tfTrayInner').scrollTop = 0; return; }
     if (t.hasAttribute('data-tray-go')) { trayTab = t.dataset.trayGo; showTrayTab(false); trayPage(tray, 'Edit custom dashboard', trayTab, TRAY_TABS.find(([k]) => k === trayTab)[1]); return; }
-    if (t.hasAttribute('data-tray-back')) { trayPage(tray, 'Edit custom dashboard', null); return; }
+    if (t.hasAttribute('data-tray-back')) { if (cardEdit) closeCardEditor(); else trayPage(tray, 'Edit custom dashboard', null); return; }
+    if (cardEdit && t.closest('[data-tray="cardedit"]')) { cardEditClick(t); return; }
     if (t.hasAttribute('data-tray-done')) setEditing(false);
     else if (t.hasAttribute('data-info')) openInfo(t);
     else if (t.hasAttribute('data-dash-sums')) { saveDash({ ...boardPrefs(), hidden: boardPrefs().hidden.filter((k) => k !== 'sums'), sumsOff: !prefs.dash?.sumsOff }); refresh(); renderTray(); }
     else if (t.hasAttribute('data-dash-welcome')) { const d = dashPrefs(); saveDash({ ...d, welcome: !d.welcome }); refresh(); renderTray(); }
-    else if (t.hasAttribute('data-tray-tuck')) { trayTucked = !trayTucked; renderTray(); }
+    else if (t.hasAttribute('data-tray-tuck')) { trayTucked = !trayTucked; renderTray(); scaleBoard(); }
     else if (t.hasAttribute('data-phone-toggle')) { phoneShown = !phoneShown; renderTray(); if (phoneShown) phone.querySelector('[data-phone-key]')?.focus({ preventScroll: true }); }
     else if (t.dataset.trayCard) { if (ev.detail === 0) { showCard(t.dataset.trayCard); renderTray(); } } // a press from the keyboard; a pointer's is its drag
     else if (t.dataset.favEye) setFavShown(t.dataset.favEye, t.getAttribute('aria-pressed') !== 'true');
@@ -3144,9 +3564,9 @@ export function mountTestFocus(root, { config, getHass }) {
       ghost.style.transform = 'translate(' + (e.clientX - 24) + 'px,' + (e.clientY - 24) + 'px)';
       const overTray = !trayTucked && e.clientX >= tray.getBoundingClientRect().left;
       if (kind === 'card') {
-        const r = grid.getBoundingClientRect(), { w } = pegsFor(grid.clientWidth);
-        drag = !overTray && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top + boardTop
-          ? { key, col: Math.max(0, Math.floor((e.clientX - r.left) / (w + PEG_GAP))), row: Math.max(0, Math.floor((e.clientY - r.top - boardTop) / ROW_PITCH)), fromTray: true } : null;
+        const r = grid.getBoundingClientRect(), { w } = pegsFor(grid.clientWidth), k = boardScale();
+        drag = !overTray && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top + boardTop * k
+          ? { key, col: Math.max(0, Math.floor((e.clientX - r.left) / k / (w + PEG_GAP))), row: Math.max(0, Math.floor(((e.clientY - r.top) / k - boardTop) / ROW_PITCH)), fromTray: true } : null;
         if (!raf) raf = requestAnimationFrame(() => { raf = 0; layoutBoard(); });
         return;
       }
@@ -3353,7 +3773,7 @@ export function mountTestFocus(root, { config, getHass }) {
   });
   // dragging: the card follows the pointer and lands on the nearest cell; cards in the way move down to make room
   function boardDown(ev) {
-    if (!editing || ev.button !== 0 || ev.target.closest('[data-board-more],.tfBoardMenu,.tfFavHides')) return;
+    if (!editing || cardEdit || ev.button !== 0 || ev.target.closest('[data-board-more],.tfBoardMenu,.tfFavHides')) return;
     const el = ev.target.closest('.tfBoardItem');
     const it = el && boardItems().find((x) => x.el === el);
     if (!it || HEAD.includes(it.key)) return;
@@ -3378,7 +3798,7 @@ export function mountTestFocus(root, { config, getHass }) {
       paint(tilt, Math.atan2(vy, vx), lift * (1 + 0.1 * st), lift * (1 - 0.063 * st));
     };
     const move = (e) => {
-      dx = e.clientX - x0; dy = e.clientY - y0;
+      dx = (e.clientX - x0) / boardScale(); dy = (e.clientY - y0) / boardScale();
       if (!started) { if (Math.hypot(dx, dy) < 4) return; started = true; drag = { key: it.key, col: p.col, row: p.row }; el.classList.add('tfDragging', 'mvDrag'); spring = requestAnimationFrame(frame); }
       if (!free && Math.hypot(dx, dy) > D.stick) { free = true; vx = dx * 0.085; vy = dy * 0.085; }
       drag.col = Math.round((p.x + dx) / (w + PEG_GAP));
@@ -3467,12 +3887,18 @@ export function mountTestFocus(root, { config, getHass }) {
     whereIs = new Map();
     model.rooms.forEach((r) => [...r.actions, ...r.plugs, ...r.readings, ...r.openings, ...r.solar, ...r.plants.flatMap((p) => [p.id, ...p.readings])].forEach((id) => whereIs.set(id, r.name)));
     if (!page) return dashboard(out, summaryData());
+    // an area's page follows Home Assistant's area view (Matt, 26 Nov), and says so in its top left corner
+    if (page.room) out.push({ key: 'areanote', html: '<p class="hcNotDesigned hcAreaNote" data-tf data-k="areanote" style="order:' + (++order) + '">This follows the same pattern as current Home Assistant. Check the <a href="https://mbb365.github.io/homecore-labs/" target="_blank" rel="noopener">HomeCore Labs</a> for ideas on how to update this.</p>' });
     out.push({ key: 'areahead', html: areaHead(page, ++order) });
     // an area's page isn't designed yet: it says so under its header (Matt, 16 Nov: "this is not designed", "below the
     // header")
-    if (page.room) out.push({ key: 'areanote', html: '<p class="hcNotDesigned" data-tf data-k="areanote" style="order:' + (++order) + '">This is not designed</p>' });
+    // Edit area card opens over the area's page, as Home Assistant's card editor does (Matt, 26 Nov)
+    const editingCard = Boolean(page.room && aceArea === page.room.id);
+    if (aceArea && !editingCard) { aceArea = null; acePick = null; }
+    app.classList.toggle('hcSecEditing', editingCard);
     if (page.key === 'weather') { out.weather = ++order; return out; }
     if (page.demo) return demoPage(out, page.key, order);
+    if (page.room) { areaView(out, page.room, order); if (editingCard) out.push({ key: 'areaedit', html: aceHtml(page.room, 9999) }); return out; }
     // the section: a room's energy, readings and plants, then its tiles
     const ids = page.ids, name = page.room ? page.room.id : page.key, r = page.room;
     if (r?.solar.length) out.push({ key: 'energy:' + r.id, html: energyCard(r, ++order) });
@@ -3480,6 +3906,56 @@ export function mountTestFocus(root, { config, getHass }) {
     r?.plants.forEach((p) => out.push({ key: 'plant:' + p.id, html: plantCard(p, ++order) }));
     const tileIds = [...ids, ...(r?.plugs || []).filter((x) => !ids.includes(x))];
     if (tileIds.length) out.push({ key: 'block:' + name, order: ++order, tiles: tileIds.map((id) => ({ key: id, html: actionTile(id) })) });
+    return out;
+  }
+  /* an area's page as Home Assistant's area view (its areas strategy, Matt 26 Nov: "more like the current Home Assistant
+     version, but give it the home core like treatment"): its temperature and humidity as badges under the header, then
+     its devices in Home Assistant's groups (Lights, Covers, Climate, Media players, Security, Actions, Others), each
+     headed with its icon and name. Each is HomeCore's tile, with the one feature Home Assistant gives it (a light's
+     brightness, a cover's open and close, a thermostat's target, a fan's speed, an alarm's modes, a lock's commands),
+     which makes it the action card; nothing else, and the tile stays a tile */
+  const AREA_GROUPS = [
+    ['lights', 'Lights', 'M10 2L12 9H2L4 2M6 10H8V20H11V22H3V20H6V10M20 8L22 15H12L14 8M16 16H18V20H21V22H13V20H16V16Z'],
+    ['covers', 'Covers', 'M20 19V3H4V19H2V21H22V19H20M16 9H18V11H16V9M14 11H6V9H14V11M18 7H16V5H18V7M14 5V7H6V5H14M6 19V13H14V14.82C13.55 15.14 13.25 15.66 13.25 16.25C13.25 17.22 14.03 18 15 18S16.75 17.22 16.75 16.25C16.75 15.66 16.45 15.13 16 14.82V13H18V19H6Z'],
+    ['climate', 'Climate', 'M19 8C20.11 8 21 8.9 21 10V16.76C21.61 17.31 22 18.11 22 19C22 20.66 20.66 22 19 22C17.34 22 16 20.66 16 19C16 18.11 16.39 17.31 17 16.76V10C17 8.9 17.9 8 19 8M19 9C18.45 9 18 9.45 18 10V11H20V10C20 9.450 19.55 9 19 9M5 20V12H2L12 3L16.4 6.96C15.54 7.69 15 8.78 15 10V16C14.37 16.83 14 17.870 14 19L14.1 20H5Z'],
+    ['media_players', 'Media players', 'M9 13V5C9 3.9 9.9 3 11 3H20C21.1 3 22 3.9 22 5V11H18.57L17.29 9.26C17.23 9.17 17.11 9.17 17.05 9.26L15.06 12C15 12.06 14.88 12.07 14.82 12L13.39 10.25C13.33 10.18 13.22 10.18 13.16 10.25L11.05 12.91C10.97 13 11.04 13.15 11.16 13.15H17.5V15H11C9.89 15 9 14.11 9 13M6 22V21H4V22H2V2H4V3H6V2H8.39C7.54 2.74 7 3.8 7 5V13C7 15.21 8.79 17 11 17H15.7C14.67 17.83 14 19.08 14 20.5C14 21.03 14.11 21.53 14.28 22H6M4 7H6V5H4V7M4 11H6V9H4V11M4 15H6V13H4V15M6 19V17H4V19H6M23 13V15H21V20.5C21 21.88 19.88 23 18.5 23S16 21.88 16 20.5 17.12 18 18.5 18C18.86 18 19.19 18.07 19.5 18.21V13H23Z'],
+    ['security', 'Security', 'M12,12H19C18.47,16.11 15.72,19.78 12,20.92V12H5V6.3L12,3.19M12,1L3,5V11C3,16.55 6.84,21.73 12,23C17.16,21.73 21,16.55 21,11V5L12,1Z'],
+    ['actions', 'Actions', 'M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H14A7,7 0 0,1 21,14H22A1,1 0 0,1 23,15V18A1,1 0 0,1 22,19H21V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V19H2A1,1 0 0,1 1,18V15A1,1 0 0,1 2,14H3A7,7 0 0,1 10,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M7.5,13A2.5,2.5 0 0,0 5,15.5A2.5,2.5 0 0,0 7.5,18A2.5,2.5 0 0,0 10,15.5A2.5,2.5 0 0,0 7.5,13M16.5,13A2.5,2.5 0 0,0 14,15.5A2.5,2.5 0 0,0 16.5,18A2.5,2.5 0 0,0 19,15.5A2.5,2.5 0 0,0 16.5,13Z'],
+    ['others', 'Others', 'M11,13.5V21.5H3V13.5H11M12,2L17.5,11H6.5L12,2M17.5,13C20,13 22,15 22,17.5C22,20 20,22 17.5,22C15,22 13,20 13,17.5C13,15 15,13 17.5,13Z'],
+  ];
+  function areaGroupOf(id) {
+    const d = id.split('.')[0], dc = attr(id).device_class;
+    if (d === 'light') return 'lights';
+    if (d === 'cover' || (d === 'binary_sensor' && ['door', 'garage_door', 'window'].includes(dc))) return 'covers';
+    if (['climate', 'humidifier', 'water_heater', 'fan'].includes(d)) return 'climate';
+    if (d === 'media_player') return 'media_players';
+    if (['alarm_control_panel', 'lock', 'camera'].includes(d)) return 'security';
+    if (['script', 'scene', 'automation'].includes(d)) return 'actions';
+    if (['vacuum', 'lawn_mower', 'valve', 'switch', 'button', 'input_boolean', 'input_button', 'select', 'number', 'input_select', 'input_number', 'counter', 'timer'].includes(d)) return 'others';
+    return null;
+  }
+  // Home Assistant's one feature for a tile in an area (its computeAreaTileCardConfig)
+  function areaFeature(id) {
+    const d = id.split('.')[0];
+    if (!['light', 'cover', 'climate', 'fan', 'alarm_control_panel', 'lock'].includes(d)) return [];
+    const parts = specFor(id)?.parts || [];
+    return d === 'cover' ? (parts.includes('buttons') ? ['buttons'] : []) : parts.slice(0, 1);
+  }
+  function areaView(out, r, order) {
+    const h = getHass(), shown = (id) => { const e = h?.entities?.[id]; return states[id] && states[id].state !== 'unavailable' && !e?.hidden && !e?.entity_category; };
+    const ids = [...new Set([...r.actions, ...r.plugs, ...(r.locks || []), ...r.openings, ...Object.keys(states).filter((id) => model.areaOf?.(id) === r.id)])].filter(shown);
+    // its temperature and humidity, as Home Assistant's badges
+    const reading = (cls) => r.readings.find((id) => attr(id).device_class === cls);
+    const badges = [reading('temperature'), reading('humidity')].filter(Boolean);
+    if (badges.length) out.push({ key: 'areabadges', html: '<div class="hcAreaBadges" data-tf data-k="areabadges" style="order:' + (++order) + '">' +
+      badges.map((id) => '<button class="hcAreaBadge" type="button" data-more="' + esc(id) + '" aria-label="' + esc(nameOf(id) + ', ' + valueOf(id)) + '"><span class="tfIcon"' + iconSlot(id, attr(id).icon || '') + '></span><span>' + esc(valueOf(id)) + '</span></button>').join('') + '</div>' });
+    AREA_GROUPS.forEach(([g, label, path]) => {
+      const mine = ids.filter((id) => areaGroupOf(id) === g);
+      if (!mine.length) return;
+      out.push({ key: 'agroup:' + g, html: '<h2 class="hcAreaGroupHead" data-tf data-k="agroup:' + g + '" style="order:' + (++order) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg>' + esc(label) + '</h2>' });
+      out.push({ key: 'block:' + r.id + ':' + g, order: ++order, tiles: mine.map((id) => ({ key: id, html: actionTile(id, false, areaFeature(id)) })) });
+    });
+    if (!ids.some(areaGroupOf)) out.push({ key: 'areanone', html: '<p class="tfDashNone" data-tf data-k="areanone" style="order:' + (++order) + '">Nothing in this area yet.</p>' });
     return out;
   }
   /* HomeCore demo (9 Nov): the Activity page the site's ⋯ opens (Matt: "I want it to be the Activity page basically";
@@ -3495,8 +3971,243 @@ export function mountTestFocus(root, { config, getHass }) {
     return out;
   }
   // a section's page header, as Move Assistant's pages have: a big back arrow and the section's name
+  /* Edit area card (Matt, 23 Nov), on the area's page: its card as Home has it (two columns wide, Large), its main and four
+     spaces to drop into (an empty one dashed), and under it everything in the area, by device, each with its icon, name
+     and state. Drag one onto a space, or tap it and then the space (the keyboard too): the card is drawn again straight
+     away with real values. Onto a full space they swap; a space dragged (or tapped, then the list) back to the list is
+     emptied. Each thing is in one place at a time. Kept with the rest of the page's settings */
+  let aceArea = null, acePick = null, aceDrag = null, aceNoClick = 0;
+  const aceRoom = () => areaRooms.find((r) => r.id === aceArea);
+  const slotGet = (c, sl) => (sl === 'main' ? c.main : c.slots[sl]);
+  const slotPut = (c, sl, v) => { if (sl === 'main') c.main = v; else c.slots[sl] = v; };
+  const slotOf = (c, item) => (c.main === item ? 'main' : c.slots.indexOf(item) >= 0 ? c.slots.indexOf(item) : null);
+  const slotParse = (v) => (v === 'main' ? 'main' : Number(v));
+  const slotName = (sl) => (sl === 'main' ? 'Main' : 'Space ' + (sl + 1));
+  // everything in the area: its card's own keys first (the lights together, the covers…), then its entities by device
+  function aceGroups(r) {
+    const keys = roomKeys(r), h = getHass();
+    const ids = [...new Set([...r.actions, ...r.plugs, ...(r.locks || []), ...r.readings, ...r.openings, ...r.solar, ...(r.alerts || []), ...(r.statuses || []), ...r.plants.flatMap((pl) => [pl.id, ...pl.readings])])].filter((id) => states[id]);
+    const byDev = new Map();
+    ids.forEach((id) => {
+      const dev = h?.devices?.[h?.entities?.[id]?.device_id], name = (dev && (dev.name_by_user || dev.name)) || nameOf(id);
+      if (!byDev.has(name)) byDev.set(name, []);
+      byDev.get(name).push(id);
+    });
+    const own = keys.filter((k) => k.kind === 'control').map((k) => 'key:' + k.key);
+    return [...(own.length ? [{ name: r.name + ' as a whole', items: own }] : []), ...[...byDev].map(([name, items]) => ({ name, items }))];
+  }
+  const ACE_CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function aceRow(r, item, c, keys) {
+    const k = slotKey(r, item, keys), at = slotOf(c, item);
+    if (!k) return '';
+    const icon = item.startsWith('key:') ? '<span class="tfIcon" aria-hidden="true">' + k.icon + '</span>' : '<span class="tfIcon" aria-hidden="true"' + iconSlot(item) + '></span>';
+    const name = item.startsWith('key:') ? k.label : nameOf(item);
+    return '<button class="activityRow hcAceRow' + (at != null ? ' hcAceUsed' : '') + '" type="button" data-ace-item="' + esc(item) + '" aria-pressed="' + (acePick?.item === item && acePick.slot == null) + '" aria-label="' + esc(name + ', ' + k.value + (at != null ? '. On the card: ' + slotName(at) : '') + '. Pick to place it') + '">' +
+      icon + '<span class="hcAceText"><span class="activityRowName">' + esc(name) + '</span><span class="activityRowMeta">' + esc(k.value) + '</span></span>' +
+      (at != null ? '<span class="hcAceAt">' + ACE_CHECK + 'On the card · ' + slotName(at) + '</span>' : '') + '</button>';
+  }
+  // a popup as Add to dashboard's card editor is (Matt, 26 Nov: "the stuff you play with on the left-hand side and the
+  // preview on the right-hand side"): on the left each of the card's spaces with what lives there, picked from what's in the
+  // area as an entity is picked (Matt, 26 Nov: "we click on that space, then we can choose what lives there"); the card on
+  // the right, where tapping a space opens its picker; "This is an idea" at the head's right, then Done
+  function aceHtml(r, order) {
+    const c = areaCard(r), keys = roomKeys(r), size = AREA_SIZES.l, groups = aceGroups(r);
+    const label = (it) => { const k = it && slotKey(r, it, keys); return k ? (it.startsWith('key:') ? k.label : nameOf(it)) + ' · ' + k.value : ''; };
+    // a space's picker: its button, and under it the list (it drops down from the field, not over the page as the Mac's own
+    // menu did: Matt, 26 Nov), what's already in another space greyed out
+    const option = (sl, it, now) => {
+      const text = label(it);
+      if (!text) return '';
+      const taken = slotOf(c, it) != null && it !== now;
+      return '<button class="hcAceOpt" type="button" role="option" aria-selected="' + (it === now) + '"' + (taken ? ' aria-disabled="true"' : '') + ' data-ace-choose="' + sl + '|' + esc(it) + '">' + esc(text) + '</button>';
+    };
+    const picker = (sl) => {
+      const now = slotGet(c, sl);
+      return '<div class="hcInfoField hcAceField" data-ace-field="' + sl + '"><span class="hcInfoFieldLabel" id="hcAceL' + sl + '">' + slotName(sl) + '</span><div class="hcAcePick">' +
+        '<button class="hcInfoInput hcAcePickBtn" type="button" data-ace-open="' + sl + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="hcAceL' + sl + ' hcAceV' + sl + '"><span id="hcAceV' + sl + '">' + esc(label(now) || 'Empty') + '</span>' + CHEVRON + '</button>' +
+        '<div class="card hcAceMenu" role="listbox" aria-labelledby="hcAceL' + sl + '" hidden>' +
+          '<button class="hcAceOpt hcAceEmpty" type="button" role="option" aria-selected="' + (now == null) + '" data-ace-choose="' + sl + '|">Empty</button>' +
+          groups.map((g) => { const opts = g.items.map((it) => option(sl, it, now)).join(''); return opts ? '<div class="hcAceGroupName">' + esc(g.name) + '</div>' + opts : ''; }).join('') +
+        '</div></div></div>';
+    };
+    return '<div class="hcSecBack hcAceBack" data-tf data-k="areaedit" style="order:' + order + '">' +
+      '<section class="hcAce hcLe hcSecDialog hcSecEditDialog hcAceDialog" role="dialog" aria-modal="true" aria-labelledby="hcAceTitle">' +
+      '<div class="hcLeHead hcSecHeadBorder"><button class="tfBack" type="button" data-ace-toggle aria-label="Close">' + CLOSE + '</button><div class="activityTitle" id="hcAceTitle">Edit ' + esc(r.name) + ' card</div><span class="hcAceIdea">This is an idea</span></div>' +
+      '<div class="hcLeBody hcSecEditBody">' +
+        '<div class="hcLeSide hcSecForm hcAceFields">' + ['main', 0, 1, 2, 3].map(picker).join('') + '</div>' +
+        '<div class="hcLePreviewWrap hcAcePreview">' +
+          '<div class="hcAceCard" style="--ace-w:' + (2 * size.w + PEG_GAP) + 'px;--ace-h:' + size.h + 'px">' + roomTile(r, null, ' data-cols="2" data-rows="' + size.rows + '"', true) + '</div>' +
+          '<p class="hcAceHint">Pick what lives in each space, or tap a space on the card.</p><p class="hcAceHint">Drag one space onto another to swap them.</p></div>' +
+      '</div>' +
+      '<div class="hcLeFoot"><button class="primary" type="button" data-ace-toggle>Done</button></div>' +
+      '</section></div>';
+  }
+  // a move, kept and drawn again; the focus goes back where it was
+  function aceMove(src, target) {
+    const r = aceRoom();
+    if (!r) return;
+    const c = areaCard(r), from = src.slot != null ? src.slot : slotOf(c, src.item);
+    if (target === 'list') { if (from == null) { acePick = null; aceMark(); return; } slotPut(c, from, null); }
+    else { const old = slotGet(c, target); slotPut(c, target, src.item); if (from != null && from !== target) slotPut(c, from, old); }
+    prefs = { ...prefs, areaCards: { ...(prefs.areaCards || {}), [r.id]: c } };
+    savePrefs();
+    acePick = null;
+    const was = root.activeElement, sel = was?.dataset?.aceOpen != null ? '[data-ace-open="' + was.dataset.aceOpen + '"]' : was?.dataset?.slot != null ? '[data-slot="' + was.dataset.slot + '"]' : was?.dataset?.aceItem ? '[data-ace-item="' + CSS.escape(was.dataset.aceItem) + '"]' : null;
+    render();
+    if (sel) grid.querySelector('.hcAce ' + sel)?.focus({ preventScroll: true });
+  }
+  // what's picked shows: its row pressed, its space outlined, and every space ready to take it
+  function aceMark() {
+    const ace = grid.querySelector('.hcAce');
+    if (!ace) return;
+    ace.classList.toggle('hcAcePicking', Boolean(acePick));
+    ace.querySelectorAll('[data-ace-item]').forEach((b) => b.setAttribute('aria-pressed', String(acePick?.slot == null && acePick?.item === b.dataset.aceItem)));
+    ace.querySelectorAll('.hcAceCard [data-slot]').forEach((b) => b.classList.toggle('hcPicked', acePick?.slot != null && String(acePick.slot) === b.dataset.slot));
+  }
+  // one space's list open at a time, under its field (or above it where the popup has no room below)
+  function aceMenu(sl) {
+    grid.querySelectorAll('.hcAce [data-ace-open]').forEach((b) => {
+      const open = sl != null && b.dataset.aceOpen === String(sl), menu = b.nextElementSibling;
+      b.setAttribute('aria-expanded', String(open));
+      menu.hidden = !open;
+      if (!open) return;
+      const box = b.closest('.hcAceDialog').getBoundingClientRect(), at = b.getBoundingClientRect();
+      menu.classList.toggle('up', at.bottom + Math.min(menu.scrollHeight, 300) + 12 > box.bottom - 70 && at.top - box.top > box.bottom - at.bottom);
+      (menu.querySelector('[aria-selected="true"]') || menu.querySelector('.hcAceOpt'))?.focus({ preventScroll: true });
+      menu.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+  function aceToggle() {
+    const r = areaRooms.find((x) => 'room:' + x.id === areaPage);
+    aceArea = aceArea ? null : r?.id || null;
+    acePick = null;
+    render();
+    grid.querySelector(aceArea ? '.hcAceDialog [data-ace-toggle]' : '.hcAceToggle')?.focus({ preventScroll: true });
+  }
+  function bindAce() {
+    grid.addEventListener('click', (ev) => {
+      if (ev.target.closest?.('[data-ace-toggle]') || ev.target.classList?.contains('hcAceBack')) { ev.stopPropagation(); ev.preventDefault(); aceToggle(); return; }
+      const ace = ev.target.closest?.('.hcAce');
+      if (!ace) return;
+      // nothing on the card works while it's being edited: a tap places, picks or takes away
+      ev.stopPropagation(); ev.preventDefault();
+      const opener = ev.target.closest('[data-ace-open]'), choice = ev.target.closest('[data-ace-choose]');
+      if (choice) {
+        if (choice.getAttribute('aria-disabled') === 'true') return;
+        const [slRaw, ...rest] = choice.dataset.aceChoose.split('|'), item = rest.join('|'), sl = slotParse(slRaw), had = slotGet(areaCard(aceRoom()), sl);
+        aceMenu(null);
+        if (item) aceMove({ item }, sl); else if (had != null) aceMove({ item: had, slot: sl }, 'list');
+        grid.querySelector('.hcAce [data-ace-open="' + slRaw + '"]')?.focus({ preventScroll: true });
+        return;
+      }
+      if (opener) { aceMenu(opener.getAttribute('aria-expanded') === 'true' ? null : opener.dataset.aceOpen); return; }
+      aceMenu(null);
+      if (performance.now() < aceNoClick) return;
+      const c = areaCard(aceRoom()), slotEl = ev.target.closest('.hcAceCard [data-slot]'), row = ev.target.closest('[data-ace-item]');
+      if (slotEl) {
+        // a space on the card opens its picker
+        aceMenu(slotEl.dataset.slot);
+        return;
+      }
+      if (row) {
+        if (acePick?.slot != null) { aceMove(acePick, 'list'); return; }
+        acePick = acePick?.item === row.dataset.aceItem ? null : { item: row.dataset.aceItem };
+        aceMark();
+        return;
+      }
+      if (ev.target.closest('.hcAceList') && acePick?.slot != null) aceMove(acePick, 'list');
+    }, true);
+    grid.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape' || !aceArea) return;
+      if (grid.querySelector('.hcAceMenu:not([hidden])')) { ev.stopPropagation(); ev.preventDefault(); const sl = grid.querySelector('.hcAceMenu:not([hidden])').closest('[data-ace-field]').dataset.aceField; aceMenu(null); grid.querySelector('.hcAce [data-ace-open="' + sl + '"]')?.focus(); return; }
+      ev.stopPropagation(); ev.preventDefault();
+      if (acePick) { acePick = null; aceMark(); } else aceToggle();
+    }, true);
+    // dragging: with a mouse or pen once it's moved 6, with a finger once it's been held a moment (so the page still
+    // scrolls under a swipe); a copy of what's dragged follows the pointer, and what it's over is outlined
+    grid.addEventListener('touchmove', (ev) => { if (aceDrag?.on) ev.preventDefault(); }, { passive: false });
+    grid.addEventListener('pointerdown', (ev) => {
+      const ace = ev.target.closest?.('.hcAce');
+      if (!ace || ev.button || !ev.isPrimary) return;
+      const c = areaCard(aceRoom()), slotEl = ev.target.closest('.hcAceCard [data-slot]'), row = ev.target.closest('[data-ace-item]');
+      const src = slotEl ? { item: slotGet(c, slotParse(slotEl.dataset.slot)), slot: slotParse(slotEl.dataset.slot), el: slotEl } : row ? { item: row.dataset.aceItem, el: row } : null;
+      if (!src?.item) return;
+      const touch = ev.pointerType === 'touch', x0 = ev.clientX, y0 = ev.clientY;
+      let x = x0, y = y0, ghost = null, over = null;
+      const drag = aceDrag = { on: false };
+      const begin = () => {
+        drag.on = true;
+        const k = slotKey(aceRoom(), src.item, roomKeys(aceRoom()));
+        ghost = Object.assign(document.createElement('div'), { className: 'hcAceGhost' });
+        ghost.innerHTML = '<span class="tfIcon">' + (src.el.querySelector('.tfIcon')?.innerHTML || '') + '</span><span class="activityRowName">' + esc(k?.label || '') + '</span>';
+        app.appendChild(ghost);
+        ace.classList.add('hcAceDragging');
+        moveTo();
+      };
+      const targetAt = () => { const el = root.elementFromPoint(x, y); return el?.closest('.hcAceCard [data-slot]') || (el?.closest('.hcAceList') ? ace.querySelector('.hcAceList') : null); };
+      const moveTo = () => {
+        ghost.style.transform = 'translate(' + (x + 12) + 'px,' + (y + 12) + 'px)';
+        const t = targetAt();
+        if (t !== over) { over?.classList.remove('hcOver'); over = t; over?.classList.add('hcOver'); }
+      };
+      const hold = touch ? setTimeout(begin, 280) : 0;
+      const move = (e) => {
+        if (e.pointerId !== ev.pointerId) return;
+        x = e.clientX; y = e.clientY;
+        if (!drag.on) { if (Math.hypot(x - x0, y - y0) >= BAR_SLOP) { if (touch) end(); else begin(); } return; }
+        moveTo();
+      };
+      const end = (e) => {
+        clearTimeout(hold);
+        removeEventListener('pointermove', move, true); removeEventListener('pointerup', end, true); removeEventListener('pointercancel', end, true);
+        if (aceDrag === drag) aceDrag = null;
+        if (!drag.on) return;
+        ghost?.remove(); over?.classList.remove('hcOver'); ace.classList.remove('hcAceDragging');
+        aceNoClick = performance.now() + 400;
+        if (e?.type !== 'pointerup' || !over) return;
+        aceMove(src, over.dataset.slot != null ? slotParse(over.dataset.slot) : 'list');
+      };
+      addEventListener('pointermove', move, true); addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+    });
+  }
+  /* Home's time and date and its weather, as HomeCore Labs has them (Matt, 26 Nov): the time and date end where the
+     summaries end, on the name's line, in a thin type the greeting's size; above them the weather, no background: its
+     icon (the weather card's own, which opens its more info), what it's doing, the temperature */
+  const wxClock = () => {
+    const now = new Date(), lang = getHass()?.locale?.language || undefined;
+    return now.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }) + '  ' + now.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+  setInterval(() => { grid?.querySelectorAll('[data-wx-clock]').forEach((c) => { const t = wxClock(); if (c.textContent !== t) c.textContent = t; }); alignHomeClock(); }, 10000);
+  const WX_WORDS = { sunny: 'Sunny', 'clear-night': 'Clear', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain', snowy: 'Snow',
+    'snowy-rainy': 'Sleet', hail: 'Hail', lightning: 'Thunder', 'lightning-rainy': 'Thunderstorms', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Unsettled' };
+  function homeWxTile() {
+    const id = weatherId(), st = id && states[id];
+    if (!st) return '';
+    const t = st.attributes?.temperature, unit = st.attributes?.temperature_unit || '';
+    const art = wbSmoothIcon(st.state, false, st.state === 'clear-night', 'homewx'), kind = 'wb' + art.k[0].toUpperCase() + art.k.slice(1) + (art.night ? ' wbNight' : '');
+    return '<span class="hcHomeWx"><button class="hcHomeWxIcon" type="button" data-more="' + esc(id) + '" aria-label="' + esc(nameOf(id)) + ', more info" title="Weather">' +
+      '<span class="wbWx ' + kind + '" aria-hidden="true">' + art.svg + '</span></button>' +
+      '<span class="hcHomeWxWords">' + esc(WX_WORDS[st.state] || cap(st.state)) + '</span>' + (t != null ? '<span class="hcHomeWxTemp">' + esc(Math.round(t) + unit) + '</span>' : '') + '</span>';
+  }
+  function alignHomeClock() {
+    const title = grid?.querySelector('.tfDashTitle'), bar = grid?.querySelector('.tfDashBarRow > *');
+    if (!overview || !title || !bar) return;
+    const tr = title.getBoundingClientRect(), right = tr.right;
+    title.style.setProperty('--sums-end', Math.max(0, Math.round(right - bar.getBoundingClientRect().right)) + 'px');
+    const clock = title.querySelector('.hcHomeClock');
+    if (clock) title.style.setProperty('--wx-above', Math.round(tr.bottom - clock.getBoundingClientRect().top + 8) + 'px');
+    // clear of the page's pencil, which sits up there too
+    const wx = title.querySelector('.hcHomeWx'), pen = $('dashEditNav')?.getBoundingClientRect();
+    if (wx) {
+      const end = right - bar.getBoundingClientRect().right, r = wx.getBoundingClientRect(), top = tr.bottom - (parseFloat(getComputedStyle(title).getPropertyValue('--wx-above')) || 40) - r.height;
+      const hits = pen?.width && pen.bottom > top && pen.top < top + r.height;
+      title.style.setProperty('--wx-end', Math.round(hits ? Math.max(end, right - pen.left + 12) : end) + 'px');
+    }
+  }
   const areaHead = (x, order) => '<div class="settingsHeader tfAreaHead" data-tf data-k="areahead" style="order:' + order + '">' +
-    '<button class="back" type="button" data-area-back aria-label="Back to the house">' + BACK + '</button><div class="settingsTitle">' + esc(x.name) + '</div></div>';
+    '<button class="back" type="button" data-area-back aria-label="Back to the house">' + BACK + '</button><div class="settingsTitle">' + esc(x.name) + '</div>' +
+    // an area's page edits its card (Matt, 23 Nov: "You should edit the area card by going to the area page itself")
+    (x.room ? '<button class="pill hcAceToggle" type="button" data-ace-toggle>Edit area card</button>' : '') + '</div>';
   // a room's Go opens its section's page at its top; back returns to the house exactly where
   // you were (Matt, 28 Oct). Scrolling it into view instead would tuck its title under Home Assistant's top bar
   let leftAt = 0, leftTop = null; // how far the house was scrolled when a page opened, and where its opener was on screen
@@ -3529,6 +4240,7 @@ export function mountTestFocus(root, { config, getHass }) {
     fix();
   }
   function closeArea() {
+    aceArea = null; acePick = null;
     const key = areaPage;
     areaPage = null;
     render();
@@ -3719,6 +4431,68 @@ export function mountTestFocus(root, { config, getHass }) {
     return false;
   };
   let touchAt = null;
+  // the icon picker (Home Assistant's: type to search, each icon shown beside its name, pick one): the icons this page
+  // can draw, from Material Design Icons as Home Assistant names them
+  let iconNames = null;
+  const loadIconNames = () => iconNames ? Promise.resolve(iconNames) : import('./demo-icons.js').then((m) => (iconNames = [...new Set([...Object.keys(m.DEMO_ICONS), ...Object.keys(HC_FROM_MDI)])].filter((n) => n.startsWith('mdi:')).sort()));
+  function showIcons(input) {
+    const list = input.closest('.hcIconPick')?.querySelector('.hcIconList');
+    if (!list) return;
+    loadIconNames().then((names) => {
+      const q = input.value.trim().toLowerCase().replace(/^mdi:/, ''), hits = names.filter((n) => n.slice(4).includes(q));
+      list.innerHTML = hits.length ? hits.map((n) => '<button class="hcIconOpt" type="button" role="option" tabindex="-1" data-icon-opt="' + esc(n) + '"><span class="tfIcon" data-icon-for="" data-icon-name="' + esc(n) + '"></span><span>' + esc(n) + '</span></button>').join('')
+        : '<div class="hcIconNone">No icons match</div>';
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      fillIcons(list);
+    });
+  }
+  function hideIcons() {
+    sheet.querySelectorAll('.hcIconList:not([hidden])').forEach((l) => { l.hidden = true; l.closest('.hcIconPick').querySelector('[data-icon-pick]').setAttribute('aria-expanded', 'false'); });
+  }
+  // the icon at the field's start follows what's typed or picked (its own when the field is empty)
+  function previewIcon(input) {
+    const chip = input.closest('.hcInfoFieldBox')?.querySelector('.hcInfoFieldIcon');
+    if (!chip) return;
+    const v = input.value.trim();
+    chip.dataset.iconName = v.startsWith('mdi:') && v.length > 4 ? v : input.placeholder.startsWith('mdi:') && input.placeholder.length > 4 ? input.placeholder : '';
+    if (!chip.dataset.iconName) delete chip.dataset.iconName;
+    chip.textContent = '';
+    delete chip.dataset.hc;
+    fillIcons(chip.parentElement); // (it fills the icons inside what it's given)
+  }
+  sheet.addEventListener('focusin', (ev) => { if (ev.target.matches?.('[data-icon-pick]')) showIcons(ev.target); });
+  sheet.addEventListener('input', (ev) => { if (ev.target.matches?.('[data-icon-pick]')) { showIcons(ev.target); previewIcon(ev.target); } });
+  sheet.addEventListener('mousedown', (ev) => { if (ev.target.closest('.hcIconList')) ev.preventDefault(); }); // the field keeps its focus
+  sheet.addEventListener('click', (ev) => {
+    const opt = ev.target.closest('[data-icon-opt]');
+    if (opt) { const input = opt.closest('.hcIconPick').querySelector('[data-icon-pick]'); input.value = opt.dataset.iconOpt; previewIcon(input); hideIcons(); return; }
+    if (ev.target.matches?.('[data-icon-pick]')) { showIcons(ev.target); return; }
+    if (!ev.target.closest('.hcIconPick')) hideIcons();
+  });
+  sheet.addEventListener('keydown', (ev) => {
+    const input = ev.target.matches?.('[data-icon-pick]') ? ev.target : null, list = input?.closest('.hcIconPick')?.querySelector('.hcIconList');
+    if (!input || !list || list.hidden) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); hideIcons(); return; }
+    const opts = [...list.querySelectorAll('[data-icon-opt]')], at = opts.findIndex((o) => o.classList.contains('active'));
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      const next = opts[Math.max(0, Math.min(opts.length - 1, at + (ev.key === 'ArrowDown' ? 1 : -1)))];
+      opts.forEach((o) => o.classList.toggle('active', o === next));
+      next?.scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter' && at > -1) { ev.preventDefault(); input.value = opts[at].dataset.iconOpt; previewIcon(input); hideIcons(); }
+  });
+  // a switch in a device's settings flips; Use device area off shows the area to pick
+  sheet.addEventListener('click', (ev) => {
+    const sw = ev.target.closest('.hcInfoSettings .switch');
+    if (!sw) return;
+    const on = !sw.classList.contains('on');
+    sw.classList.toggle('on', on);
+    sw.setAttribute('aria-checked', String(on));
+    if (sw.dataset.setToggle === 'area') { const pick = sheet.querySelector('.hcInfoAreaPick'); if (pick) pick.hidden = on; }
+  });
+  // the head's menu closes with a click anywhere but its button
+  sheet.addEventListener('click', (ev) => { if (ev.target.closest('[data-more-menu]')) return; sheet.querySelectorAll('.hcInfoMenu:not([hidden])').forEach((m) => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); }); });
   sheet.addEventListener('touchstart', (ev) => { touchAt = { x: ev.touches[0].clientX, y: ev.touches[0].clientY }; }, { passive: true });
   sheet.addEventListener('touchmove', (ev) => {
     if (!touchAt || ev.touches.length > 1 || ev.target.closest?.('input,textarea,select')) return;
@@ -3834,26 +4608,153 @@ export function mountTestFocus(root, { config, getHass }) {
     }
     const d = id.split('.')[0], st = states[id];
     const s = ACTION_DOMAINS.includes(d) || TOGGLES.includes(d) ? specFor(id) : quickSpec(id);
-    const pop = popOf(id);
-    // its pages: the drawn ones (a light's Colour and Control) or Control as it was, then Info
-    const pages = [...(pop ? pop.pages.map((pg) => ({ name: pg.name, svg: pg.svg, tabs: pg.tabs, html: pg.space + '<div class="tfMoreCtl"' + lightAttrs(id).replace(' data-light', '') + '>' + pg.rows.filter(Boolean).join('') + '</div>' }))
-      : [{ name: 'Control', svg: TUNE_SVG, html: moreSpace(id) + (d === 'plant' ? plantProblems(id).join('') : '') + s.sections.filter(Boolean).join('') }]), { name: 'Info', svg: INFO_SVG, html: infoOf(id) }];
-    if (more && more.page == null) more.page = 0;
-    if (more) more.pages = pages.length;
-    const page = more?.page || 0, mode = more?.mode || '';
-    // the tabs: a page's own (a colour light's Colour and Controls, one page in two modes), else the page; then Info
-    // a light's Info is its own (i) at the foot's right end, not a tab (Matt, 17 Nov); its pill holds only its views
-    const infoAt = pages.length - 1, infoOwn = Boolean(pop?.infoButton);
-    const tabs = pages.flatMap((pg, i) => (infoOwn && i === infoAt ? [] : pg.tabs || [{ name: pg.name, svg: pg.svg }]).map((t) => ({ ...t, page: i })));
-    const picked = (t) => t.page === page && (t.mode == null || t.mode === mode);
-    return [
-      moreHead(id, s, head),
-      '<div class="tfMorePages' + (pop ? ' tfMorePop' : '') + (mode && page === 0 ? ' tfMoreHold' : '') + '" data-more-pages>' + pages.map((pg) => '<section class="tfMorePage" aria-label="' + pg.name + '" data-mode="' + mode + '">' + pg.html + '</section>').join('') + '</div>',
-      // the pages' icons in place of their dots (Matt, 12 Nov): Control's sliders and Info's (i); a light's Colour its palette first
-      (infoOwn ? '<div class="tfMoreFoot"><span class="tfMoreFootGap"></span>' : '') +
-      (tabs.length ? '<div class="tfMoreDots hcMorePageIcons" role="tablist" aria-label="' + (infoOwn ? 'Views' : 'Pages') + '">' + tabs.map((t) => '<button type="button" role="tab" aria-selected="' + picked(t) + '" aria-label="' + t.name + '" title="' + t.name + '" data-more-page="' + t.page + '"' + (t.mode != null ? ' data-more-mode="' + t.mode + '"' : '') + (picked(t) ? '' : ' tabindex="-1"') + '>' + t.svg + '</button>').join('') + '</div>' : '') +
-      (infoOwn ? '<button class="tfMoreInfoBtn" type="button" aria-label="Info" title="Info" aria-pressed="' + (page === infoAt) + '" data-more-page="' + infoAt + '" data-more-toggle>' + INFO_SVG + '</button></div>' : ''),
-    ];
+    const pop = popOf(id), view = more?.view || '', mode = more?.mode || '';
+    if (more) { more.page = 0; more.pages = 1; }
+    // Home Assistant's more info (Matt, 26 Nov: "more like the more info cards are now, but to look like home core"):
+    // the head, the state and when it changed, the device's controls; History and Details are views of their own
+    // an Activity row's entry (Matt, 26 Nov, Home Assistant's logbook entry): the name and its state, which opens its controls,
+    // then its history and what happened to it, each with Show more
+    if (view === 'log') return [haHead(id, null, true), logEntity(id), logGroup('History', historyOf(id, false)), logGroup('Activity', '<div class="hcLogList" data-log="' + esc(id) + '"></div>')];
+    if (view === 'history') return [haHead(id, 'History'), historyOf(id, false), activityOf(id)];
+    if (view === 'details') return [haHead(id, 'Details'), infoOf(id)];
+    if (view === 'settings') return [haHead(id, 'Settings'), settingsOf(id), '<div class="hcInfoFoot"><button class="hcInfoDelete" type="button" data-oops>Delete</button><button class="primary" type="button" data-settings-save>Update</button></div>'];
+    // its controls as they were for now (each kind is made Home Assistant's in turn), in one block: no pages to swipe
+    const pg = pop?.pages[0], tabs = pg?.tabs || [];
+    const ctl = pop ? pg.space + '<div class="tfMoreCtl"' + lightAttrs(id).replace(' data-light', '') + '>' + pg.rows.filter(Boolean).join('') + '</div>'
+      : (NEW_INFO.includes(d) ? moreSpace(id) : '') + (d === 'plant' ? plantProblems(id).join('') : '') + s.sections.filter(Boolean).join('');
+    // a light's views (Colour, the pad) sit under its controls, as Home Assistant's row of buttons does
+    const modes = tabs.length ? '<div class="tfMoreDots hcMorePageIcons" role="tablist" aria-label="Views">' + tabs.map((tb) => '<button type="button" role="tab" aria-selected="' + ((tb.mode || '') === mode) + '" aria-label="' + tb.name + '" title="' + tb.name + '" data-more-page="0" data-more-mode="' + (tb.mode || '') + '">' + tb.svg + '</button>').join('') + '</div>' : '';
+    // a device that turns on and off has its switch at the foot's left, on the line with its other options (Matt, 26 Nov)
+    // only where its controls have no Off and On of their own (Matt, 26 Nov: a light keeps it; a switch, with its Off/On,
+    // doesn't), and as Home Assistant's power button, the line in the circle, not a toggle
+    const hasOnOff = />Off<\/button>/.test(ctl) && />On<\/button>/.test(ctl);
+    const onOff = ['light', 'switch', 'fan', 'input_boolean', 'humidifier', 'siren', 'automation'].includes(d) && st && st.state !== 'unavailable' && !hasOnOff;
+    const sw = onOff ? '<button class="hcMorePower' + (st.state === 'on' ? ' on' : '') + '" type="button" role="switch" aria-checked="' + (st.state === 'on') + '" aria-label="' + esc(nameOf(id)) + (st.state === 'on' ? ', on' : ', off') + '" title="' + (st.state === 'on' ? 'Turn off' : 'Turn on') + '" data-act="' + act(d, 'toggle', id) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13"/></svg></button>' : '';
+    const foot = sw || modes ? '<div class="hcMoreFootRow">' + (sw || '<span></span>') + modes + '<span></span></div>' : '';
+    const body = ctl || foot ? '<div class="tfMorePages hcMoreBody' + (pop ? ' tfMorePop' : '') + '"><section class="tfMorePage" aria-label="Control" data-mode="' + mode + '">' + ctl + foot + '</section></div>' : '';
+    // a reading or anything else without Home Assistant's new design: its history and what happened, under the state
+    return [haHead(id), stateHead(id), ...(body ? [body] : []), ...(NEW_INFO.includes(d) ? [] : [historyOf(id), activityOf(id)])];
+  }
+  // the kinds Home Assistant gives its new more info (its DOMAINS_WITH_NEW_MORE_INFO): their controls, no history under them
+  const NEW_INFO = ['alarm_control_panel', 'cover', 'climate', 'fan', 'humidifier', 'input_boolean', 'lawn_mower', 'light', 'lock', 'siren', 'script', 'switch', 'timer', 'vacuum', 'valve', 'water_heater', 'media_player'];
+  const HISTORY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7V10H9V17M13 17H11V7H13V17M17 17H15V13H17V17M19 19H5V5H19V19.1M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3Z"/></svg>';
+  const COG_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.11,6.62L12.74,4H11.25Z"/></svg>';
+  const DOTS_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"/></svg>';
+  // Home Assistant's head: Close (Back from a view, or into the popup it was opened from), the area and device over the
+  // name, then History, Settings and the menu (Device info, Related, Details)
+  function haHead(id, view, log = false) {
+    const h = getHass(), ent = h?.entities?.[id], dev = ent?.device_id ? h?.devices?.[ent.device_id] : null, devName = dev && (dev.name_by_user || dev.name);
+    const area = model.areaOf?.(id), areaName = area ? model.rooms.find((r) => r.id === area)?.name || h?.areas?.[area]?.name || '' : '';
+    const crumbs = [areaName, devName && devName !== nameOf(id) ? devName : null, view ? nameOf(id) : null].filter(Boolean);
+    // Back from a view, or from the controls to the entry they were opened from
+    const lead = view || more?.trail?.length ? '<button class="tfBack" type="button" data-more-pop aria-label="Back">' + ARROW + '</button>'
+      : more?.back ? '<button class="tfBack" type="button" data-more-back aria-label="Back">' + ARROW + '</button>' : '<button class="tfBack" type="button" data-more-close aria-label="Close">' + CLOSE + '</button>';
+    const item = (label, attrs) => '<button class="hcInfoMenuItem" type="button" role="menuitem" ' + attrs + '>' + esc(label) + '</button>';
+    const tools = view ? '' : '<div class="hcInfoTools">' +
+      (log ? '' : '<button class="tfBack" type="button" data-more-view="history" aria-label="History" title="History">' + HISTORY_SVG + '</button>') +
+      '<button class="tfBack" type="button" data-more-view="settings" aria-label="Settings" title="Settings">' + COG_SVG + '</button>' +
+      '<div class="hcInfoMenuWrap"><button class="tfBack" type="button" data-more-menu aria-haspopup="menu" aria-expanded="false" aria-label="Menu" title="Menu">' + DOTS_SVG + '</button>' +
+        '<div class="card hcInfoMenu" role="menu" hidden>' + (dev ? item('Device info', 'data-path="/config/devices/device/' + esc(ent.device_id) + '"') : '') + item('Related', 'data-oops') + item('Details', 'data-more-view="details"') + '</div></div></div>';
+    return '<div class="tfMoreHead hcInfoHead">' + lead + '<div class="hcInfoTitle">' + (crumbs.length ? '<span class="hcInfoCrumb">' + crumbs.map(esc).join(' ▸ ') + '</span>' : '') +
+      '<span class="activityTitle" id="tfMoreTitle">' + esc(view || nameOf(id)) + '</span></div>' + tools + '</div>';
+  }
+  // Home Assistant's entity settings, behind the gear (Matt, 26 Nov): name, icon, how it shows, its unit, its entity ID,
+  // its area, voice assistants, Enabled and Visible, then Delete and Update. Update keeps the name and the icon (in the
+  // saved prefs, as entities[id]); Home Assistant's areas and entity IDs are never changed here
+  const SHOW_AS = {
+    cover: ['Awning', 'Blind', 'Curtain', 'Damper', 'Door', 'Garage door', 'Gate', 'Shade', 'Shutter', 'Window'],
+    binary_sensor: ['Battery', 'Cold', 'Connectivity', 'Door', 'Garage door', 'Gas', 'Heat', 'Light', 'Lock', 'Moisture', 'Motion', 'Moving', 'Occupancy', 'Opening', 'Plug', 'Power', 'Presence', 'Problem', 'Running', 'Safety', 'Smoke', 'Sound', 'Tamper', 'Update', 'Vibration', 'Window'],
+    switch: ['Switch', 'Light', 'Fan', 'Lock', 'Cover', 'Valve', 'Siren'],
+  };
+  function settingsOf(id) {
+    const d = id.split('.')[0], a = attr(id), h = getHass(), ent = h?.entities?.[id], dev = ent?.device_id ? h?.devices?.[ent.device_id] : null;
+    const mine = prefs.entities?.[id] || {}, area = model.areaOf?.(id);
+    const field = (label, input, lead = '') => '<label class="hcInfoField"><span class="hcInfoFieldLabel">' + esc(label) + '</span><span class="hcInfoFieldBox">' + lead + input + '</span></label>';
+    const select = (label, opts, now, attrs = '') => field(label, '<select class="hcInfoInput" ' + attrs + '>' + opts.map(([v, txt]) => '<option value="' + esc(v) + '"' + (v === now ? ' selected' : '') + '>' + esc(txt) + '</option>').join('') + '</select>');
+    const toggle = (title, status, on, attrs = '') => '<div class="toggleRow hcInfoToggle"><div><strong>' + esc(title) + '</strong>' + (status ? '<div class="status">' + status + '</div>' : '') + '</div>' +
+      '<button class="switch' + (on ? ' on' : '') + '" type="button" role="switch" aria-checked="' + on + '" aria-label="' + esc(title) + '" ' + attrs + '></button></div>';
+    const iconNow = mine.icon || a.icon || '';
+    const shown = SHOW_AS[d], cls = d === 'switch' ? 'Switch' : (a.device_class ? cap(String(a.device_class).replace(/_/g, ' ')) : '');
+    const rooms = [['', 'No area'], ...model.rooms.map((r) => [r.id, r.name])];
+    return '<div class="hcInfoSettings">' +
+      field('Name', '<input class="hcInfoInput" type="text" data-set="name" value="' + esc(nameOf(id)) + '" placeholder="' + esc(a.friendly_name || '') + '">') +
+      '<div class="hcIconPick">' + field('Icon', '<input class="hcInfoInput" type="text" data-set="icon" data-icon-pick role="combobox" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false" value="' + esc(mine.icon || '') + '" placeholder="' + esc(iconNow || 'mdi:') + '">', '<span class="tfIcon hcInfoFieldIcon"' + iconSlot(id, iconNow) + '></span>') +
+        '<div class="card hcIconList" role="listbox" aria-label="Icons" hidden></div></div>' +
+      (shown ? select(d === 'switch' ? 'Show switch as' : 'Show as', shown.map((x) => [x, x]), shown.includes(cls) ? cls : shown[0]) : '') +
+      (d === 'sensor' && a.unit_of_measurement ? select('Unit of measurement', [[a.unit_of_measurement, a.unit_of_measurement]], a.unit_of_measurement) +
+        select('Display precision', [['', 'Default'], ['0', '0'], ['1', '0.1'], ['2', '0.01']], '') : '') +
+      field('Entity ID', '<input class="hcInfoInput" type="text" value="' + esc(id.split('.').slice(1).join('.')) + '" readonly>', '<span class="hcInfoPrefix">' + esc(d) + '.</span>') +
+      (dev ? toggle('Use device area', 'You can change the device area in the device settings', true, 'data-set-toggle="area"') : '') +
+      '<div class="hcInfoAreaPick"' + (dev ? ' hidden' : '') + '>' + select('Area', rooms, area || '', 'data-set="area"') + '</div>' +
+      '<button class="tfMoreLink hcInfoLink" type="button" data-oops><span><strong>Voice assistants</strong><span class="status">Configure aliases and expose settings for voice assistants</span></span>' + CHEVRON + '</button>' +
+      toggle('Enabled', 'Disabled entities will not be added to Home Assistant.', true) +
+      toggle('Visible', 'Hidden entities will not be included in auto-populated dashboards or when their area, device or label is referenced. Their history is still tracked and you can still interact with them with actions.', true) +
+      '</div>';
+  }
+  // Update: the name and icon it was given (none if it's Home Assistant's own again), then back to its info
+  function saveSettings() {
+    const id = more?.id, box = sheet.querySelector('.hcInfoSettings');
+    if (!id || !box) return;
+    const name = box.querySelector('[data-set="name"]').value.trim(), icon = box.querySelector('[data-set="icon"]').value.trim();
+    const mine = { ...(name && name !== attr(id).friendly_name ? { name } : {}), ...(icon ? { icon } : {}) };
+    const entities = { ...(prefs.entities || {}) };
+    if (Object.keys(mine).length) entities[id] = mine; else delete entities[id];
+    prefs = { ...prefs, entities };
+    savePrefs();
+    more.view = more.trail?.length ? more.trail.pop() : null;
+    refresh();
+    renderMore();
+  }
+  // the state, big, and when it last changed
+  function stateHead(id) {
+    const st = states[id], word = headLine(id, '') || cap(String(st.state).replace(/_/g, ' '));
+    return '<div class="hcInfoState"><div class="hcInfoStateNow">' + esc(word) + '</div>' + (st.last_changed ? '<div class="hcInfoStateWhen">Last changed ' + esc(ago(Date.parse(st.last_changed))) + '</div>' : '') + '</div>';
+  }
+  // its last 24 hours
+  const historyOf = (id, named = true) => '<div class="tfMoreGraph">' + (named ? '<div class="tfMoreGroupName">History</div>' : '') + '<svg class="tfGraph tfDay" data-day="' + esc(id) + '" role="img" aria-label="' + esc(nameOf(id)) + ', last 24 hours"></svg></div>';
+  // what happened to it, newest first: the logbook's changes, else its last one
+  function activityOf(id) {
+    const st = states[id], unit = attr(id).unit_of_measurement, said = (logbook || []).filter((e) => e.entity_id === id).sort((x, y) => y.when - x.when).slice(0, 8);
+    const rows = said.length ? said.map((e) => [e.state, e.when * 1000]) : st.last_changed ? [[st.state, Date.parse(st.last_changed)]] : [];
+    return '<div class="tfMoreGroup hcInfoActivity"><div class="tfMoreGroupName">Activity</div><div class="tfMoreRows">' +
+      (rows.length ? rows.map(([s, at]) => '<div class="tfMoreRow"><span>' + esc(cap(String(s).replace(/_/g, ' ')) + (unit && !isNaN(Number(s)) ? (unit === '%' ? '' : ' ') + unit : '')) + '</span><span>' + esc(ago(at)) + '</span></div>').join('') : '<div class="tfMoreRow"><span>Nothing in the last 24 hours</span></div>') + '</div></div>';
+  }
+  // an Activity entry's head row: its icon, name and when it changed, its state at the right; it opens the controls
+  function logEntity(id) {
+    const st = states[id], word = valueOf(id) || cap(String(st.state).replace(/_/g, ' '));
+    return '<button class="hcLogEntity" type="button" data-more-view="" aria-label="' + esc(nameOf(id) + ', ' + word + ', controls') + '"><span class="tfIcon"' + iconSlot(id, attr(id).icon || '') + '></span>' +
+      '<span class="hcLogEntityText"><span class="hcLogEntityName">' + esc(nameOf(id)) + '</span>' + (st.last_changed ? '<span class="hcLogEntityWhen">' + esc(ago(Date.parse(st.last_changed))) + '</span>' : '') + '</span>' +
+      '<span class="hcLogEntityState">' + esc(word) + '</span>' + CHEVRON + '</button>';
+  }
+  const logGroup = (name, html) => '<section class="hcLogGroup" aria-label="' + name + '"><div class="hcLogGroupHead"><h3 class="hcLogTitle">' + name + '</h3><button class="hcLogMore" type="button" data-more-view="history">Show more</button></div>' + html + '</section>';
+  // a state it was in, in words (as its tile says it now)
+  function wordAt(id, s) {
+    const d = id.split('.')[0], a = attr(id), n = Number(s);
+    if (['light', 'switch', 'fan', 'input_boolean', 'automation', 'siren', 'humidifier'].includes(d)) return s === 'on' ? 'On' : 'Off';
+    if (d === 'binary_sensor' || d === 'alarm_control_panel') { const real = states[id]; states[id] = { ...real, state: s }; try { return valueOf(id); } finally { states[id] = real; } }
+    if (s !== '' && Number.isFinite(n)) return n.toLocaleString(undefined, { maximumFractionDigits: Math.abs(n) >= 100 ? 0 : 1 }) + (a.unit_of_measurement ? (a.unit_of_measurement === '%' ? '%' : ' ' + a.unit_of_measurement) : '');
+    return cap(String(s).replace(/_/g, ' '));
+  }
+  // its last changes, newest first, under the day they fell on, each a dot on a line (on in its colour, off grey)
+  async function fillLog(id, el) {
+    const pts = await dayOf(id);
+    if (!el.isConnected || !states[id]) return;
+    const ch = [];
+    let was;
+    pts.forEach(([t, s]) => { if (s !== was && !['unavailable', 'unknown'].includes(s)) ch.push([t, s]); was = s; });
+    let rows = ch.reverse().slice(0, 5);
+    if (!rows.length && states[id].last_changed) rows = [[Date.parse(states[id].last_changed), states[id].state]];
+    const dayName = (t) => { const d0 = new Date(t), today = new Date(); const diff = Math.round((new Date(today.toDateString()) - new Date(d0.toDateString())) / 864e5);
+      return (diff === 0 ? 'Today · ' : diff === 1 ? 'Yesterday · ' : '') + d0.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    const tone = alarmOf(id) ? ' alarm' : id.startsWith('light.') ? ' light' : '';
+    let html = '', day = '';
+    rows.forEach(([t, s]) => {
+      const name = dayName(t);
+      if (name !== day) { html += (day ? '</div>' : '') + '<div class="hcLogDay">' + esc(name) + '</div><div class="hcLogRows">'; day = name; }
+      html += '<button class="hcLogRow" type="button" data-more-view="history"><span class="hcLogDot' + (isOn(id, s) ? ' on' + tone : '') + '"></span><span class="hcLogWhat">' + esc(wordAt(id, s)) + '</span>' +
+        '<span class="hcLogTime">' + esc(new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })) + '</span>' + CHEVRON + '</button>';
+    });
+    el.innerHTML = rows.length ? html + '</div>' : '<div class="hcLogDay">Nothing in the last 24 hours</div>';
   }
   // under the name, as the drawings have it (17 Nov): its area and its state in a word or a number; a light its value
   const headLine = (id, areaName) => {
@@ -3863,16 +4764,6 @@ export function mountTestFocus(root, { config, getHass }) {
       : d === 'fan' && st.state === 'on' && a.percentage != null ? a.percentage + '%' : (d === 'valve' || d === 'cover') && a.current_position != null && st.state !== 'closed' ? a.current_position + '%' : valueOf(id);
     return [areaName, word].filter(Boolean).join(' · ');
   };
-  // the popup's head is the tile's: Back where it was opened from inside a popup, the icon (its button), the name
-  // over the area, and Close
-  function moreHead(id, s, head) {
-    const area = model.areaOf?.(id), areaName = area ? model.rooms.find((r) => r.id === area)?.name || getHass()?.areas?.[area]?.name || '' : '';
-    const icon = s.button ? iconButton(id, s) : '<div class="tfIcon"' + iconSlot(id, s.icon) + '></div>';
-    return '<div class="tfMoreHead tfMoreTileHead' + (s.on ? ' on' : '') + '"' + (s.tone ? ' data-tone="' + s.tone + '"' : '') + lightAttrs(id) + '>' +
-      (more?.back ? '<button class="tfBack" type="button" data-more-back aria-label="Back">' + ARROW + '</button>' : '') + icon +
-      '<div class="tfName"><span class="activityRowName" id="tfMoreTitle">' + esc(nameOf(id)) + '</span><span class="activityRowMeta">' + esc(headLine(id, areaName)) + '</span></div>' +
-      '<button class="tfBack" type="button" data-more-close aria-label="Close">' + CLOSE + '</button></div>';
-  }
   // the big space (Matt, 10 Nov: the data and action space is left largely undefined, for contributors to design;
   // for now a large number and the basic information, stacked to fill the room it has): the device's main number
   // (its reading, brightness, position, battery, else its state in a word) at the top, its facts spread under it
@@ -3917,6 +4808,49 @@ export function mountTestFocus(root, { config, getHass }) {
   // the data: the main number and its unit at the top, its facts spread under it
   const popData = (big, unit, facts) => '<div class="tfMoreSpace"><div class="tfMoreBig"><span class="tfMoreNum">' + esc(big) + '</span>' + (unit ? '<span class="tfMoreUnit">' + esc(unit) + '</span>' : '') + '</div>' +
     '<div class="tfMoreFacts">' + facts.filter(([, v]) => v != null && v !== '').map(([k, v]) => '<div class="tfMoreFact"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>').join('') + '</div></div>';
+  // the alarm asks for its code before a mode it guards (Home Assistant: disarming whenever it has a code; arming when
+  // code_arm_required)
+  const needsCode = (id, service) => { const a = attr(id); return Boolean(a.code_format) && (service === 'alarm_disarm' || a.code_arm_required !== false); };
+  const CODE_VERB = { alarm_disarm: 'Disarm', alarm_arm_home: 'Arm home', alarm_arm_away: 'Arm away', alarm_arm_night: 'Arm night', alarm_arm_vacation: 'Arm vacation' };
+  function askCode(id, service, opener) {
+    if (more?.id !== id) openMore(id, opener);
+    if (more?.id !== id) return;
+    more.view = null;
+    more.pending = { service, label: CODE_VERB[service] || 'Send' };
+    more.code = ''; more.codeState = ''; more.codeSaid = '';
+    renderMore();
+    sheet.querySelector('[data-code]')?.focus({ preventScroll: true });
+  }
+  // the alarm opens on its code pad for the next thing to do (Matt, 26 Nov: "when you open up the alarm and it's off, it
+  // should just go to the arm home thing or cancel"): off, Arm home; on, Disarm. Cancel closes it, as does the right code
+  function padFirst() {
+    const id = more?.id;
+    if (!id?.startsWith('alarm_control_panel.') || more.pending || !states[id]) return;
+    const service = states[id].state === 'disarmed' ? 'alarm_arm_home' : 'alarm_disarm';
+    if (!needsCode(id, service)) return;
+    more.pending = { service, label: CODE_VERB[service], first: true };
+    more.code = ''; more.codeState = ''; more.codeSaid = '';
+  }
+  function endCode() { if (more) { more.pending = null; more.code = ''; more.codeState = ''; more.codeSaid = ''; } }
+  async function submitCode() {
+    const p = more?.pending, id = more?.id;
+    if (!p || more.codeState === 'right') return;
+    const code = more.code || '';
+    // said in place: the popup leaves a part with a focused field alone when it redraws
+    const say = (state, words) => {
+      more.codeState = state; more.codeSaid = words;
+      const pad = sheet.querySelector('.hcCodePad'), field = sheet.querySelector('[data-code]'), said = sheet.querySelector('.hcCodeSaid');
+      if (field) field.value = more.code || '';
+      if (said) said.textContent = words;
+      if (pad) { pad.classList.remove('wrong', 'right'); void pad.offsetWidth; pad.classList.add(state); }
+    };
+    if (!code) { say('wrong', 'Type the code first'); return; }
+    try { await send('alarm_control_panel', p.service, id, { code }); }
+    catch (_e) { if (more?.pending !== p) return; more.code = ''; say('wrong', 'Wrong code. Try again'); sheet.querySelector('[data-code]')?.focus({ preventScroll: true }); return; }
+    if (more?.pending !== p) return;
+    say('right', 'Code accepted');
+    setTimeout(() => { if (more?.pending === p && p.first) closeMore(); else if (more?.pending === p) { endCode(); if (sheet.contains(root.activeElement)) root.activeElement.blur(); renderMore(); sheet.querySelector('.tfMore')?.focus({ preventScroll: true }); } }, 900);
+  }
   const codeField = () => '<input class="tfMoreCode" type="password" inputmode="numeric" autocomplete="off" placeholder="Code" aria-label="Code" data-code value="' + esc(more?.code || '') + '">';
   // a button that sends its code too, when one's typed (a lock's, the alarm's)
   const coded = (domain, service, id, label, pressed) => ({ label, pressed, html: null, coded: [domain, service, id].join('|') });
@@ -3955,7 +4889,7 @@ export function mountTestFocus(root, { config, getHass }) {
         stepper('High', num(hi) + ' °C', set({ target_temp_low: lo, target_temp_high: hi - step }), set({ target_temp_low: lo, target_temp_high: hi + step })) + '</div>');
       const hum = Number(a.humidity);
       return { pages: [{ name: 'Control', svg: TUNE_SVG,
-        space: popData(num(a.current_temperature), '°C', [['Target', Number.isFinite(t) ? num(t) + ' °C' : null], ['Humidity', a.current_humidity != null ? a.current_humidity + '%' : null], ['Action', a.hvac_action && cap(a.hvac_action)]]),
+        space: popData(num(a.current_temperature), '°C', [['Target', Number.isFinite(t) ? num(t) + ' °C' : null], ['Action', a.hvac_action && cap(a.hvac_action)]]),
         rows: [
           Number.isFinite(t) && stepper('Target temperature', num(t) + ' °C', set({ temperature: t - step }), set({ temperature: t + step })),
           range,
@@ -3992,10 +4926,20 @@ export function mountTestFocus(root, { config, getHass }) {
     }
     if (d === 'alarm_control_panel') {
       const modes = [...ALARM_MODES, ['armed_vacation', 'Vacation', 'alarm_arm_vacation', 32]].filter(([, , , bit]) => !bit || has(id, bit));
-      const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'];
-      const keypad = '<div class="tfMoreSpace tfMoreKeypad">' + codeField() + '<div class="tfKeypad">' + keys.map((k) => '<button type="button" data-key="' + k + '"' + (k === 'back' ? ' aria-label="Delete"' : '') + '>' +
-        (k === 'clear' ? 'Clear' : k === 'back' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22,3H7C6.31,3 5.77,3.35 5.41,3.88L0,12L5.41,20.11C5.77,20.64 6.31,21 7,21H22A2,2 0 0,0 24,19V5A2,2 0 0,0 22,3M22,19H7.07L2.4,12L7.06,5H22V19M10.41,17L14,13.41L17.59,17L19,15.59L15.41,12L19,8.41L17.59,7L14,10.59L10.41,7L9,8.41L12.59,12L9,15.59L10.41,17Z"/></svg>' : k) + '</button>').join('') + '</div></div>';
-      return { pages: [{ name: 'Control', svg: TUNE_SVG, space: keypad, rows: [codedSeg(nameOf(id), modes.map(([state, label, service]) => coded('alarm_control_panel', service, id, label, st.state === state)))] }] };
+      // Home Assistant's way (Matt, 26 Nov: "no way to press enter or see that you've got it correct or incorrect"): its
+      // modes; picking one that needs the code asks for it, its keypad ending in Clear, 0 and Enter, then says whether it
+      // was right (the field green, the mode sent) or wrong (red, a shake, emptied to try again)
+      const p = more?.id === id ? more.pending : null;
+      if (p) {
+        const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'submit'];
+        const glyph = (k) => k === 'clear' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>'
+          : k === 'submit' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>' : k;
+        const pad = '<div class="tfMoreSpace tfMoreKeypad hcCodePad' + (more.codeState ? ' ' + more.codeState : '') + '"><div class="hcCodeTitle">Enter code to ' + esc(p.label.toLowerCase()) + '</div>' + codeField() +
+          '<div class="hcCodeSaid" role="status" aria-live="polite">' + esc(more.codeSaid || '') + '</div>' +
+          '<div class="tfKeypad">' + keys.map((k) => '<button type="button" data-key="' + k + '"' + (k === 'clear' ? ' aria-label="Clear"' : k === 'submit' ? ' aria-label="Enter" class="hcCodeEnter"' : '') + '>' + glyph(k) + '</button>').join('') + '</div></div>';
+        return { pages: [{ name: 'Control', svg: TUNE_SVG, space: pad, rows: ['<div class="hcCodeFoot"><button type="button" data-code-cancel>Cancel</button><button class="primary" type="button" data-code-submit>' + esc(p.label) + '</button></div>'] }] };
+      }
+      return { pages: [{ name: 'Control', svg: TUNE_SVG, space: '', rows: [codedSeg(nameOf(id), modes.map(([state, label, service]) => coded('alarm_control_panel', service, id, label, st.state === state)))] }] };
     }
     if (d === 'cover') {
       if (a.current_position == null) return { pages: [{ name: 'Control', svg: TUNE_SVG, space: popSwitch(id, s), rows: [popSeg(nameOf(id), [{ label: 'Open', act: act('cover', 'open_cover', id), pressed: st.state !== 'closed' }, { label: 'Close', act: act('cover', 'close_cover', id), pressed: st.state === 'closed' }])] }] };
@@ -4051,11 +4995,10 @@ export function mountTestFocus(root, { config, getHass }) {
   // Info: the device's details, when it changed, where it is and what it is, and the way to its device page
   function infoOf(id) {
     const st = states[id], h = getHass(), ent = h?.entities?.[id], dev = ent?.device_id ? h?.devices?.[ent.device_id] : null;
-    const graph = '<div class="tfMoreGraph"><div class="tfMoreGroupName">Last 24 hours</div><svg class="tfGraph tfDay" data-day="' + esc(id) + '" role="img" aria-label="' + esc(nameOf(id)) + ', last 24 hours"></svg></div>';
     const area = model.areaOf?.(id), areaName = area ? model.rooms.find((r) => r.id === area)?.name || h?.areas?.[area]?.name || '' : '';
     const rows = [...(DETAILS[id.split('.')[0]]?.(attr(id)) || []), ['Changed', st.last_changed && ago(Date.parse(st.last_changed))], ['Area', areaName],
       ['Device', dev && (dev.name_by_user || dev.name)], ['Integration', ent?.platform && cap(ent.platform.replace(/_/g, ' '))], ['Entity', id]].filter(([, v]) => v != null && v !== '');
-    return graph + '<div class="tfMoreRows">' + rows.map(([k, v]) => '<div class="tfMoreRow"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>').join('') + '</div>' + madeUpNote(id) +
+    return '<div class="tfMoreRows">' + rows.map(([k, v]) => '<div class="tfMoreRow"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>').join('') + '</div>' + madeUpNote(id) +
       (dev ? '<button class="tfDetailsBtn tfMoreLink" type="button" data-path="/config/devices/device/' + esc(ent.device_id) + '"><span>Device page</span>' + CHEVRON + '</button>' : '');
   }
   const detailsOf = () => ''; // a device's details are its Info page now (10 Nov); nothing opens beside the popup
@@ -4108,6 +5051,7 @@ export function mountTestFocus(root, { config, getHass }) {
       mountDacs(sheet);
       fillIcons(sheet);
       sheet.querySelectorAll('[data-day]').forEach((svg) => drawDay(svg.dataset.day, svg, more.at));
+      sheet.querySelectorAll('[data-log]').forEach((el) => fillLog(el.dataset.log, el));
       drawPlantGraphs(sheet);
       if (keep) sheet.querySelector('.tfMore').scrollTop = keep;
       settlePages();
@@ -4132,10 +5076,16 @@ export function mountTestFocus(root, { config, getHass }) {
       if (side !== moreSide) { const body = sheet.querySelector('.tfMoreSideBody'); if (body) body.innerHTML = side; moreSide = side; }
       // a day graph swapped in empty (its page redrawn for a new reading) is drawn again
       box.querySelectorAll('[data-day]').forEach((svg) => { if (!svg.innerHTML) drawDay(svg.dataset.day, svg, more.at); });
+      box.querySelectorAll('[data-log]').forEach((el) => { if (!el.innerHTML) fillLog(el.dataset.log, el); });
       settlePages();
       if (!sheet.contains(root.activeElement)) refocus(sheet, was);
     }
     sheet.querySelector('.tfMorePair')?.classList.toggle('details', Boolean(more.details && side));
+    // Settings: the popup grows to hold every field, no scrolling to reach Update (Matt, 26 Nov)
+    // a reading's popup (a humidity, a temperature: its state, its graph, what happened) hugs what it holds too (Matt, 26 Nov:
+    // "make those pop-up cards hug to the size of it"); the devices with controls keep their height
+    const kind = more.id.includes('.') && !more.id.includes(':') ? more.id.split('.')[0] : '';
+    sheet.querySelector('.tfMore')?.classList.toggle('hcFit', more.view === 'settings' || more.view === 'log' || (kind && !NEW_INFO.includes(kind)));
     moreParts = parts;
     syncArts();
   }
@@ -4178,6 +5128,7 @@ export function mountTestFocus(root, { config, getHass }) {
     if (mode != null && mode !== (more.mode || '')) {
       more.mode = mode;
       sheet.querySelectorAll('.tfMorePage').forEach((p) => { p.dataset.mode = mode; });
+      sheet.querySelectorAll('[data-more-mode]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.moreMode === mode)));
     }
     turnPage(page, focus);
   }
@@ -4204,17 +5155,28 @@ export function mountTestFocus(root, { config, getHass }) {
   // the alarm's keypad types into its code; a lock's or the alarm's buttons send that code with them (17 Nov). The code
   // is kept on the popup, so a redraw doesn't lose it
   sheet.addEventListener('input', (ev) => { if (ev.target.matches?.('[data-code]') && more) more.code = ev.target.value; });
+  // Enter in the alarm's code field sends it; Cancel and the big button under the keypad
+  sheet.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.matches?.('[data-code]') && more?.pending) { ev.preventDefault(); submitCode(); } });
+  sheet.addEventListener('click', (ev) => {
+    if (!more?.pending) return;
+    if (ev.target.closest('[data-code-submit]')) submitCode();
+    else if (ev.target.closest('[data-code-cancel]') && more.pending.first) closeMore();
+    else if (ev.target.closest('[data-code-cancel]')) { endCode(); if (sheet.contains(root.activeElement)) root.activeElement.blur(); renderMore(); }
+  });
   sheet.addEventListener('click', (ev) => {
     const key = ev.target.closest('[data-key]'), send1 = ev.target.closest('[data-coded]');
     if (!more || !(key || send1)) return;
     const field = sheet.querySelector('[data-code]');
     if (key) {
       const k = key.dataset.key, code = more.code || '';
+      if (k === 'submit') { submitCode(); return; }
+      if (more.codeState) { more.codeState = ''; more.codeSaid = ''; sheet.querySelector('.hcCodePad')?.classList.remove('wrong', 'right'); const said = sheet.querySelector('.hcCodeSaid'); if (said) said.textContent = ''; }
       more.code = k === 'clear' ? '' : k === 'back' ? code.slice(0, -1) : (code + k).slice(0, 12);
       if (field) field.value = more.code;
       return;
     }
     const [domain, service, id] = send1.dataset.coded.split('|'), code = more.code;
+    if (domain === 'alarm_control_panel' && needsCode(id, service)) { askCode(id, service, send1); return; }
     more.code = ''; // cleared first: the popup redraws as the state changes
     if (field) field.value = '';
     send(domain, service, id, code ? { code } : null).catch(() => {});
@@ -4252,6 +5214,7 @@ export function mountTestFocus(root, { config, getHass }) {
     moreParts = [];
     turning = !sheet.hidden;
     arts.forEach((art, k) => { if (k !== more.id && sheet.contains(art.el)) { art.destroy(); arts.delete(k); } });
+    padFirst();
     renderMore();
     turning = false;
   }
@@ -4476,11 +5439,13 @@ export function mountTestFocus(root, { config, getHass }) {
     if (domain === 'cover') noteGoal(service, d);
     used[id] = (used[id] || 0) + 1;
     local.set(USED_KEY, JSON.stringify(used));
-    if (house.call(domain, service, d)) return Promise.resolve();
+    const done = house.call(domain, service, d);
+    if (done) return done === true ? Promise.resolve() : done;
     return Promise.resolve(callService(domain, service, d));
   }
-  function run(spec) {
+  function run(spec, opener) {
     const [domain, service, id, json] = spec.split('|');
+    if (domain === 'alarm_control_panel' && needsCode(id, service)) { askCode(id, service, opener); return; }
     send(domain, service, id, json ? JSON.parse(json) : null).catch(() => {});
   }
   // a cover's target while it's held (its drawing, its blocks or the keys): every view of it follows
@@ -4640,7 +5605,7 @@ export function mountTestFocus(root, { config, getHass }) {
   // the same controls work on the page and in the stand-in more-info
   function bindControls(el) {
     el.addEventListener('click', (ev) => {
-      const t = ev.target.closest('[data-act],[data-acts],[data-more],[data-more-close],[data-more-back],[data-details],[data-details-close],[data-go],[data-summary],[data-star],[data-favs-edit],[data-area-back],[data-board-more],[data-board-act],[data-board-show],[data-fav-hide],[data-energy-pick],[data-more-page],[data-path],[data-area-pick],.tfAreaPanel');
+      const t = ev.target.closest('[data-act],[data-acts],[data-more],[data-more-close],[data-more-back],[data-details],[data-details-close],[data-go],[data-summary],[data-star],[data-favs-edit],[data-area-back],[data-board-more],[data-board-act],[data-board-show],[data-fav-hide],[data-energy-pick],[data-more-page],[data-more-view],[data-more-pop],[data-more-menu],[data-settings-save],[data-path],[data-area-pick],.tfAreaPanel');
       if (boardOpen && !ev.target.closest('.tfBoardMenu,[data-board-more]')) closeBoardMenu();
       if (!t || !el.contains(t) || t.disabled) return;
       if (t.dataset.boardMore) { if (boardOpen?.key === t.dataset.boardMore) closeBoardMenu(true); else openBoardMenu(t.dataset.boardMore, t); }
@@ -4649,7 +5614,7 @@ export function mountTestFocus(root, { config, getHass }) {
       else if (t.dataset.favHide) setFavShown(t.dataset.favHide, false);
       else if (t.dataset.energyPick) pickEnergy(t.dataset.energyPick);
       else if (t.dataset.areaPick) pickPhoneArea(t.dataset.areaPick);
-      else if (t.dataset.act) run(t.dataset.act);
+      else if (t.dataset.act) run(t.dataset.act, t);
       else if (t.hasAttribute('data-details')) toggleDetails(!more?.details);
       else if (t.hasAttribute('data-details-close')) toggleDetails(false);
       else if (t.dataset.summary) openSummary(t.dataset.summary, t);
@@ -4659,6 +5624,10 @@ export function mountTestFocus(root, { config, getHass }) {
       else if (t.dataset.acts) JSON.parse(t.dataset.acts).forEach(([domain, service, id, data]) => send(domain, service, id, data).catch(() => {}));
       else if (t.dataset.more) openMore(t.dataset.more, t);
       else if (t.hasAttribute('data-more-close')) closeMore();
+      else if (t.hasAttribute('data-settings-save')) saveSettings();
+      else if (t.dataset.morePop != null) { more.view = more.trail?.length ? more.trail.pop() : null; renderMore(); sheet.querySelector('[data-more-pop],[data-more-close]')?.focus({ preventScroll: true }); }
+      else if (t.dataset.moreView != null) { (more.trail ||= []).push(more.view || null); more.view = t.dataset.moreView || null; renderMore(); sheet.querySelector('[data-more-pop],[data-more-close]')?.focus({ preventScroll: true }); }
+      else if (t.hasAttribute('data-more-menu')) { const m = t.nextElementSibling, open = m.hidden; m.hidden = !open; t.setAttribute('aria-expanded', String(open)); if (open) m.querySelector('button')?.focus({ preventScroll: true }); }
       else if (t.dataset.morePage) pickTab(t.hasAttribute('data-more-toggle') && (more?.page || 0) === Number(t.dataset.morePage) ? 0 : Number(t.dataset.morePage), t.dataset.moreMode ?? null, true); // the (i) again: back
       else if (t.dataset.path) go(t.dataset.path);
       else if (t.dataset.go) openArea('room:' + t.dataset.go);
@@ -4672,6 +5641,7 @@ export function mountTestFocus(root, { config, getHass }) {
       if (t.classList?.contains('tfAreaPanel') && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); pickArea(t); }
       if (t.dataset?.summary && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openSummary(t.dataset.summary, t); }
       if (ev.key === 'Escape' && boardOpen && el === grid) { ev.preventDefault(); closeBoardMenu(true); return; }
+      if (ev.key === 'Escape' && cardEdit && el === grid) { ev.preventDefault(); closeCardEditor(); return; }
       if (ev.key === 'Escape' && editing && el === grid) { ev.preventDefault(); setEditing(false); $('dashEditNav')?.focus(); return; }
       if (ev.key === 'Escape' && areaPage && el === grid) { ev.preventDefault(); closeArea(); }
       // a cover's blocks: arrows 1 (10 with Shift), Page Up and Down 25, Home closed, End open; sent after a pause
@@ -4757,6 +5727,7 @@ export function mountTestFocus(root, { config, getHass }) {
     loadPrefs();
     bindControls(grid);
     grid.addEventListener('pointerdown', swipeAreas); // a phone's Areas card
+    bindAce(); // Edit area card
     bindControls(sheet);
     sheet.addEventListener('click', (ev) => { if (ev.target === sheet) closeMore(); });
     // Home, from an area's page, goes back to the house
@@ -4764,6 +5735,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // the dashboard's edit mode: the pencil in the bottom bar, and dragging on the board
     root.querySelector('.bottomNav')?.insertAdjacentHTML('beforeend', '<button class="navBtn" id="dashEditNav" type="button" title="Edit" aria-label="Edit the dashboard" aria-pressed="false" hidden>' + PENCIL + '</button>');
     $('dashEditNav')?.addEventListener('click', () => (overview ? setHomeEditing(!homeEditing) : setEditing(!editing)));
+    grid.addEventListener('pointerdown', cardItemDown, true); // a card's parts, while its page is open
     grid.addEventListener('pointerdown', boardDown);
     grid.addEventListener('pointerdown', homeDown);
     grid.addEventListener('scroll', (ev) => { if (ev.target.classList?.contains('hcSchedList') || ev.target.classList?.contains('hcFadeList')) schedFade(ev.target); }, true);
@@ -4792,6 +5764,11 @@ export function mountTestFocus(root, { config, getHass }) {
     get model() { return model; },
     // Home (the overview) or Dashboards (the board you edit): the same view, its own cards
     get overview() { return overview; },
+    // a device's more info, from a page of the demo's own (My Cool Dashboard)
+    more(id, opener) { openMore(id, opener); },
+    // a device's more info open on its History (its graph and what happened): the Activity page's rows
+    barGlyph,
+    moreHistory(id, opener) { openMore(id, opener); if (more?.id === id) { more.view = 'log'; more.trail = []; renderMore(); } },
     setOverview(on) {
       if (overview === on) return;
       if (editing) setEditing(false);
@@ -4804,6 +5781,26 @@ export function mountTestFocus(root, { config, getHass }) {
     // and its colour while on, any colour by the same rule, and the filling and fitting of the glyphs
     chip(id) { const c = kindRgb(id); return iconSlot(id, iconFor(id)) + (c ? ' data-light style="' + colourVars(c) + '"' : ''); },
     tint(hex) { return colourVars([1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))); },
+    // a light's colour on its card (the action card's chip takes it while on)
+    light(id) { return lightAttrs(id); },
+    // where a light's brightness was while it was last on (its off line)
+    lastBright(id) { return lastBright[id] ?? null; },
+    // HomeCore settings drawn again (its lights' list, after a search or another grouping)
+    resync() { syncSettings(); },
+    // the official area card, for a page of the demo's own (My Cool Dashboard), at a width in columns (1 or 2) and rows;
+    // bind() gives that page the controls' clicks (its lights, its devices, opening the room)
+    areaCard(id, cols = 2, rows = 2, given = null) { const r = model.rooms.find((x) => x.id === id); return r ? roomTile(r, null, ' data-cols="' + cols + '" data-rows="' + rows + '"', false, given) : ''; },
+    // what an area card can hold: its main reading and its four spaces as they start, and everything it could hold, by
+    // device (Edit area card's list), each with its name
+    areaSlots(id) {
+      const r = model.rooms.find((x) => x.id === id);
+      if (!r) return null;
+      const keys = roomKeys(r), start = areaCard(r), label = (it) => { const k = slotKey(r, it, keys); return k ? (it.startsWith('key:') ? k.label : nameOf(it)) : null; };
+      return { main: start.main, slots: start.slots, label, groups: aceGroups(r).map((g) => ({ name: g.name, items: g.items.filter((it) => label(it)) })).filter((g) => g.items.length) };
+    },
+    bind(el) { bindControls(el); },
+    // HomeCore's toast, with Undo when given one
+    toast(message, undo = null) { toast(message, undo); },
     paint(scope) { fillIcons(scope); },
     // Settings' choices measured again (they're measured on resize; a late font changes their words' widths too)
     refit() { fitChoices(); },

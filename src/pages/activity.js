@@ -21,10 +21,10 @@ function said(id, state, attrs) {
   return { on: 'Turned on', off: 'Turned off', unavailable: 'Became unavailable' }[state] || 'Changed to ' + state;
 }
 
-export function renderActivity(page, { getHass, esc, device, paint, head, icon }) {
+export function renderActivity(page, { getHass, esc, device, paint, head, icon, homecore }) {
   const hass = getHass();
   const KEY = 'homecore-demo-activity';
-  let prefs = { period: 'today', area: '' };
+  let prefs = { period: 'today', area: '', type: '', source: '' };
   try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch (_e) { /* the defaults */ }
   let q = '', events = [];
   // the rooms (not the areas that aren't rooms, which HomeCore leaves out too)
@@ -39,16 +39,25 @@ export function renderActivity(page, { getHass, esc, device, paint, head, icon }
     if (e.context_name) return 'triggered by ' + e.context_name;
     return '';
   };
+  // what did it, as Home Assistant's logbook tells it: a person, an automation or script, or the device itself
+  const sourceOf = (e) => (e.context_user_id ? 'person' : e.context_domain === 'automation' || e.context_domain === 'script' || e.context_event_type === 'automation_triggered' || e.context_name ? 'automation' : 'device');
+  const SOURCES = [['', 'All sources'], ['person', 'People'], ['automation', 'Automations'], ['device', 'Devices themselves']];
+  const TYPES = { light: 'Lights', switch: 'Switches', climate: 'Climate', cover: 'Covers', lock: 'Locks', media_player: 'Media', binary_sensor: 'Sensors', sensor: 'Readings', fan: 'Fans', vacuum: 'Vacuums', person: 'People', alarm_control_panel: 'Alarm' };
+  const typeOf = (id) => id.split('.')[0];
 
   page.innerHTML = head('Activity') +
     '<div class="hcToolbar hcActivityBar">' +
       '<div class="tfSeg hcPeriod" role="group" aria-label="When">' + PERIODS.map(([k, t]) => '<button type="button" data-period="' + k + '">' + t + '</button>').join('') + '</div>' +
       '<select class="settingsSelect" data-area aria-label="Area"><option value="">All areas</option>' + areas.map((a) => '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>').join('') + '</select>' +
+      '<select class="settingsSelect" data-type aria-label="Type"><option value="">All types</option>' + Object.entries(TYPES).map(([k, t]) => '<option value="' + k + '">' + t + '</option>').join('') + '</select>' +
+      '<select class="settingsSelect" data-source aria-label="Source">' + SOURCES.map(([k, t]) => '<option value="' + k + '">' + t + '</option>').join('') + '</select>' +
       '<label class="hcSearch">' + icon('mdi:magnify') + '<input class="addInput" type="search" placeholder="Search activity" aria-label="Search activity"></label>' +
     '</div>' +
     '<div class="hcActivityDays"></div>';
   const box = page.querySelector('.hcActivityDays');
   page.querySelector('[data-area]').value = prefs.area;
+  page.querySelector('[data-type]').value = prefs.type;
+  page.querySelector('[data-source]').value = prefs.source;
 
   const span = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -67,12 +76,12 @@ export function renderActivity(page, { getHass, esc, device, paint, head, icon }
   function draw() {
     page.querySelectorAll('[data-period]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.period === prefs.period)));
     const words = q.trim().toLowerCase();
-    const shown = events.filter((e) => (!prefs.area || areaOf(e.entity_id) === prefs.area))
+    const shown = events.filter((e) => (!prefs.area || areaOf(e.entity_id) === prefs.area) && (!prefs.type || typeOf(e.entity_id) === prefs.type) && (!prefs.source || sourceOf(e) === prefs.source))
       .map((e) => ({ ...e, name: nameOf(e.entity_id), what: said(e.entity_id, e.state, hass.states[e.entity_id]?.attributes), by: who(e) }))
       .filter((e) => !words || (e.name + ' ' + e.what + ' ' + e.by).toLowerCase().includes(words))
       .sort((a, b) => b.when - a.when);
     if (!shown.length) {
-      box.innerHTML = '<section class="card hcFields hcSoon"><p>' + (words || prefs.area ? 'Nothing matches.' : prefs.period === 'yesterday' ? 'Nothing happened yesterday.' : 'Nothing has happened yet.') + '</p></section>';
+      box.innerHTML = '<section class="card hcFields hcSoon"><p>' + (words || prefs.area || prefs.type || prefs.source ? 'Nothing matches.' : prefs.period === 'yesterday' ? 'Nothing happened yesterday.' : 'Nothing has happened yet.') + '</p></section>';
       return;
     }
     const days = new Map();
@@ -84,9 +93,11 @@ export function renderActivity(page, { getHass, esc, device, paint, head, icon }
     const today = new Date().toDateString(), yesterday = new Date(Date.now() - DAY).toDateString();
     const dayName = (d) => (d.toDateString() === today ? 'Today' : d.toDateString() === yesterday ? 'Yesterday' : d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }));
     box.innerHTML = [...days.values()].map(({ d, rows }) => '<section class="card hcActivityCard"><div class="hcCardTitle">' + esc(dayName(d)) + '</div>' +
-      rows.map((e) => '<button class="hcRow hcActivityRow" type="button" data-oops>' +
-        '<span class="hcActivityTime">' + new Date(e.when * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</span>' +
-        device(e.entity_id) + '<span class="hcRowText"><span class="hcRowName">' + esc(e.name) + '</span><span class="hcRowSub">' + esc(e.what + (e.by ? ' ' + e.by : '')) + '</span></span></button>').join('') +
+      // each row as Home Assistant's logbook has it: the device's chip, its name, what happened and who or what did it, the
+      // time at the right; it opens the device's history (Matt, 26 Nov: "it will actually go to the proper history for it")
+      rows.map((e) => '<button class="hcRow hcActivityRow" type="button" data-history="' + esc(e.entity_id) + '" aria-label="' + esc(e.name + ', ' + e.what + '. History') + '">' +
+        device(e.entity_id) + '<span class="hcRowText"><span class="hcRowName">' + esc(e.name) + '</span><span class="hcRowSub">' + esc(e.what + (e.by ? ' ' + e.by : '')) + '</span></span>' +
+        '<span class="hcActivityTime">' + new Date(e.when * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</span></button>').join('') +
       '</section>').join('');
     paint(box);
   }
@@ -94,6 +105,9 @@ export function renderActivity(page, { getHass, esc, device, paint, head, icon }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (_e) { /* this visit only */ } };
   page.querySelector('.hcPeriod').addEventListener('click', (ev) => { const b = ev.target.closest('[data-period]'); if (!b) return; prefs.period = b.dataset.period; save(); load(); });
   page.querySelector('[data-area]').addEventListener('change', (ev) => { prefs.area = ev.target.value; save(); draw(); });
+  page.querySelector('[data-type]').addEventListener('change', (ev) => { prefs.type = ev.target.value; save(); draw(); });
+  page.querySelector('[data-source]').addEventListener('change', (ev) => { prefs.source = ev.target.value; save(); draw(); });
+  box.addEventListener('click', (ev) => { const row = ev.target.closest('[data-history]'); if (row) homecore.moreHistory?.(row.dataset.history, row); });
   page.querySelector('.hcSearch input').addEventListener('input', (ev) => { q = ev.target.value; draw(); });
   load();
 }

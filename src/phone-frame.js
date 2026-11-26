@@ -87,7 +87,7 @@ export function mountPhoneFrame() {
   const watch = () => {
     const a = app();
     if (!a) { setTimeout(watch, 300); return; }
-    new MutationObserver(() => { const e = a.classList.contains('tfEditing'); if (e !== editing) { editing = e; show(); } }).observe(a, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(() => { const e = a.classList.contains('tfEditing') || a.classList.contains('hcSecEditing') /* My Cool Dashboard's edit mode too */; if (e !== editing) { editing = e; show(); } }).observe(a, { attributes: true, attributeFilter: ['class'] });
   };
   watch();
   show();

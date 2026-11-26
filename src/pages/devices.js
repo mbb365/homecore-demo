@@ -83,9 +83,10 @@ export function renderDevices(page, { getHass, homecore, esc, icon, opts, device
       '<div class="activityRows hcDevRows">' + xs.map((x) => '<div class="activityRow" data-oops>' + iconCell(x) +
         '<div class="tfName"><span class="activityRowName">' + esc(x.name) + '</span><span class="activityRowMeta">' + esc([x.area, x.stateText].filter(Boolean).join(' · ')) + '</span></div></div>').join('') + '</div>' +
     '</section>';
-  const cards = (xs) => '<div class="hcDevCards">' + xs.map((x) => '<div class="tfAction hcDevTile" data-oops>' +
-      '<div class="tfActionHead">' + iconCell(x) + '<div class="tfName"><span class="activityRowName">' + esc(x.name) + '</span><span class="activityRowMeta">' + esc(x.area || '—') + '</span></div></div>' +
-      pills(x) + '</div>').join('') + '</div>';
+  // each device a tile, as HomeCore's are (Matt, 26 Nov: "It's not a tile card"): it has no control here, so not the action
+  // card; its name, and its area and state under it (the group it's in says its type)
+  const cards = (xs) => '<div class="hcDevCards">' + xs.map((x) => '<div class="card hcDevTile" data-oops><div class="activityRow' + (x.on ? ' on' : '') + '">' + iconCell(x) +
+      '<div class="tfName"><span class="activityRowName">' + esc(x.name) + '</span><span class="activityRowMeta">' + esc([x.area, x.stateText].filter(Boolean).join(' · ')) + '</span></div></div></div>').join('') + '</div>';
 
   function draw() {
     const words = q.trim().toLowerCase();

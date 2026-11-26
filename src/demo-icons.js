@@ -10,6 +10,8 @@ import {
   mdiCurtainsClosed, mdiRollerShade, mdiRollerShadeClosed, mdiBlindsHorizontal, mdiBlindsHorizontalClosed,
   mdiWindowShutter, mdiWindowShutterOpen, mdiUpdate, mdiAccountCircleOutline, mdiMapMarker, mdiHeartPulse, mdiCalendar,
   mdiShieldAccount, mdiPalette, mdiHuman, mdiBell, mdiCart, mdiChartBoxOutline, mdiTooltipAccount, mdiAccountMultiple, mdiDoorOpen,
+  // My Cool Dashboard (26 Nov)
+  mdiSunglasses, mdiPencil, mdiDotsVertical, mdiDeleteOutline, mdiArrowLeft, mdiCheck, mdiTextureBox, mdiViewGridPlus, mdiShape, mdiPower, mdiPowerOff, mdiEye, mdiEyeOff, mdiDrag, mdiUndo,
   // Home Assistant's Settings and About (9 Nov)
   mdiCloudLock, mdiRobot, mdiSofa, mdiPuzzle, mdiViewDashboard, mdiAccessPointNetwork, mdiAccount, mdiHammer, mdiInformationOutline, mdiNewspaperVariant, mdiHandsPray, mdiTshirtCrew, mdiBug, mdiHelp, mdiFileDocument, mdiKeyboard, mdiOpenInNew, mdiTuneVariant, mdiChevronRight, mdiImage,
 } from '@mdi/js';
@@ -17,6 +19,8 @@ import { ICONS as HC_ICONS, svg as hcSvg } from './hc-icons.js';
 import { HC_FROM_MDI } from './test-focus.js';
 
 export const DEMO_ICONS = {
+  'mdi:sunglasses': mdiSunglasses, 'mdi:pencil': mdiPencil, 'mdi:dots-vertical': mdiDotsVertical, 'mdi:delete-outline': mdiDeleteOutline,
+  'mdi:arrow-left': mdiArrowLeft, 'mdi:check': mdiCheck, 'mdi:texture-box': mdiTextureBox, 'mdi:view-grid-plus': mdiViewGridPlus, 'mdi:shape': mdiShape, 'mdi:power': mdiPower, 'mdi:power-off': mdiPowerOff, 'mdi:eye': mdiEye, 'mdi:eye-off': mdiEyeOff, 'mdi:drag': mdiDrag, 'mdi:undo': mdiUndo,
   'mdi:home-assistant': mdiHomeAssistant, 'mdi:magnify': mdiMagnify, 'mdi:home': mdiHome,
   'mdi:weather-partly-cloudy': mdiWeatherPartlyCloudy, 'mdi:devices': mdiDevices, 'mdi:dots-horizontal': mdiDotsHorizontal,
   'mdi:menu': mdiMenu, 'mdi:close': mdiClose, 'mdi:filter-variant': mdiFilterVariant, 'mdi:cog-outline': mdiCogOutline,

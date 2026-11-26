@@ -436,6 +436,411 @@
 #app.hcIntro:not(.hcIntroGo) #homeView :is(.tfBoardItem,.tfDashTitle){opacity:0}
 #app.hcIntroGo #homeView .tfBoardItem:not(.tfDashTitle){animation:hcIntroCard var(--intro-card-dur,.5s) var(--intro-card-ease,ease) var(--intro-d,250ms) both}
 @keyframes hcIntroCard{from{opacity:0;translate:0 var(--intro-rise,14px);scale:var(--intro-scale,1)}to{opacity:1;translate:0 0;scale:1}}
+/* the summaries and Favourites only fade in, staying where they are, their words still (Matt, 26 Nov: "calm it") */
+#app.hcIntroGo #homeView .tfBoardItem:is([data-k="sums"],[data-k="favs"]){animation-name:hcIntroFade}
+@keyframes hcIntroFade{from{opacity:0}to{opacity:1}}
 .hcIntroSplit{display:inline-block;white-space:pre}
 .hcIntroLetter{display:inline-block;white-space:pre;transform-origin:50% 60%;animation:hcIntroLetter var(--intro-letter-dur,.45s) var(--intro-letter-ease,ease) both}
 @keyframes hcIntroLetter{from{opacity:0;transform:perspective(300px) rotateX(var(--intro-rx,-100deg)) rotateY(var(--intro-ry,0deg)) translateY(var(--intro-lrise,.25em))}60%{opacity:1}to{opacity:1;transform:none}}
+
+/* ---------- My Cool Dashboard (Matt, 26 Nov): Home Assistant's sections view in HomeCore's look ---------- */
+.hcSecPage{display:flex;flex-direction:column;gap:16px}
+.hcSecEditBar .primary{margin-left:auto}
+.hcSecNote{display:flex;align-items:flex-start;gap:12px;padding:14px 12px 14px 16px;border-radius:var(--r-card);background:color-mix(in srgb,var(--primary,#03a9f4) 12%,var(--card));color:var(--text)}
+.hcSecNote>svg{flex:none;width:22px;height:22px;margin-top:1px;fill:var(--primary,#03a9f4)}
+.hcSecNote>div{flex:1;min-width:0}
+.hcSecNote strong{display:block;font:500 15px/20px var(--font-tile)}
+.hcSecNote p{margin:2px 0 0;color:var(--muted);font:400 14px/20px var(--font)}
+.hcSecGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+/* a section: 12 round its cards in both modes (so nothing moves going into edit mode), dashed while editing, its corners the
+   cards' and 12, as HomeCore's floor boxes (Matt, 26 Nov: "doesn't match the pattern for spacing") */
+.hcSec{display:flex;flex-direction:column;gap:12px;min-width:0;padding:12px;border:1.5px dashed transparent;border-radius:calc(var(--r-card) + 12px)}
+.hcSecPage.editing .hcSec{border-color:var(--line)}
+.hcSecHead{display:flex;align-items:center;gap:2px;min-height:34px;padding-left:8px}
+.hcSecHeading{flex:1;min-width:0;margin:0;padding:0;font:500 20px/28px var(--font-tile);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcSecHead .back svg,.hcSecEditBar .back svg{width:20px;height:20px;fill:currentColor}
+.hcSecCards{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.hcSecSlot{position:relative;grid-column:span var(--cols,12);min-width:0}
+.hcSecSlot>.card{height:100%;box-sizing:border-box}
+.hcSecPage.editing .hcSecGrid .hcSecSlot>.card{cursor:default}
+.hcSecName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 14px/20px var(--font-tile)}
+.hcSecState{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font:400 13px/18px var(--font)}
+.hcSecText{display:grid;min-width:0}
+.hcSecTitle{margin-bottom:6px;font:500 18px/24px var(--font-tile)}
+.hcSecEmpty{padding:12px 0;color:var(--muted);font:400 14px/20px var(--font)}
+/* Tile: HomeCore's tile (Matt, 26 Nov: "the spacings on the tiles is wrong"): 60 tall, 10 in, the chip 40, 12 between,
+   the tile's corners; its icon toggles, its name opens more info; its features under it, 10 in, their corners the
+   tile's less the 10 (they nest) */
+#app .hcSecTile{display:flex;flex-direction:column;padding:0;border-radius:var(--r-tile)}
+#app .hcSecTile>.activityRow{min-height:var(--tile-min);padding:var(--inset);gap:12px;border-radius:var(--r-tile);background:transparent}
+#app .hcSecTile .tfName{display:grid;min-width:0}
+#app .hcSecTile .tfName>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcSecIconBtn{border:0;padding:0;cursor:pointer}
+#app .hcSecTile.vertical>.activityRow{grid-template-columns:1fr;justify-items:center;gap:8px;padding:14px var(--inset);text-align:center}
+#app .hcSecTile.vertical .tfName{justify-items:center;text-align:center}
+.hcSecFeat{margin:0 var(--inset) var(--inset)}
+#app .hcSecFeat.tfBar{height:42px;border-radius:calc(var(--r-tile) - var(--inset))}
+.hcSecFeat-light-color-temp{background:linear-gradient(90deg,var(--k-lo,#ffb46b),var(--k-hi,#e6efff))!important}
+.hcSecFeat-light-color{background:linear-gradient(90deg,#ff0000,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000)!important}
+.hcSecFeat b{position:absolute;top:8px;bottom:8px;width:6px;margin-left:-3px;border-radius:3px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18),0 1px 4px rgba(0,0,0,.25)}
+.hcSecFeatToggle{display:grid;grid-template-columns:1fr 1fr;gap:4px;height:42px;padding:4px;box-sizing:border-box;border-radius:calc(var(--r-tile) - var(--inset));background:var(--tile)}
+.hcSecFeatToggle button{display:grid;place-items:center;border:0;border-radius:calc(var(--r-tile) - var(--inset) - 4px);background:none;color:var(--muted);cursor:pointer}
+.hcSecFeatToggle button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all)}
+.hcSecFeatToggle button:last-child[aria-pressed="true"]{background:linear-gradient(90deg,#ffc247,#ffaa00);color:#3d2800}
+.hcSecFeatToggle svg{width:20px;height:20px;fill:currentColor}
+/* the cards in HomeCore's pattern (Matt, 26 Nov: "the spacing is all wrong"): the card 10 in (#homeView .card), its title
+   8 further in, its rows HomeCore's tiles (60 tall, 10 in, the chip 40, 12 between, corners the card's less its 10) */
+#app .hcSecTitle{margin:0;padding:6px 8px 8px;font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+#app .hcSecRow{min-height:var(--tile-min);padding:var(--inset);gap:12px;border-radius:calc(var(--r-card) - var(--inset));background:transparent;grid-template-columns:var(--chip-size) minmax(0,1fr)}
+#app .hcSecRow.hcSecRowEnd{grid-template-columns:var(--chip-size) minmax(0,1fr) auto}
+#app .hcSecRow .tfName{display:grid;min-width:0}
+#app .hcSecRow .tfName>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcSecRows{display:flex;flex-direction:column}
+/* Button: its icon big, its name under it */
+#app .hcSecButton{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:136px;padding:var(--inset);border:0;color:var(--text);cursor:pointer}
+#app .hcSecButton .tfIcon{width:56px;height:56px}
+/* Glance: each a small tile, its chip over its name and state */
+.hcSecGlanceRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+#app .hcSecGlanceItem{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:var(--inset);border:0;border-radius:calc(var(--r-card) - var(--inset));background:none;color:var(--text);cursor:pointer;text-align:center}
+#app .hcSecGlanceItem:hover{background:var(--tile)}
+#app .hcSecGlanceItem>span:not(.tfIcon){max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .hcSecGlanceItem .tfIcon{margin-bottom:2px}
+/* History graph and Sensor: lines over the last hours */
+.hcSecHistoryBody{padding:0 8px 8px}
+.hcSecLegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:10px;color:var(--muted);font:400 13px/18px var(--font)}
+.hcSecLegend i{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;vertical-align:-1px}
+.hcSecGraph{display:block;width:100%;height:120px;overflow:visible}
+#app .hcSecSensor{display:flex;flex-direction:column;overflow:hidden}
+.hcSecBig{display:flex;align-items:baseline;gap:4px;padding:2px 8px 10px}
+.hcSecBig span{font:500 36px/40px var(--font-tile);letter-spacing:-.02em}
+.hcSecBig small{color:var(--muted);font:500 16px/20px var(--font-tile)}
+#app .hcSecSensor .hcSecGraph{height:60px;width:calc(100% + 2 * var(--inset));margin:auto calc(-1 * var(--inset)) calc(-1 * var(--inset))}
+/* Area: its glyph, name and readings as a tile; its lights' button under it, 8 further in */
+#app .hcSecArea{display:flex;flex-direction:column}
+.hcSecAreaActs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 8px 8px}
+.hcSecAreaBtn{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;border:0;border-radius:999px;background:var(--tile);color:var(--text);cursor:pointer}
+.hcSecAreaBtn .tfIcon{width:32px;height:32px}
+/* edit mode: Add card at a section's foot, Create section after the last, each card's pencil and menu */
+.hcSecAdd,.hcSecCreate{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--line);background:none;color:var(--muted);font:500 14px/20px var(--font-tile);cursor:pointer;transition:background .15s ease,color .15s ease}
+.hcSecAdd{grid-column:1/-1;min-height:var(--tile-min);border-radius:var(--r-tile)}
+.hcSecCreate{min-height:160px;border-radius:calc(var(--r-card) + 12px)}
+.hcSecAdd:hover,.hcSecCreate:hover{background:var(--tile);color:var(--text)}
+.hcSecAdd svg,.hcSecCreate svg{width:20px;height:20px;fill:currentColor}
+.hcSecCardTools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px}
+.hcSecCardTools>button{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all),0 2px 8px rgba(0,0,0,.12);cursor:pointer}
+.hcSecCardTools svg{width:18px;height:18px;fill:currentColor}
+.hcSecMenu{top:38px}
+.hcSecDanger{color:#d32f2f}
+.hcSecPage.editing .hcSecGrid .hcSecSlot>.card{outline:1.5px solid transparent;transition:outline-color .15s ease}
+.hcSecPage.editing .hcSecGrid .hcSecSlot:hover>.card{outline-color:var(--primary,#03a9f4)}
+/* the dialogs: Add to dashboard, and a card's editor */
+.hcSecBack{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45)}
+.hcSecDialog{display:flex;flex-direction:column;width:min(960px,100%);max-height:calc(100dvh - 32px);border-radius:var(--r-card);background:var(--card);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.hcSecAddDialog{width:min(880px,100%);height:min(760px,calc(100dvh - 32px))}
+.hcSecEditDialog{height:min(680px,calc(100dvh - 32px))}
+.hcSecDialog .hcLeHead{display:flex;align-items:center;gap:8px;padding:14px 16px 6px 20px}
+.hcSecDialog .hcLeHead .activityTitle{flex:1;min-width:0;font-style:normal}
+.hcSecDialog .tfBack svg{width:22px;height:22px;fill:currentColor}
+.hcSecTabs{display:flex;gap:3px;width:max-content;margin:6px 20px 0;padding:3px;border-radius:999px;background:var(--tile)}
+.hcSecTab{min-height:34px;padding:0 16px;border:0;border-radius:999px;background:none;color:var(--muted);font:500 14px/20px var(--font-tile);cursor:pointer}
+.hcSecTab.active{background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all)}
+.hcSecSearch{padding:12px 20px 0}
+.hcSecSearch .hcInfoFieldLabel:empty{display:none}
+.hcSecDialogBody{flex:1;min-height:0;overflow:auto;padding:14px 20px 20px}
+.hcSecPicker{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));grid-auto-rows:1fr;gap:16px}
+.hcSecPick{display:flex;flex-direction:column;gap:4px;padding:var(--inset);border:0;border-radius:var(--r-inner);background:var(--card);box-shadow:var(--hc-hair-all);color:var(--text);text-align:left;cursor:pointer;outline:2px solid transparent;transition:outline-color .15s ease}
+.hcSecPick:hover,.hcSecPick:focus-visible{outline-color:var(--primary,#03a9f4)}
+.hcSecPickName{padding:6px 8px 2px;color:var(--muted);font:500 13px/18px var(--font-tile)}
+.hcSecPickPreview{display:block;pointer-events:none}
+/* the card drawn without its own shell: the box is its ground (Matt, 26 Nov: "remove the need for the cards… calmer") */
+#app .hcSecPickPreview>.card{padding:0;border-radius:0;background:none;box-shadow:none}
+.hcSecEntityList{display:flex;flex-direction:column;gap:6px}
+.hcSecEntityRow{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 8px;border:0;border-radius:16px;background:var(--tile);color:var(--text);text-align:left;cursor:pointer}
+.hcSecEntityRow>.hcSecName{flex:1;font-weight:400}
+.hcSecEntityRow small{display:block;color:var(--muted);font:400 12px/16px var(--font);overflow:hidden;text-overflow:ellipsis}
+.hcSecEntityRow .back svg{width:18px;height:18px;fill:currentColor}
+.hcSecCheck{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.hcSecEntityRow[aria-checked="true"] .hcSecCheck{background:var(--bright);color:var(--on-bright);box-shadow:none}
+.hcSecCheck svg{width:18px;height:18px;fill:currentColor}
+.hcSecField{display:grid;gap:8px}
+.hcSecEditBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;flex:1;min-height:0;padding:12px 20px}
+.hcSecForm{display:flex;flex-direction:column;gap:14px;min-height:0;overflow:auto;padding:2px 4px 8px 2px}
+.hcSecDialog .hcLePreviewWrap{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto;padding:16px;border-radius:var(--r-inner);background:var(--bg,var(--page))}
+.hcSecDialog .hcLePreviewLabel{color:var(--muted);font:500 13px/18px var(--font-tile)}
+.hcSecDialog .hcLeFoot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;box-shadow:inset 0 .4px 0 var(--line)}
+.hcSecDialog .hcLeFoot .primary{min-width:112px}
+.hcSecDialog .hcLeFoot .primary:disabled{opacity:.45;cursor:default}
+.hcLeCancel{min-height:41.6px;padding:0 18px;border:0;border-radius:999px;background:var(--tile);color:var(--text);font:600 14px/20px var(--font-tile);cursor:pointer}
+@media (max-width:620px){
+  .hcSecBack{padding:0}
+  .hcSecDialog,.hcSecAddDialog,.hcSecEditDialog{width:100%;height:100dvh;max-height:none;border-radius:0}
+  .hcSecEditBody{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:12px}
+  .hcSecEditBody>.hcLePreviewWrap{order:-1;max-height:240px}
+}
+.hcSecPage>.hcTitle .hcHeadActions{margin-left:auto}
+.hcSecPage>.hcTitle .navBtn svg{width:22px;height:22px;fill:currentColor}
+/* Add to dashboard as Home Assistant has it now: By entity's tree on the left, the picked entity's suggestions on the
+   right; the configure step's breadcrumb */
+.hcSecDialog .hcSecHeadBorder{padding:12px 16px 10px 12px}
+.hcSecDialog .hcSecTabs{margin-top:4px}
+.hcSecSplit{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);flex:1;min-height:0;margin-top:12px;box-shadow:inset 0 .4px 0 var(--line)}
+.hcSecTree{display:flex;flex-direction:column;min-height:0;box-shadow:inset -.4px 0 0 var(--line)}
+.hcSecTree .hcSecSearch{padding:12px 16px 8px}
+.hcSecTreeList{flex:1;min-height:0;overflow:auto;padding:0 8px 12px}
+.hcSecTreeTitle{padding:12px 8px 6px;color:var(--muted);font:500 12px/16px var(--font-tile);letter-spacing:.02em;text-transform:uppercase}
+.hcSecTreeArea,.hcSecTreeEnt{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:4px 8px;border:0;border-radius:14px;background:none;color:var(--text);text-align:left;cursor:pointer}
+.hcSecTreeArea:hover,.hcSecTreeEnt:hover{background:var(--tile)}
+.hcSecTreeEnt.active{background:color-mix(in srgb,var(--primary,#03a9f4) 14%,var(--card))}
+.hcSecTreeArea>.hcSecName,.hcSecTreeEnt>.hcSecName{flex:1;font-weight:400}
+.hcSecTreeArea .tfIcon,.hcSecTreeEnt .tfIcon{width:32px;height:32px}
+.hcSecChev{flex:none;width:18px;height:18px;fill:var(--muted);transition:transform .15s ease}
+.hcSecTreeArea[aria-expanded="true"] .hcSecChev{transform:rotate(90deg)}
+.hcSecCount{color:var(--muted);font:400 12px/16px var(--font)}
+.hcSecTreeKids{padding-left:26px}
+.hcSecMain{min-height:0;overflow:auto;padding:4px 20px 20px}
+.hcSecEmptyState{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100%;min-height:240px;text-align:center}
+.hcSecEmptyState h2{margin:0;font:500 18px/24px var(--font-tile)}
+.hcSecEmptyState p{margin:0 0 8px;color:var(--muted);font:400 14px/20px var(--font)}
+.hcSecBrowse{display:inline-flex;align-items:center;gap:8px}
+.hcSecBrowse svg{width:18px;height:18px;fill:currentColor}
+.hcSecSelected{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 10px;border-radius:16px;background:var(--tile)}
+.hcSecSelected>.hcSecText{flex:1}
+.hcSecSelected .back svg{width:18px;height:18px;fill:currentColor}
+.hcSecMain .hcSecPicker{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.hcSecNotFound{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:20px;padding:12px 12px 12px 16px;border-radius:16px;box-shadow:inset 0 0 0 1px var(--line)}
+.hcSecNotFound p{margin:0;color:var(--muted);font:400 14px/20px var(--font)}
+.hcSecCrumbs{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.hcSecCrumbs button{padding:0;border:0;background:none;color:var(--muted);font:500 16px/22px var(--font-tile);cursor:pointer}
+.hcSecCrumbs>span:not(.activityTitle){color:var(--muted)}
+.hcSecCrumbs .activityTitle{font-style:normal}
+.hcSecDialog .hcLePreviewWrap .hcSecCards{align-content:start}
+@media (max-width:620px){
+  .hcSecSplit{grid-template-columns:1fr;grid-template-rows:minmax(0,45%) minmax(0,1fr)}
+  .hcSecTree{box-shadow:inset 0 -.4px 0 var(--line)}
+}
+/* the dialogs are settings, a more formal place (Matt, 26 Nov): their own surfaces less rounded (the picks and the
+   preview's ground 16, rows and fields 12); the cards drawn in them keep their own corners */
+.hcSecDialog{border-radius:var(--r-tile)}
+.hcSecDialog :is(.hcSecEntityRow,.hcSecSelected,.hcSecNotFound,.hcSecTreeArea,.hcSecTreeEnt,.hcInfoFieldBox,.hcInfoToggle){border-radius:var(--r-fine)}
+.hcSecDialog .hcSecTabs,.hcSecDialog .hcSecTab{border-radius:var(--r-fine)}
+.hcSecDialog .hcSecTab{border-radius:calc(var(--r-fine) - 3px)}
+/* the site's every button is 16 round (!important, styles.css); My Cool Dashboard's own keep the corners their pattern
+   gives them */
+#app .hcSecAdd{border-radius:var(--r-tile)!important}
+#app .hcSecCreate{border-radius:calc(var(--r-card) + 12px)!important}
+#app .hcSecButton{border-radius:var(--r-card)!important}
+#app .hcSecGlanceItem{border-radius:calc(var(--r-card) - var(--inset))!important}
+#app .hcSecAreaBtn{border-radius:999px!important}
+#app .hcSecFeatToggle button{border-radius:calc(var(--r-tile) - var(--inset) - 4px)!important}
+#app .hcSecDialog :is(.hcSecTreeArea,.hcSecTreeEnt,.hcSecEntityRow){border-radius:var(--r-fine)!important}
+#app .hcSecDialog .hcSecTab{border-radius:calc(var(--r-fine) - 3px)!important}
+/* Add to dashboard, as Matt marked it up (26 Nov): the suggestions and By card on a grey ground, each the proper card as
+   it will look (its own shell, no box or border round it) under its name; "Can't find the card you want?" centred under
+   them with its button, no box; the list's icons HomeCore's standard chip (40, its 16 corners), not shrunk into circles */
+.hcSecDialog .hcSecMain,.hcSecAddDialog .hcSecDialogBody{background:var(--bg,var(--page))}
+.hcSecDialog .hcSecPicker{grid-auto-rows:auto;align-items:start}
+#app .hcSecPick{gap:8px;padding:0;border-radius:0;background:none;box-shadow:none;outline:0}
+#app .hcSecPickName{padding:0 4px}
+#app .hcSecPickPreview>.card{border-radius:var(--r-card);background:var(--card);box-shadow:var(--hc-hair);transition:box-shadow .15s ease}
+#app .hcSecPickPreview>.card.hcSecTile{border-radius:var(--r-tile)}
+#app .hcSecPickPreview>.card:not(.hcSecTile){padding:var(--inset)}
+#app .hcSecPick:hover .hcSecPickPreview>.card,#app .hcSecPick:focus-visible .hcSecPickPreview>.card{box-shadow:0 0 0 2px var(--primary,#03a9f4)}
+.hcSecFind{display:flex;flex-direction:column;align-items:center;gap:14px;margin:40px 0 20px;text-align:center}
+.hcSecFind p{margin:0;color:var(--text);font:400 16px/22px var(--font)}
+#app .hcSecBrowse{min-height:44px;padding:0 28px;border:0;border-radius:999px!important;background:color-mix(in srgb,var(--text) 10%,transparent);color:var(--text);font:500 14px/20px var(--font-tile);cursor:pointer}
+#app .hcSecBrowse:hover{background:color-mix(in srgb,var(--text) 16%,transparent)}
+.hcSecTreeArea .tfIcon,.hcSecTreeEnt .tfIcon{width:var(--chip-size);height:var(--chip-size)}
+#app .hcSecTreeArea,#app .hcSecTreeEnt{min-height:52px;padding:6px 8px}
+.hcSecAreaBtn .tfIcon{border-radius:var(--r-fine)}
+/* the card editor's tabs (Home Assistant's Config, Visibility and Layout) */
+.hcSecDialog .hcSecEditTabs{margin:6px 20px 0}
+/* sized cards: as many tile rows tall as picked (60, 16 between) */
+.hcSecSlot.hcRows{grid-row:span var(--rows,1)}
+.hcSecSlot.hcRows>.card{height:100%}
+/* Visibility */
+.hcSecVisStatus{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-fine);background:color-mix(in srgb,#4caf50 14%,var(--card))}
+.hcSecVisStatus.off{background:color-mix(in srgb,#ff9800 16%,var(--card))}
+.hcSecVisStatus svg{flex:none;width:22px;height:22px;fill:currentColor}
+.hcSecVisStatus strong{display:block;font:500 14px/20px var(--font-tile)}
+.hcSecVisStatus span{color:var(--muted);font:400 13px/18px var(--font)}
+.hcSecNoteText{margin:0;color:var(--muted);font:400 13px/18px var(--font)}
+.hcSecCond{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--r-fine);box-shadow:inset 0 0 0 1px var(--line)}
+.hcSecCond.off{box-shadow:inset 0 0 0 1px #ff9800}
+.hcSecCondHead{display:flex;align-items:center;justify-content:space-between}
+.hcSecCondHead strong{font:500 14px/20px var(--font-tile)}
+.hcSecCondHead .back svg{width:18px;height:18px;fill:currentColor}
+.hcSecPair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hcSecChecks{display:flex;flex-direction:column;gap:4px}
+#app .hcSecCheckRow{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 8px;border:0;border-radius:var(--r-fine)!important;background:none;color:var(--text);font:400 14px/20px var(--font);cursor:pointer;text-align:left}
+#app .hcSecCheckRow:hover{background:var(--tile)}
+.hcSecCheckRow[aria-checked="true"] .hcSecCheck{background:var(--bright);color:var(--on-bright);box-shadow:none}
+/* a card hidden by its conditions shows only while editing, faded */
+.hcSecSlot.hcSecHidden>.card{opacity:.45}
+/* the tile's editor, Concept A (Matt's, frontend #53898): plain section headings, box choices with a radio, the name as
+   one row of chips (Custom types a part, Add puts in the entity's, device's, area's or floor's name; drag to reorder) */
+.hcSecBand{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+.hcSecForm>.hcSecBand:first-child,.hcSecForm>.hcInfoField:first-child+.hcSecBand{margin-top:4px}
+.hcSecBand span{font:500 16px/22px var(--font-tile);color:var(--text)}
+.hcSecBand small{color:var(--muted);font:400 12px/16px var(--font)}
+.hcSecInfoBand{padding:10px 12px;border-radius:var(--r-fine);background:var(--tile);color:var(--muted);font:400 13px/18px var(--font)}
+.hcSecBoxes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#app .hcSecBox{display:flex;align-items:flex-start;gap:10px;padding:12px;border:0;border-radius:var(--r-fine)!important;background:var(--tile);color:var(--text);text-align:left;cursor:pointer;box-shadow:inset 0 0 0 1.5px transparent}
+#app .hcSecBox.on{box-shadow:inset 0 0 0 1.5px var(--primary,#03a9f4);background:color-mix(in srgb,var(--primary,#03a9f4) 8%,var(--card))}
+.hcSecBox strong{display:block;font:500 14px/20px var(--font-tile)}
+.hcSecBox small{display:block;color:var(--muted);font:400 12px/16px var(--font)}
+.hcSecBoxRadio{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--muted)}
+.hcSecBox.on .hcSecBoxRadio{box-shadow:inset 0 0 0 5px var(--primary,#03a9f4)}
+.hcSecChips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px;border-radius:var(--r-fine);background:var(--tile)}
+.hcSecChip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 4px 0 12px;border-radius:999px;background:var(--card);box-shadow:var(--hc-hair-all);cursor:grab;font:400 14px/20px var(--font)}
+.hcSecChip.dragging{opacity:.5}
+.hcSecChipKind{color:var(--muted);font:500 12px/16px var(--font-tile)}
+.hcSecChipVal{color:var(--text)}
+#app .hcSecChipText{width:auto;min-width:0;padding:0;border:0;background:none;color:var(--text);font:400 14px/20px var(--font);outline:none}
+#app .hcSecChip>button{display:grid;place-items:center;width:26px;height:26px;padding:0;border:0;border-radius:50%!important;background:none;color:var(--muted);cursor:pointer}
+.hcSecChip>button svg{width:16px;height:16px;fill:currentColor}
+#app .hcSecChipAdd{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px 0 8px;border:0;border-radius:999px!important;background:none;color:var(--primary,#03a9f4);font:500 13px/18px var(--font-tile);cursor:pointer}
+.hcSecChipAdd svg{width:16px;height:16px;fill:currentColor}
+.hcSecChipPick select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+/* a tile with its first feature inline: the feature on the right of its name */
+#app .hcSecTile.inline>.activityRow{grid-template-columns:var(--chip-size) minmax(0,1fr) minmax(96px,45%)}
+#app .hcSecTile.inline>.activityRow>.hcSecFeat{margin:0}
+.hcSecTile .tfIcon>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+/* a tile with features is HomeCore's action card (its head, then its controls, all in one card): its bars and Toggle as
+   the action card has them, 46 tall, 14 apart, nothing between them and the card's edge but its 18 */
+#app .hcSecAction{height:100%;box-sizing:border-box}
+#app .hcSecAction>.tfActionHead .tfName{display:grid;min-width:0}
+#app .hcSecAction>.tfActionHead .tfName>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .hcSecAction .hcSecFeat{margin:0}
+#app .hcSecAction .hcSecFeat.tfBar{height:46px;border-radius:16px}
+#app .hcSecAction .hcSecFeatToggle{height:46px;border-radius:16px}
+#app .hcSecAction .hcSecFeatToggle button{border-radius:12px!important}
+#app .hcSecPickPreview>.tfAction{box-shadow:var(--hc-hair)}
+#app .hcSecPick:hover .hcSecPickPreview>.tfAction,#app .hcSecPick:focus-visible .hcSecPickPreview>.tfAction{box-shadow:0 0 0 2px var(--primary,#03a9f4)}
+/* a section in the action card's proportions (Matt, 26 Nov: "the same ratios for sizing as you have inside the action
+   cards"): 18 round what it holds, 28 corners, 14 between its heading, its cards and Add card; Add card sits inside it as
+   a control sits in the action card, 46 tall with 16 corners; Create section the same box */
+#app .hcSec{gap:14px;padding:18px;border-radius:28px}
+#app .hcSecHead{min-height:28px;padding-left:2px}
+#app .hcSecAdd{min-height:46px;border-radius:16px!important}
+#app .hcSecCreate{min-height:139px;border-radius:28px!important} /* as tall as an empty section */
+/* the official area card in My Cool Dashboard: as tall as its slot; at rest while the dashboard is edited */
+.hcSecSlot>.tfRoomTile{height:100%;box-sizing:border-box}
+.hcSecPage.editing .hcSecGrid .hcSecSlot>.tfRoomTile{pointer-events:none}
+/* a stack's rows drag into order: a grip at the start, the row it would land on marked */
+.hcSecSortRow{cursor:grab}
+.hcSecSortRow.dragging{opacity:.45}
+.hcSecSortRow.over{box-shadow:inset 0 2px 0 var(--primary,#03a9f4)}
+.hcSecGrip{display:grid;place-items:center;flex:none;width:24px;color:var(--muted)}
+.hcSecGrip svg{width:20px;height:20px;fill:currentColor}
+/* an area card's size: Small, Medium, Large, XL in one row */
+.hcSecSeg{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;border-radius:var(--r-fine);background:var(--tile)}
+#app .hcSecSeg button{min-height:38px;border:0;border-radius:calc(var(--r-fine) - 3px)!important;background:none;color:var(--muted);font:500 14px/20px var(--font-tile);cursor:pointer}
+#app .hcSecSeg button[aria-checked="true"]{background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all)}
+#app .hcSecSeg button:disabled{opacity:.4;cursor:default}
+/* a double section: two of the dashboard's columns, a grid of 24 so its cards keep their size (a full-width card spans it) */
+.hcSecSeg.hcSecSeg2{grid-template-columns:1fr 1fr}
+.hcSec.hcSecDouble{grid-column:span 2}
+.hcSec.hcSecDouble>.hcSecCards{grid-template-columns:repeat(24,minmax(0,1fr))}
+@media (max-width:760px){.hcSec.hcSecDouble{grid-column:auto}.hcSec.hcSecDouble>.hcSecCards{grid-template-columns:repeat(12,minmax(0,1fr))}}
+/* a light that's off: its colour temperature and colour bars greyed, the spectrum still there to see, with a faint line
+   where it was set */
+.hcSecFeat.hcSecOff{filter:grayscale(1);opacity:.7}
+.hcSecFeat.hcSecOff .was{width:3px;margin-left:-1.5px;background:#fff;opacity:1;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+/* are you sure: a small dialog, Cancel, and a button held to go ahead (it fills as it's held, springs back if let go) */
+.hcSecDialog.hcSecConfirm{width:min(420px,100%);height:auto}
+.hcSecConfirmBody{display:grid;gap:8px;padding:22px 22px 6px}
+.hcSecConfirmBody .activityTitle{font:500 20px/1.2 var(--font-tile);font-style:normal}
+.hcSecConfirmBody p{margin:0;color:var(--muted);font:400 15px/21px var(--font)}
+#app .hcSecHold{position:relative;overflow:hidden;min-width:150px;min-height:41.6px;padding:0 18px;border:0;border-radius:999px!important;background:color-mix(in srgb,#d32f2f 16%,var(--card));color:#b71c1c;font:600 14px/20px var(--font-tile);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.hcSecHoldFill{position:absolute;inset:0 auto 0 0;width:0;background:#d32f2f;pointer-events:none}
+.hcSecHoldLabel{position:relative;z-index:1}
+.hcSecHold.holding .hcSecHoldLabel{color:#fff;mix-blend-mode:normal}
+/* Undo beside Done; the ⋮ with Clear dashboard */
+#app .hcSecEditBar .hcSecUndo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;min-height:41.6px;padding:0 16px 0 12px;border:0;border-radius:999px!important;background:var(--tile);color:var(--text);font:600 14px/20px var(--font-tile);cursor:pointer}
+#app .hcSecEditBar .hcSecUndo:disabled{opacity:.4;cursor:default}
+.hcSecUndo svg{width:20px;height:20px;fill:currentColor}
+.hcSecEditBar .hcSecUndo~.primary{margin-left:0}
+.hcSecBarMenu{position:relative}
+.hcSecBarMenu .hcSecMenu{top:44px;right:0}
+/* a card just added: a blue ring that fades away */
+.hcSecSlot.hcSecFlash>*{animation:hcSecFlash 1.8s ease-out both}
+@keyframes hcSecFlash{0%,25%{box-shadow:0 0 0 3px var(--primary,#03a9f4)}100%{box-shadow:0 0 0 3px transparent}}
+/* the are-you-sure popup on the action card's pattern (Matt, 26 Nov: "follow the proper pattern of a tile"): 18 in, 28
+   corners, 14 between its title, its words and its controls; the title at a card's 18; Cancel and the hold button as the
+   card's controls, side by side, 46 tall with 16 corners */
+#app .hcSecDialog.hcSecConfirm{width:min(360px,100%);gap:14px;padding:18px;border-radius:28px}
+#app .hcSecConfirm .hcSecConfirmBody{gap:6px;padding:0}
+#app .hcSecConfirm .hcSecConfirmBody .activityTitle{font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em}
+#app .hcSecConfirm .hcSecConfirmBody p{font:400 14px/20px var(--font)}
+#app .hcSecConfirm .hcLeFoot{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0;box-shadow:none}
+#app .hcSecConfirm .hcLeFoot>button{width:100%;min-width:0;min-height:46px;border-radius:16px!important}
+#app .hcSecConfirm .hcLeFoot.hcSecOne{grid-template-columns:1fr}
+/* the welcome: more room between its title and words, Have fun! a line of its own, and room before Got it */
+#app .hcSecWelcome{gap:20px}
+#app .hcSecWelcome .hcSecConfirmBody{gap:12px}
+#app .hcSecWelcome .hcSecConfirmBody p+p{margin-top:2px}
+/* the Devices page's cards are HomeCore's tiles: 60 tall, 10 in, the chip 40, 12 between, the tile's 24 corners */
+#app .hcDevTile{padding:0;border-radius:var(--r-tile)}
+#app .hcDevTile>.activityRow{min-height:var(--tile-min);padding:var(--inset);gap:12px;border-radius:var(--r-tile);background:transparent}
+.hcDevCards{gap:16px}
+/* HomeCore settings → Lights, as the Devices page: its switch at the top right, the table's chips, the cards as action cards */
+#housePane .hcLightView{display:flex;justify-content:flex-end;margin-bottom:12px}
+#housePane .hcLightView .hcViewSeg{width:100px}
+#housePane .tfLightTable .hcNameCell{display:flex;align-items:center;gap:12px}
+#housePane .tfLightTable .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+#housePane .tfLightTable .tfIcon[data-light]{background:var(--light-soft);color:var(--light-ink)}
+#housePane.hcLightCards .tfLightCards{grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+#app #housePane .hcLightCard{gap:14px}
+#app #housePane .hcLightCard .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+#app #housePane .hcLightCard.on[data-light] .tfIcon{background:var(--light-soft);color:var(--light-ink)}
+#app #housePane .hcLightCard .tfName{display:grid;min-width:0}
+#app #housePane .hcLightRows{display:flex;flex-direction:column;gap:8px;padding:0;background:none;box-shadow:none}
+#app #housePane .hcLightRows>.toggleRow{min-height:46px;padding:4px 6px 4px 14px;border-radius:16px;background:var(--tile)}
+#app #housePane .tfLightCards>.hcLightCard{grid-column:auto} /* (an action card spans two of a board's columns; here each is one card of the grid) */
+/* the light table keeps the Devices table's look but not its fixed columns: its columns as wide as what's in them, so the
+   Tile and Pad lists show whole (Matt, 26 Nov: "it chops off… the drop down things"); sideways if the pane is narrower */
+#housePane .tfLightTable.hcDevTable{table-layout:auto;width:100%}
+#housePane .tfLightTable.hcDevTable :is(th,td){width:auto!important;overflow:visible;text-overflow:clip}
+#housePane .tfLightTable.hcDevTable td:first-child{min-width:200px}
+#housePane .tfLightTable .settingsSelect{min-width:170px}
+#housePane [data-house-pane="lights"] .metaTableWrap{overflow-x:auto}
+/* the Lights tab's toolbar, as the Devices page's; its groups headed with their counts */
+#housePane .hcLightView.hcToolbar{justify-content:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+#housePane .hcLightView .hcViewSeg{margin-left:auto}
+.hcLightGroup{grid-column:1/-1;margin:8px 0 -4px;font:500 18px/1.2 var(--font-tile);letter-spacing:-.01em;color:var(--text)}
+.hcLightGroup span,.hcLightGroupRow span{color:var(--muted);font-weight:400}
+#housePane .tfLightTable .hcLightGroupRow th{padding:18px 8px 6px;text-align:left;font:500 16px/1.2 var(--font-tile);text-transform:none;letter-spacing:0;color:var(--text)}
+.hcLightNone{padding:16px 8px;color:var(--muted)}
+/* the Lights tab's groups as the Devices page's: a name and count, then a card with its table (or its cards); tables or
+   cards, never both */
+#housePane.hcLightCards #lightTables,#housePane:not(.hcLightCards) #lightCards{display:none}
+#housePane #lightCards{display:grid;gap:24px}
+#housePane #lightTables .hcTableCard .metaTableWrap{display:block}
+#housePane .hcLightGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+#app #housePane .hcLightGrid>.hcLightCard{grid-column:auto}
+@container housepane (width < 720px){#housePane:not(.hcLightCards) #lightTables{display:none}#housePane:not(.hcLightCards) #lightCards{display:grid}}
+/* the light tables on cards as the Devices page's (settings makes its cards see-through): the card colour, its corners, 10 in, its hairline */
+#app #housePane #lightTables .hcTableCard{background:var(--card);border-radius:var(--r-card);padding:var(--inset);box-shadow:var(--hc-hair)}
+#app #housePane #lightTables .hcGroup>.sectionLabel{margin:0 18px}
+/* the weather widgets in My Cool Dashboard: as tall as their slot (four rows, as on the custom dashboard), a preview's a
+   set height; the Nice to have edition heading set apart */
+.hcSecSlot>.hcSecWx{height:100%;box-sizing:border-box}
+.hcSecPickPreview .hcSecWx{height:220px}
+.hcSecDialog .hcLePreviewWrap .hcSecWx{min-height:220px}
+.hcSecTreeTitle.hcSecNice{margin-top:24px;padding-left:4px;color:var(--text);font:500 16px/22px var(--font-tile);text-transform:none;letter-spacing:0}
+/* the toast on HomeCore's tile pattern (Matt, 26 Nov: "following the same pattern as the rest of the tiles"): 60 tall,
+   10 in, its tick in a 40 chip with its 16 corners, 12 between, the tile's 24 corners, the message at the tile's 14/20;
+   Undo a control at its end, 40 tall with its corners nesting (24 less 10 = 14) */
+#app.hcDemo .toast.tfToast{min-height:60px;padding:10px 16px 10px 10px;gap:12px;border-radius:var(--r-tile);font:600 14px/20px var(--font-tile)}
+#app.hcDemo .toast.tfToast.withAction{padding-right:10px}
+#app.hcDemo .toast .mvTick{width:40px;height:40px;border-radius:16px}
+#app.hcDemo .toast .mvTick svg{width:24px;height:24px}
+#app.hcDemo .toast .mvToastText{font:600 14px/20px var(--font-tile)}
+#app.hcDemo .toast .toastAction{min-height:40px;margin-left:4px;padding:0 14px;border-radius:14px!important;background:color-mix(in srgb,currentColor 16%,transparent);font:600 14px/20px var(--font-tile);text-decoration:none}
+/* Activity as Home Assistant's logbook: each row the device's chip, its name and what happened, the time at its right */
+#app .hcActivityRow{grid-template-columns:var(--chip-size) minmax(0,1fr) auto}
+#app .hcActivityRow .hcActivityTime{justify-self:end;padding-left:12px}
+.hcActivityBar{flex-wrap:wrap}
+/* Home's weather icon comes in with the other icons: it fades as the summaries do, when they do (Matt, 26 Nov) */
+#app.hcIntro:not(.hcIntroGo) .tfDashTitle .hcHomeWxIcon{opacity:0}
+#app.hcIntroGo .tfDashTitle .hcHomeWxIcon{animation:hcIntroFade var(--intro-card-dur,.5s) var(--intro-card-ease,ease) var(--intro-icons-d,250ms) both}

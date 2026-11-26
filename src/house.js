@@ -61,8 +61,8 @@ export function createHouse({ onChange }) {
     if (m.vacuum) add('vacuum.' + PREFIX + 'robot', a, 'docked', { friendly_name: 'Robot vacuum', battery_level: 100, fan_speed: 'standard', rooms: [] });
     // the thermostat has every row its popup can show (Matt, 17 Nov): a range, fan, swing, preset and humidity too
     if (m.climate) add('climate.' + PREFIX + a, a, 'heat', { friendly_name: 'Thermostat', hvac_modes: ['off', 'heat', 'cool', 'auto'], hvac_action: 'heating', current_temperature: m.temperature, temperature: 21, min_temp: 7, max_temp: 30, target_temp_step: 0.5,
-      target_temp_low: 19, target_temp_high: 23, fan_mode: 'auto', fan_modes: ['auto', 'low', 'medium', 'high'], swing_mode: 'off', swing_modes: ['off', 'on'], preset_mode: 'home', preset_modes: ['home', 'away', 'eco', 'boost'],
-      current_humidity: m.humidity, humidity: 45, min_humidity: 30, max_humidity: 70 });
+      // the temperature, its range and its mode only: no fan, swing, preset or humidity to set (Matt, 26 Nov)
+      target_temp_low: 19, target_temp_high: 23, current_humidity: m.humidity });
     // a fan: [name, speed %] (with a speed it oscillates and turns either way); [name] is only on and off
     if (m.fan) { const [name, pct] = m.fan; add('fan.' + PREFIX + a + '_' + slug(name), a, 'on', pct != null ? { friendly_name: name, percentage: pct, percentage_step: 10, oscillating: true, direction: 'forward', supported_features: 1 | 2 | 4 | 16 | 32 } : { friendly_name: name, supported_features: 16 | 32 }); }
     if (m.waterHeater) add('water_heater.' + PREFIX + a, a, 'eco', { friendly_name: 'Water heater', current_temperature: 55, temperature: 60, min_temp: 40, max_temp: 75, target_temp_step: 1, operation_mode: 'eco', operation_list: ['off', 'eco', 'electric', 'gas'], away_mode: 'off' });
@@ -98,7 +98,7 @@ export function createHouse({ onChange }) {
   });
   // the whole house
   // its code on a keypad (any code does here), and Vacation (Matt, 17 Nov)
-  add('alarm_control_panel.' + PREFIX + 'house', 'hallway', 'disarmed', { friendly_name: 'Alarm', supported_features: 1 | 2 | 4 | 32, code_format: 'number', code_arm_required: false, changed_by: 'Wembely' });
+  add('alarm_control_panel.' + PREFIX + 'house', 'hallway', 'disarmed', { friendly_name: 'Alarm', supported_features: 1 | 2 | 4 | 32, code_format: 'number', code_arm_required: true, changed_by: 'Wembely' });
   opening(null, 'Front door', 'door', false);
   opening(null, 'Smoke alarm', 'smoke', false);
   add('sensor.' + PREFIX + 'doorbell', null, '', { friendly_name: 'Doorbell', device_class: 'timestamp', rang: Date.now() - 47 * 60 * 1000 });
@@ -106,6 +106,7 @@ export function createHouse({ onChange }) {
   const target = {}; // cover id → position it's moving to
   const tiltTarget = {}; // venetian blinds: the slats' tilt they're turning to
   let arming = null; // { mode, at }
+  const ALARM_CODE = '1856';
   function solarNow() {
     const now = new Date();
     Object.keys(fake).forEach((id) => {
@@ -169,6 +170,8 @@ export function createHouse({ onChange }) {
     if (!fake[id]) return false;
     const s = fake[id], a = s.attributes;
     const set = (state, attrs) => put(id, state, attrs);
+    // the made-up alarm's code is 1856 (Matt, 26 Nov): a wrong one is refused, as Home Assistant refuses it
+    if (domain === 'alarm_control_panel' && /^alarm_/.test(service) && String(data.code || '') !== ALARM_CODE) return Promise.reject(new Error('Invalid code'));
     if (domain === 'climate') {
       if (service === 'set_temperature' && data.temperature != null) set(null, { temperature: Math.max(a.min_temp, Math.min(a.max_temp, data.temperature)) });
       if (service === 'set_hvac_mode') set(data.hvac_mode, data.hvac_mode === 'off' ? { hvac_action: 'off' } : {});

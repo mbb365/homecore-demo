@@ -677,18 +677,18 @@ button.tfAreaIcon{cursor:pointer}
 .tfRoomTile:not([data-rows="1"]) :is(.tfRoomDevices,.tfRoomHeads){margin-top:auto}
 .tfRoomSub{overflow:hidden;color:var(--muted);font:400 16px/19px var(--font);white-space:nowrap;text-overflow:ellipsis}
 .tfRoomDevices{display:flex;gap:12px}
-.tfRoomDevices .tfIcon{border:0;padding:0;background:var(--hc-icon);color:var(--hc-icon-ink);cursor:pointer}
+.tfRoomDevices .tfIcon{border:0;padding:0;background:var(--hc-icon-soft);color:var(--text);cursor:pointer} /* faint: an icon on its own opens (Matt, 20 and 21 Nov) */
 .tfRoomDevices .tfIcon.on[data-light]{background:var(--light-soft);color:var(--light-ink)}
-#app.tfBoard .tfRoomTile[data-rows="1"] .tfRoomInline{display:inline}
-#app.tfBoard .tfRoomTile[data-rows="1"] :is(.tfRoomReading,.tfRoomDevices),#app.tfBoard .tfRoomTile[data-rows="2"] .tfRoomDevices{display:none}
-#app.tfBoard .tfRoomTile:is([data-rows="4"],[data-rows="5"]) .tfActionHead .activityRowMeta{display:none}
-#app.tfBoard .tfRoomTile:is([data-rows="4"],[data-rows="5"]) .tfRoomSub{display:block}
-#app.tfBoard .tfRoomTile[data-rows="4"] .tfRoomBig{font-size:41.6px;line-height:41.6px;letter-spacing:-1.54px}
-#app.tfBoard .tfRoomTile[data-rows="5"] .tfRoomBig{font-size:51.2px;line-height:51.2px;letter-spacing:-1.54px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="1"] .tfRoomInline{display:inline}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="1"] :is(.tfRoomReading,.tfRoomDevices),:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="2"] .tfRoomDevices{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:is([data-rows="4"],[data-rows="5"]) .tfActionHead .activityRowMeta{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:is([data-rows="4"],[data-rows="5"]) .tfRoomSub{display:block}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="4"] .tfRoomBig{font-size:41.6px;line-height:41.6px;letter-spacing:-1.54px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="5"] .tfRoomBig{font-size:51.2px;line-height:51.2px;letter-spacing:-1.54px}
 /* narrow (one column): all four devices in one row along the foot, 12 apart, as the Figma draws them (Width=1, Size=M,
    L, XL: 954:6202, 954:6233, 954:6265; Matt, 18 Nov: "one row, as Figma"), the reading big above them; at M its second
    reading stays in the head. A card too narrow for four in a row (a phone's) takes them onto a second */
-#app.tfBoard .tfRoomTile[data-cols="1"]:is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomDevices{display:flex;flex-wrap:wrap}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"]:is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomDevices{display:flex;flex-wrap:wrap}
 /* a room's tile wide (2 columns) or really wide (3+; Matt, 6 Nov; Figma 954:6297): its devices as heads (icon, name,
    state) in place of buttons, wide two by two, really wide in one row. XS the buttons on the right of the head; wide S
    (its first two) and M, and really wide S, have the reading in the head */
@@ -699,32 +699,33 @@ button.tfAreaIcon{cursor:pointer}
 .tfRoomDev{position:relative;isolation:isolate;display:flex;align-items:center;gap:12px;min-width:0;height:60px;padding:10px;box-sizing:border-box;border-radius:20px;cursor:pointer} /* the whole tile opens its control (Matt, 20 Nov) */
 .tfRoomDev::before{content:"";position:absolute;z-index:-1;inset:0;border-radius:inherit;pointer-events:none;transition:background .15s ease,box-shadow .15s ease}
 /* a wide Small card: its head, 10, then its one row of tiles */
-#app.tfBoard .tfRoomTile:not([data-cols="1"])[data-rows="2"]{gap:10px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"])[data-rows="2"]{gap:10px}
 @media (hover:hover){.tfRoomDev:hover::before{background:var(--tile);box-shadow:inset 0 0 0 .2px var(--line),inset 0 -.4px 0 var(--line)}}
 .tfRoomDevName{padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
-.tfRoomDev .tfIcon{border:0;padding:0;background:var(--hc-icon-soft);color:var(--text);cursor:pointer} /* faint fill: this icon opens the device, it does not toggle it (Matt, 21 Nov: a full fill is a switch, a faint fill opens something) */
+.tfRoomDev .tfIcon{border:0;padding:0;background:var(--hc-icon);color:var(--hc-icon-ink);cursor:pointer} /* full: a tile's icon is its switch (Matt, 20 Nov; 21 Nov: a full fill is a switch, a faint fill opens something) */
+.tfRoomDev span.tfIcon{background:var(--hc-icon-soft);color:var(--text)} /* one that can't be switched opens with its tile: faint */
 .tfRoomDev .tfIcon.on[data-light]{background:var(--light-soft);color:var(--light-ink)}
 /* the room's icon opens the room's page and is drawn as the summaries' are, no chip (Matt, 18 Nov); a device's icon keeps
    its chip */
 #app .tfRoomTile .tfIcon.tfIconOpen{border:0;padding:0;background-color:transparent!important;color:var(--hc-icon-ink);cursor:pointer}
 /* a small card: the callout big with what it is under it, small (Matt, 18 Nov: "a small subtitle under"), and not in the
    head as well */
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]{gap:8px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfActionHead .activityRowMeta{display:none}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomReading{gap:2px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomBig{font-size:32px;line-height:32px;letter-spacing:-.64px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomSub{display:block;font-size:14px;line-height:18px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"][data-rows="2"]{gap:8px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"][data-rows="2"] .tfActionHead .activityRowMeta{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomReading{gap:2px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomBig{font-size:32px;line-height:32px;letter-spacing:-.64px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomSub{display:block;font-size:14px;line-height:18px}
 .tfRoomDevName{display:flex;flex-direction:column;min-width:0}
 .tfRoomDevName>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#app.tfBoard .tfRoomTile[data-rows="1"]:not([data-cols="1"]){flex-direction:row;align-items:center;gap:12px}
-#app.tfBoard .tfRoomTile[data-rows="1"]:not([data-cols="1"])>.tfActionHead{flex:1;margin-bottom:0}
-#app.tfBoard .tfRoomTile[data-rows="1"]:not([data-cols="1"]) .tfRoomDevices{display:flex}
-#app.tfBoard .tfRoomTile:not([data-cols="1"]):not([data-rows="1"]) .tfRoomDevices{display:none}
-#app.tfBoard .tfRoomTile:not([data-cols="1"]):not([data-rows="1"]) .tfRoomHeads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-#app.tfBoard .tfRoomTile:not([data-cols="1"]):not([data-cols="2"]):not([data-rows="1"]) .tfRoomHeads{grid-template-columns:repeat(4,minmax(0,1fr))}
-#app.tfBoard .tfRoomTile[data-cols="2"][data-rows="2"] .tfRoomDev:nth-child(n+3){display:none}
-#app.tfBoard .tfRoomTile:not([data-cols="1"]):is([data-rows="2"],[data-cols="2"][data-rows="3"]):has(.tfRoomDevices) .tfRoomInline{display:inline}
-#app.tfBoard .tfRoomTile:not([data-cols="1"]):is([data-rows="2"],[data-cols="2"][data-rows="3"]):has(.tfRoomDevices) .tfRoomReading{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="1"]:not([data-cols="1"]){flex-direction:row;align-items:center;gap:12px}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="1"]:not([data-cols="1"])>.tfActionHead{flex:1;margin-bottom:0}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-rows="1"]:not([data-cols="1"]) .tfRoomDevices{display:flex}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"]):not([data-rows="1"]) .tfRoomDevices{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"]):not([data-rows="1"]) .tfRoomHeads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"]):not([data-cols="2"]):not([data-rows="1"]) .tfRoomHeads{grid-template-columns:repeat(4,minmax(0,1fr))}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="2"] .tfRoomDev:nth-child(n+3){display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"]):is([data-rows="2"],[data-cols="2"][data-rows="3"]):has(.tfRoomDevices) .tfRoomInline{display:inline}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile:not([data-cols="1"]):is([data-rows="2"],[data-cols="2"][data-rows="3"]):has(.tfRoomDevices) .tfRoomReading{display:none}
 #app.tfBoard .tfDashBento[data-rows="1"] .wbCard{padding:10px;border-radius:24px}
 #app.tfBoard .tfDashBento[data-rows="1"] .wbVisual{display:none}
 /* the weather: XS now as a tile; S now; M now and a sentence; L now and the days; XL all three */
@@ -801,7 +802,7 @@ button.tfAreaIcon{cursor:pointer}
 /* the edit tray (Matt, 28 Oct): edit mode's side panel from the right, over the board (the board isn't squeezed, so the
    board edited is the board shown); its tab tucks it away. It holds the hidden cards (drag one onto the board) and the
    favourites, edited as on Home Assistant's home view. Its look follows the cards: card colour, corner 34, padding 20 */
-.tfEditTray{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px));right:0;bottom:0;z-index:160;display:flex;width:608px;max-width:calc(100vw - 56px);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
+.tfEditTray{position:fixed;top:calc(var(--header-height,0px) + env(safe-area-inset-top,0px));right:0;bottom:0;z-index:160;display:flex;width:576px;max-width:calc(100vw - 56px);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.7,.3,1);pointer-events:none}
 .tfEditTray.open{transform:none}
 .tfEditTray.open.tucked{transform:translateX(100%)}
 .tfEditTray.open :is(.tfTrayInner,.tfTrayTuck){pointer-events:auto}
@@ -810,7 +811,7 @@ button.tfAreaIcon{cursor:pointer}
 .tfTrayTuck{position:absolute;top:20px;left:-52px;display:grid;place-items:center;width:var(--chip-size);height:var(--chip-size);min-height:0;padding:0;border:0;border-radius:var(--r-inner);background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all);cursor:pointer;--mdc-icon-size:22px}
 .tfTrayTuck svg{width:22px;height:22px}
 .tfEditTray:not(.open) .tfTrayTuck{visibility:hidden}
-.tfTrayInner{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px;overflow:auto;overscroll-behavior:contain;padding:20px;border-radius:var(--r-card) 0 0 var(--r-card);background:var(--card);box-shadow:var(--hc-hair-all),0 0 40px rgba(0,0,0,.3)}
+.tfTrayInner{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;overflow:auto;overscroll-behavior:contain;padding:16px;border-radius:var(--r-card) 0 0 var(--r-card);background:var(--card);box-shadow:var(--hc-hair-all),0 0 40px rgba(0,0,0,.3)}
 .tfTrayHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .tfTraySection{display:flex;flex-direction:column;gap:8px}
 .tfTraySection .sectionLabel{margin:0}
@@ -1059,7 +1060,7 @@ button.tfAreaIcon{cursor:pointer}
 .hcHeSecBody[hidden]{display:none}
 .hcHeBody>.tfTrayNote{margin:0 0 8px}
 .hcHeLabel{display:flex;align-items:center;gap:4px}
-.hcHeLine{display:flex;align-items:center;gap:4px;min-height:44px}
+.hcHeLine{display:flex;align-items:center;gap:4px;min-height:40px}
 .hcHeLine>.activityRowName{min-width:0}
 .hcHeLine>.switch{margin-left:auto}
 /* Number of suggested entities: the tiles' stepper, smaller, at the line's end (Matt, 23 Nov) */
@@ -1107,8 +1108,8 @@ button.tfAreaIcon{cursor:pointer}
 #app .tfTrayAdd.hcAddBtn:hover{background:#0398dc}
 #app .tfTrayAdd.hcAddBtn[aria-expanded="true"]{background:#0288d1}
 /* a fine line between a tray's sections (Matt, 12 Nov) */
-.tfEditTray:not(.hcHomeTray) .tfTraySection:not(.hcFirst){padding-top:20px;border-top:1px solid var(--line)}
-#app.hcDemo .tfEditTray:not(.hcHomeTray) .tfTrayInner{gap:20px}
+.tfEditTray:not(.hcHomeTray) .tfTraySection:not(.hcFirst){padding-top:16px;border-top:1px solid var(--line)}
+#app.hcDemo .tfEditTray:not(.hcHomeTray) .tfTrayInner{gap:16px}
 .hcHeRule{width:100%;height:0;margin:8px 0;border:0;border-top:1px solid var(--line)}
 /* the dashboard tray's tabs (Page, Cards, Areas, Favourites): HomeCore settings' tabs, the tray's width, under its head */
 .tfEditTray .hcTrayTabs{display:flex;align-self:stretch;margin:0 0 4px;flex:none}
@@ -1272,8 +1273,8 @@ button.tfAreaIcon{cursor:pointer}
 .tfMorePad{--tf-dac-pad:337px;--tf-dac-max:none}
 /* and full width on a room's light card too (Matt, 17 Nov) */
 .tfAction.tfDac{--tf-dac-max:none}
-/* a cover's drawing in its 224 space */
-.tfMoreSpace.tfMoreArt{justify-content:center;align-items:center;padding:8px;container-type:size}
+/* a cover's drawing in its 224 space, straight on the popup: no grey behind it (Matt, 26 Nov) */
+.tfMoreSpace.tfMoreArt{justify-content:center;align-items:center;padding:8px;border-radius:0;background:none;container-type:size}
 .tfMoreArt>.tfCoverArt{width:min(100%,100cqh);height:auto;max-width:none} /* the drawing is square: as tall as its space lets it */
 /* a code: a field as tall as a control */
 #app .tfMoreCode{width:100%;height:46px;padding:0 16px;border:0;border-radius:16px!important;background:var(--tile);color:var(--text);box-shadow:var(--hc-hair-all);font:400 16px/20px var(--font);box-sizing:border-box}
@@ -1299,6 +1300,90 @@ button.tfAreaIcon{cursor:pointer}
 #app.tfAreaOpen #homeView .grid .tfAction{align-self:start}
 /* a HomeCore icon (19 Nov) sits where Home Assistant's would, at its size until it's fitted */
 [data-icon-for]>svg.hcGlyph{display:block;flex:none;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px);overflow:visible}
+/* a card's own page in the edit tray (Edit card, Matt, 20 Nov): the tray's tabs and sections give way to the card's,
+   ‹ back to them, as a phone's tray pages do */
+.tfEditTray:not(.hcTrayCard) .hcCardEdit{display:none}
+#app .tfEditTray.hcTrayCard :is(.hcTrayTabs,.hcTrayList,.tfTraySection){display:none!important}
+#app .tfEditTray.hcTrayCard .hcTrayBack{display:inline-flex;flex:none;width:40px;height:40px;margin-block:-4px}
+#app .tfEditTray.hcTrayCard .tfTrayHead{justify-content:flex-start;gap:12.8px}
+#app .tfEditTray.hcTrayCard .tfTrayHead>.activityTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .tfEditTray.hcTrayCard .tfTrayHead>[data-tray-done]{margin-left:auto}
+.hcCardEdit{display:flex;flex-direction:column;gap:16px}
+.hcCeGroup{display:flex;flex-direction:column;gap:4px}
+.hcCeGroup+.hcCeGroup{padding-top:16px;border-top:1px solid var(--line)}
+.hcCeGroup>.sectionLabel{margin:0 0 4px}
+.hcCeSub{margin:8px 0 4px}
+.hcCeLine{gap:12px}
+.hcCeEnd{display:flex;align-items:center;gap:12px;margin-left:auto}
+/* a row that shows or hides something, or picks the main one: its icon, its name and what it reads, then its switch or tick */
+.hcCeRow{display:grid;grid-template-columns:36px var(--chip-size) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:0 4px;border-radius:var(--r-tile)}
+.hcCeRow.hcCeBare{grid-template-columns:36px minmax(0,1fr) auto}
+.hcCeRow.hcCeFixed>span:first-child{width:36px}
+.hcCeGroup>.tfTrayNote{margin:-2px 0 6px}
+.hcCeWarn{color:var(--text)}
+/* a card's parts dragged into place on the card (Matt, 20 Nov): the one dragged lifted, the one it'll land on marked */
+#app.hcCardEditing .hcCardEdited :is([data-ce-item],[data-k^="fav:"]){cursor:grab}
+#app.hcCardEditing .hcCardEdited .hcCeDragging{position:relative;z-index:6;opacity:.92;filter:drop-shadow(0 8px 24px rgba(0,0,0,.3));cursor:grabbing;pointer-events:none}
+#app.hcCardEditing .hcCardEdited .hcCeOver{outline:2px solid var(--primary)!important;outline-offset:2px;border-radius:var(--r-tile)}
+.hcCeRow .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+.hcCeRow .tfIcon svg{width:20px;height:20px;fill:currentColor}
+#app button.hcCeRow{width:100%;min-height:var(--tile-min);border:0;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer}
+#app button.hcCeRow:hover{background:var(--tile)}
+#app button.hcCeRow[aria-checked="true"]{background:var(--tile);box-shadow:inset 0 0 0 .2px var(--line),inset 0 -.4px 0 var(--line)}
+.hcCeTick{display:grid;place-items:center;width:36px;color:var(--text);visibility:hidden}
+.hcCeTick svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.hcCePick[aria-checked="true"] .hcCeTick{visibility:visible}
+.hcCeRow>.switch:disabled{opacity:.4;cursor:default}
+/* the board while a card's page is open: the card as it'll be, the others faded and still, edit mode's outlines and
+   chips gone; the board slides left from under the tray */
+#app.hcCardEditing #homeView .tfBoardItem:not(.hcCardEdited){opacity:.25;pointer-events:none}
+#app.hcCardEditing #homeView .tfBoardItem{outline:none!important;cursor:default!important}
+#app.hcCardEditing #homeView .tfDashBento .wbCard{outline:none}
+#app.hcCardEditing #homeView :is(.tfEditChips,.tfFavHides,.tfBoardCells){display:none}
+#app.hcCardEditing #homeView .hcCardEdited{z-index:2}
+/* the board scales down beside an open tray, from its top left, and back when the tray goes (Matt, 20 Nov) */
+#app.tfBoard #homeView>.grid{transform-origin:0 0;transition:scale .35s cubic-bezier(.2,.7,.3,1),margin-bottom .35s cubic-bezier(.2,.7,.3,1)}
+/* the handles, hide buttons and ⋯ menus stay their size on the scaled board (Matt, 20 Nov): each scales back up by the
+   same amount, the chips from the card's top right, a favourite's eye from its middle, the menu from its top right */
+/* the grip smaller (Matt, 20 Nov: at half scale it was most of a tile): 48 × 28, as tall as the ⋯ chip */
+#app.tfBoard #homeView>.grid .tfEditGrip{top:-4px;left:calc(50% - 24px);width:48px;height:28px;border-radius:14px;transform:none;transform-origin:50% 0;scale:calc(1 / var(--board-k,1))} /* centred by its left, not a translate, which the scale would stretch */
+#app.tfBoard #homeView>.grid .tfEditGrip svg{width:20px;height:20px}
+#app.tfBoard #homeView>.grid .tfEditChip{transform-origin:100% 0;scale:calc(1 / var(--board-k,1))}
+#app.tfBoard #homeView>.grid .tfFavHide{transform-origin:50% 50%;scale:calc(1 / var(--board-k,1))}
+#app.tfBoard #homeView>.grid .tfBoardMenu{transform-origin:100% 0;scale:calc(1 / var(--board-k,1))}
+@media (prefers-reduced-motion:reduce){#app.tfBoard #homeView>.grid{transition:none}}
+/* Edit area card (Matt, 23 Nov), on the area's page: the card as Home has it, the hint over it, and everything in the area
+   under it, by device, as cards of rows two across. A space the card can take is dashed; what's picked or dragged over is
+   outlined in the accent; what's on the card says where */
+.hcAce{grid-column:1/-1;display:flex;flex-direction:column;gap:16px;min-width:0}
+.hcAceHint{margin:0;color:var(--muted);font:400 14px/1.4 var(--font)}
+.hcAceCard{width:min(var(--ace-w),100%);height:var(--ace-h)}
+.hcAceCard>.tfRoomTile{height:100%;box-sizing:border-box;cursor:default}
+.hcAceCard [data-slot]{cursor:grab;touch-action:pan-y}
+.hcAceDragging,.hcAceDragging *{cursor:grabbing!important;user-select:none}
+.hcSlotEmpty{border:0;padding:0;background:none;box-shadow:inset 0 0 0 1.5px var(--line);outline:1.5px dashed color-mix(in srgb,var(--text) 35%,transparent);outline-offset:-6px;color:inherit}
+.hcAceCard .tfRoomHeads>.hcSlotEmpty{margin:0}
+.hcSlotMain{display:block;width:100%;min-height:72px;margin:6px 0;border-radius:20px}
+.hcAceCard .tfRoomHeads{gap:0}
+.hcAceCard :is(.hcPicked,.hcOver),.hcAcePicking .hcAceCard [data-slot]:hover{outline:2px solid var(--primary);outline-offset:-2px;border-radius:20px}
+.hcAceList{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start;border-radius:var(--r-card)}
+.hcAceList.hcOver{outline:2px dashed var(--primary);outline-offset:4px}
+.hcAceGroup .activityRows{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+#app .hcAceRow{display:flex;flex-wrap:nowrap;align-items:center;gap:12px;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:grab;border-radius:16px;touch-action:pan-y}
+.hcAceRow[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--primary)}
+.hcAceRow .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+.hcAceText{display:flex;flex-direction:column;min-width:0;flex:1}
+.hcAcePreview{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hcAceTitle{margin:0}
+/* what's on the card (Matt, 23 Nov: "a bigger indication to show that it's already placed into the card rather than just
+   the small chip"): the row tinted in the accent with an accent edge, and a filled accent label with a tick saying where */
+#app .hcAceRow.hcAceUsed{background:color-mix(in srgb,var(--primary) 10%,transparent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 45%,transparent)}
+#app .hcAceRow.hcAceUsed[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--primary)}
+.hcAceAt{flex:none;display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:4px 10px 4px 8px;border-radius:999px;background:var(--primary);color:var(--text-on-primary,#fff);font:600 12px/16px var(--font-tile);white-space:nowrap}
+.hcAceGhost{position:fixed;left:0;top:0;z-index:600;display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:20px;background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all),0 8px 24px rgba(0,0,0,.25);pointer-events:none;font:600 14px/20px var(--font-tile)}
+.hcAceGhost .tfIcon{background:var(--hc-icon);color:var(--hc-icon-ink)}
+.hcAceToggle{margin-left:auto}
+@media(max-width:620px){.hcAce{padding:0 16px}.hcAceList{grid-template-columns:minmax(0,1fr)}}
 
 /* ---------- a popup's title stays put (Matt, 23 Nov: "the title should stay in place… the content will scroll beneath it
    with a gentle fade out underneath", phone and desktop): the head sticks where it sits, what's above it is covered in
@@ -1332,3 +1417,228 @@ button.tfAreaIcon{cursor:pointer}
 /* ---------- a popup's stroke drawn over what's in it (Matt, 23 Nov: "the top corners and edge of the popup windows and more info cards… appear to be missing the stroke"): the pinned head's cover was painted over the inset stroke, so the stroke is a border now: a scrolling box clips what it holds inside its border, so nothing in it can cover it ---------- */
 #app .tfMoreBackdrop :is(.tfMore,.tfMoreSideInner){box-shadow:none;border:1px solid var(--line)}
 @media(max-width:620px){#app .tfMoreBackdrop :is(.tfMore,.tfMoreSideInner){box-shadow:0 10px 30px rgba(0,0,0,.28)}}
+
+/* ---------- Home Assistant's more info in HomeCore's look (Matt, 26 Nov: "more like the more info cards are now"):
+   Close, the area and device over the name, History, Settings and the menu; the state big and centred with when it
+   changed; the controls; History and Details as views of their own. The popup keeps its height (660 on a wide screen, Matt, 26 Nov:
+   "make the frame longer, like it was before") */
+.hcInfoHead{justify-content:flex-start}
+.hcInfoTitle{display:grid;flex:1;min-width:0}
+.hcInfoTitle>*{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcInfoCrumb{color:var(--muted);font:400 12px/16px var(--font)}
+.hcInfoTools{display:flex;flex:none;gap:2px}
+.hcInfoTools svg{width:22px;height:22px;fill:currentColor;stroke:none}
+.hcInfoMenuWrap{position:relative}
+.hcInfoMenu{position:absolute;top:calc(100% + 6px);right:0;z-index:5;display:flex;flex-direction:column;min-width:180px;padding:6px;border-radius:calc(var(--r-card) - 4px);background:var(--card);box-shadow:var(--hc-hair-all),0 8px 24px rgba(0,0,0,.18)}
+.hcInfoMenu[hidden]{display:none}
+.hcInfoMenuItem{min-height:40px;padding:0 12px;border:0;border-radius:calc(var(--r-card) - 10px);background:none;color:var(--text);font:400 14px/20px var(--font);text-align:left;cursor:pointer}
+.hcInfoMenuItem:hover,.hcInfoMenuItem:focus-visible{background:var(--tile)}
+.hcInfoState{display:grid;justify-items:center;gap:4px;padding:8px 0 4px;text-align:center}
+.hcInfoStateNow{font:500 36px/1.15 var(--font-tile);letter-spacing:-.01em}
+.hcInfoStateWhen{color:var(--muted);font:400 14px/20px var(--font)}
+/* on a phone, Close stays in the head as Home Assistant's sheet keeps it (the handle stays too) */
+@media(max-width:620px){#app .tfMoreBackdrop .tfMore .hcInfoHead [data-more-close]{display:grid}}
+/* a device's settings (Home Assistant's, behind the gear): fields named above their boxes, switches in rows, and
+   Delete and Update held at the foot */
+.hcInfoSettings{display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+.hcInfoField{display:grid;gap:6px}
+.hcInfoFieldLabel{color:var(--muted);font:400 13px/18px var(--font)}
+.hcInfoFieldBox{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:16px;background:var(--tile);box-shadow:var(--hc-hair-all)}
+.hcInfoFieldBox:focus-within{outline:2px solid var(--primary);outline-offset:-1px}
+#app .hcInfoInput{flex:1;min-width:0;height:46px;padding:0;border:0;background:none;color:var(--text);font:400 16px/20px var(--font);outline:none;appearance:none;-webkit-appearance:none}
+#app .hcInfoInput::placeholder{color:var(--muted);opacity:1}
+#app .hcInfoInput[readonly]{color:var(--muted)}
+#app select.hcInfoInput{cursor:pointer}
+.hcInfoFieldIcon{flex:none;width:28px;height:28px}
+.hcInfoPrefix{flex:none;margin-right:-10px;color:var(--muted);font:400 16px/20px var(--font)}
+.hcInfoAreaPick[hidden]{display:none}
+#app .hcInfoToggle{padding:12px 14px;border-radius:16px;background:var(--tile)}
+.hcInfoToggle strong{font-weight:500}
+.hcInfoLink{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 14px;border:0;border-radius:16px;background:var(--tile);color:var(--text);text-align:left;cursor:pointer}
+.hcInfoLink strong{display:block;font-weight:500}
+.hcInfoLink svg{flex:none;width:20px;height:20px}
+.hcInfoFoot{position:sticky;bottom:-20px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;margin:auto -20px -20px;padding:14px 20px 20px;background:var(--hc-pop-bg,var(--card));box-shadow:inset 0 .4px 0 var(--line)}
+.hcInfoFoot .primary{min-width:112px}
+.hcInfoDelete{min-height:41.6px;padding:0 18px;border:0;border-radius:999px;background:none;color:#d32f2f;font:600 14px/20px var(--font-tile);cursor:pointer}
+.hcInfoDelete:hover{background:color-mix(in srgb,#d32f2f 10%,transparent)}
+/* Settings grows to hold all its fields (on a short window it still scrolls) */
+#app .tfMoreBackdrop:not(.wide) .tfMore.hcFit{height:auto;max-height:calc(100dvh - 32px)}
+/* the icon picker: its list under the field, each icon beside its name */
+.hcIconPick{position:relative}
+.hcIconList{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:6;display:flex;flex-direction:column;max-height:264px;overflow-y:auto;overscroll-behavior:contain;padding:6px;border-radius:calc(var(--r-card) - 4px);background:var(--card);box-shadow:var(--hc-hair-all),0 8px 24px rgba(0,0,0,.18)}
+.hcIconList[hidden]{display:none}
+.hcIconOpt{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 10px;border:0;border-radius:calc(var(--r-card) - 10px);background:none;color:var(--text);font:400 14px/20px var(--font);text-align:left;cursor:pointer}
+.hcIconOpt .tfIcon{flex:none;width:28px;height:28px}
+.hcIconOpt:hover,.hcIconOpt.active{background:var(--tile)}
+.hcIconNone{padding:12px 10px;color:var(--muted);font:400 14px/20px var(--font)}
+/* Home's summaries and Favourites: each one row across the page, the tiles sharing it, sideways only where they can't
+   all fit (Matt, 26 Nov: "just as strips across the top") */
+@media (min-width:621px){
+  #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows,#app.tfOverview.hcFavStrip.tfDash #homeView .tfDash-favs>.activityRows{display:flex;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+  #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows>.activityRow,#app.tfOverview.hcFavStrip.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{flex:1 0 auto;width:auto;min-width:150px} /* as wide as its words, the rest shared, so nothing is cut short */
+}
+/* a wide Medium area card with two spaces or fewer has room for its main reading as Large shows it: big, with what it is
+   under it, and not in the head as well (Matt, 26 Nov: "with 2 slots… the main should basically be displaying the same way
+   that the large card displays the main data points") */
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="3"]:not(:has(.tfRoomDev:nth-child(3))):has(.tfRoomDevices) .tfRoomReading{display:flex}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="3"]:not(:has(.tfRoomDev:nth-child(3))):has(.tfRoomDevices) .tfRoomInline{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="3"]:not(:has(.tfRoomDev:nth-child(3))) .tfActionHead .activityRowMeta{display:none}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="3"]:not(:has(.tfRoomDev:nth-child(3))) .tfRoomSub{display:block}
+:is(#app.tfBoard,#app .hcAceCard) .tfRoomTile[data-cols="2"][data-rows="3"]:not(:has(.tfRoomDev:nth-child(3))) .tfRoomBig{font-size:41.6px;line-height:41.6px;letter-spacing:-1.54px}
+/* the head's buttons (Close, Back, History, Settings, the menu) are squircles, not circles (Matt, 26 Nov): the icon chip's
+   shape, their corners nesting in the popup's (its 34 less its 20 = 14); a soft fill on hover, as a chip's */
+#app :is(.tfMoreHead,.hcSecDialog .hcLeHead) .tfBack{border-radius:14px!important;transition:background .15s ease}
+#app :is(.tfMoreHead,.hcSecDialog .hcLeHead) .tfBack:hover{background:var(--tile)}
+#app :is(.tfMoreHead,.hcSecDialog .hcLeHead) .tfBack:focus-visible{outline:2px solid var(--primary,#03a9f4);outline-offset:0}
+/* the foot of a device's controls: its on/off switch at the left, its other options (a light's views) in the middle */
+.hcMoreFootRow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-top:auto}
+.hcMoreFootRow>.switch{justify-self:start}
+.hcMoreFootRow>.tfMoreDots{grid-column:2}
+/* an Activity row's entry (Home Assistant's logbook entry, Matt 26 Nov): the name row opens the controls; History and
+   Activity each headed with Show more; the changes a line of dots, newest first */
+.hcLogEntity{display:grid;grid-template-columns:var(--chip-size,40px) minmax(0,1fr) auto 18px;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px;border:0;border-radius:var(--r-tile,24px)!important;background:var(--tile);color:var(--text);text-align:left;cursor:pointer}
+.hcLogEntity:hover,.hcLogEntity:focus-visible{filter:brightness(.97)}
+.hcLogEntity>svg,.hcLogRow>svg{width:18px;height:18px;color:var(--muted)}
+.hcLogEntityText{display:grid;min-width:0}
+.hcLogEntityName{font:500 15px/20px var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcLogEntityWhen{color:var(--muted);font:400 13px/18px var(--font)}
+.hcLogEntityState{font:500 15px/20px var(--font);white-space:nowrap}
+.hcLogGroup{display:grid;gap:10px}
+.hcLogGroupHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hcLogTitle{margin:0;font:500 18px/24px var(--font);letter-spacing:-.01em}
+.hcLogMore{min-height:32px;padding:0 10px;border:0;border-radius:12px!important;background:none;color:var(--primary);font:500 14px/20px var(--font);cursor:pointer}
+.hcLogMore:hover,.hcLogMore:focus-visible{background:var(--tile)}
+.hcLogDay{margin:4px 0 2px;color:var(--muted);font:500 13px/18px var(--font)}
+.hcLogRows{display:grid}
+.hcLogRow{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr) auto 18px;align-items:center;gap:12px;min-height:48px;padding:0 4px;border:0;border-radius:14px!important;background:none;color:var(--text);font:400 15px/20px var(--font);text-align:left;cursor:pointer}
+.hcLogRow:hover,.hcLogRow:focus-visible{background:var(--tile)}
+.hcLogRow::before{content:"";position:absolute;left:13.5px;top:0;bottom:0;width:1.5px;background:var(--line)}
+.hcLogRow:first-child::before{top:50%}
+.hcLogRow:last-child::before{bottom:50%}
+.hcLogRow:only-child::before{display:none}
+.hcLogDot{position:relative;z-index:1;justify-self:center;width:12px;height:12px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 3px var(--card)}
+.hcLogDot.on{background:var(--primary)}
+.hcLogDot.on.light{background:#ffaa00}
+.hcLogDot.on.alarm{background:var(--danger)}
+.hcLogTime{color:var(--muted);font:400 13px/18px var(--font);font-variant-numeric:tabular-nums}
+/* the alarm (Matt, 26 Nov): its shield, big, in its state's colour, over its modes; a mode it guards asks for the code:
+   the keypad ends Clear, 0, Enter; right turns the field green, wrong turns it red, shakes and empties it */
+.tfMoreSpace.hcAlarmNow{display:grid;place-items:center;min-height:180px}
+.hcAlarmNow .tfIcon{width:120px;height:120px;border-radius:44px;--icon-size:56px;color:var(--primary);background:color-mix(in srgb,var(--primary) 14%,transparent);box-shadow:none}
+.hcAlarmNow .tfIcon svg{width:56px;height:56px}
+.hcAlarmNow[data-alarm="disarmed"] .tfIcon{color:var(--muted);background:var(--tile)}
+.hcAlarmNow[data-alarm="triggered"] .tfIcon{color:var(--danger);background:color-mix(in srgb,var(--danger) 14%,transparent);animation:hcPulse 1s infinite}
+.hcAlarmNow:is([data-alarm="arming"],[data-alarm="pending"]) .tfIcon{animation:hcPulse 1.4s infinite}
+@keyframes hcPulse{50%{opacity:.45}}
+.hcCodeTitle{font:500 15px/20px var(--font);text-align:center}
+#app .hcCodePad .tfMoreCode{text-align:center;letter-spacing:.3em;font-size:20px}
+.hcCodeSaid{min-height:18px;color:var(--muted);font:500 13px/18px var(--font);text-align:center}
+#app .hcCodePad.wrong .tfMoreCode{box-shadow:inset 0 0 0 2px var(--danger)}
+.hcCodePad.wrong .hcCodeSaid{color:var(--danger)}
+.hcCodePad.wrong{animation:hcShake .36s}
+#app .hcCodePad.right .tfMoreCode{box-shadow:inset 0 0 0 2px #2e9e5b}
+.hcCodePad.right .hcCodeSaid{color:#2e9e5b}
+@keyframes hcShake{20%,60%{translate:-6px 0}40%,80%{translate:6px 0}}
+.tfKeypad .hcCodeEnter{background:var(--primary);color:#fff;box-shadow:none}
+.hcCodeFoot{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hcCodeFoot button{height:46px;border-radius:16px!important}
+@media(prefers-reduced-motion:reduce){.hcCodePad.wrong,.hcAlarmNow .tfIcon{animation:none!important}}
+/* a slider's icon in its pocket (Matt, 26 Nov): 20 square, 13 in from the left as from the top and bottom of the 46 bar;
+   the text colour on the empty track, dark over a fill or a spectrum */
+.tfBar .tfBarGlyph{position:absolute;left:13px;top:50%;z-index:1;width:20px;height:20px;translate:0 -50%;fill:var(--text);pointer-events:none}
+.tfBar.over .tfBarGlyph,.tfBar:is(.ct,.hue,.hcSecFeat-light-color-temp,.hcSecFeat-light-color) .tfBarGlyph{fill:#26221e}
+.tfBar.hue .tfBarGlyph,.tfBar.hcSecFeat-light-color .tfBarGlyph{fill:#fff;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+/* an area's page as Home Assistant's area view (Matt, 26 Nov): the note in the top left corner, the temperature and
+   humidity as badges, then each group headed with its icon and name over its tiles */
+.hcAreaBadges{grid-column:1/-1;flex:0 0 100%;display:flex;flex-wrap:wrap;gap:8px}
+.hcAreaBadge{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 4px;border:0;border-radius:20px!important;background:var(--card);color:var(--text);box-shadow:var(--hc-hair-all);font:500 14px/20px var(--font);cursor:pointer}
+.hcAreaBadge .tfIcon{width:32px;height:32px;border-radius:16px;--icon-size:18px}
+.hcAreaGroupHead{grid-column:1/-1;flex:0 0 100%;display:flex;align-items:center;gap:8px;margin:12px 0 -2px 4px;color:var(--text);font:500 18px/24px var(--font);letter-spacing:-.01em}
+.hcAreaGroupHead svg{width:22px;height:22px;fill:var(--muted)}
+/* Edit area card as a popup, laid out as Add to dashboard's card editor (Matt, 26 Nov): the area's things on the left,
+   the card on the right under "This is an idea" (orange, italic, no pill) */
+#app .hcAceBack{grid-column:1/-1;flex:0 0 100%}
+#app .hcAceDialog{gap:0}
+#app .hcAceDialog .hcAceList{display:flex;flex-direction:column;gap:16px;grid-template-columns:none}
+.hcAceGroupName{margin:0 0 6px 4px;color:var(--muted);font:500 13px/18px var(--font-tile)}
+#app .hcAceDialog .hcAcePreview{gap:10px}
+.hcAceIdea{margin:0;color:#e07b00;font:italic 500 14px/20px var(--font)}
+/* the area page's note and the editor's idea line: orange, italic, light, no pill (Matt, 26 Nov) */
+#app .hcAreaNote,#app .hcAceIdea{padding:0;border-radius:0;background:none;color:#e07b00;font:italic 300 14px/20px var(--font)}
+/* on a phone, where it's on the card goes under the name rather than over it */
+@media(max-width:620px){#app .hcAceDialog .hcAceRow{flex-wrap:wrap}#app .hcAceDialog .hcAceAt{margin-left:calc(var(--chip-size,40px) + 12px)}}
+/* a device's power at the foot's left (Matt, 26 Nov): Home Assistant's power button, the line in the circle, in the
+   pill the views sit in; on, it's filled */
+.hcMoreFootRow>.hcMorePower{justify-self:start}
+#app .hcMorePower{display:grid;place-items:center;width:54px;height:38px;padding:0;border:0;border-radius:19px!important;background:var(--tile);color:var(--muted);cursor:pointer;transition:background .15s ease,color .15s ease}
+#app .hcMorePower svg{width:22px;height:22px;fill:currentColor}
+#app .hcMorePower:hover{color:var(--text)}
+#app .hcMorePower.on{background:var(--text);color:var(--card)}
+#app .tfMore .hcMorePower.on{background:#ffaa00;color:#26221e}
+#app .hcMorePower:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#app .hcAreaNote a{color:inherit;font-weight:500;text-decoration:underline;text-underline-offset:2px}
+/* Home's time and date on the name's line and the weather above them, from HomeCore Labs (Matt, 26 Nov): the greeting's
+   size in a thin weight, ending with the summaries; the weather with no background, its icon opening its more info */
+#app.tfOverview .tfDashTitle{position:relative}
+#app.tfOverview .tfDashTitle .hcTitleLine{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+#app.tfOverview .tfDashTitle .hcHomeClock{margin-inline-end:var(--sums-end,0px);font:300 20px/1.2 var(--font-tile);letter-spacing:0;white-space:pre;font-variant-numeric:tabular-nums;color:var(--text)}
+#app.tfOverview .tfDashTitle .hcHomeWx{position:absolute;right:var(--wx-end,var(--sums-end,0px));bottom:var(--wx-above,40px);display:flex;align-items:center;gap:12px;font:300 20px/24px var(--font-tile);letter-spacing:0;color:var(--text);white-space:nowrap}
+#app.tfOverview .tfDashTitle .hcHomeWxIcon{flex:none;display:block;width:40px;height:40px;border:0;padding:0;border-radius:12px!important;background:none;cursor:pointer}
+#app.tfOverview .tfDashTitle .hcHomeWxIcon .wbWx{width:40px;height:40px;border-radius:12px}
+#app.tfOverview .tfDashTitle .hcHomeWxIcon:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#app.tfOverview .tfDashTitle .hcHomeWxTemp{font-variant-numeric:tabular-nums}
+/* on a phone, neither the time and date nor the weather: the name alone (Matt, 26 Nov: "on the mobile version, remove
+   the weather and the time and date") */
+@media(max-width:620px){
+  #app.tfOverview .tfDashTitle .hcTitleLine{display:block}
+  #app.tfOverview .tfDashTitle :is(.hcHomeClock,.hcHomeWx){display:none}
+}
+/* the Oops and search ("Hey there, explorer") popups are as tall as what they hold, nothing to scroll (Matt, 26 Nov: "just
+   be full size as it needs to be"); on a short screen the picture gives up height first, cropped from its foot */
+#app .tfMoreBackdrop:is(.hcOops,.hcSearchPop) .tfMore.tfMore{height:auto;max-height:calc(100dvh - 32px);overflow:hidden}
+#app .hcOops .hcArtOops{flex:0 1 auto;min-height:120px;aspect-ratio:auto;height:min(calc((465px - 40px) * 460 / 424),calc(100dvh - 220px))}
+#app .hcOops .hcArtOops img{object-fit:cover;object-position:top}
+#app .hcSearchPop .hcArtSearch{flex:0 1 auto;min-height:120px;aspect-ratio:auto;height:min(calc((597px - 40px) * 642 / 556),calc(100dvh - 250px))}
+#app .hcSearchPop .hcArtSearch img{object-fit:cover;object-position:top}
+/* the summaries (and Favourites as a strip) share the row equally, not each as wide as its words (Matt, 26 Nov: "all
+   relatively the same size and not just bunched up… not hugging"): equal shares, a tile only wider where its words need it */
+@media (min-width:621px){
+  #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows>.activityRow,#app.tfOverview.hcFavStrip.tfDash #homeView .tfDash-favs>.activityRows>.activityRow{flex:0 0 auto;min-width:200px} /* each its own size, 200 or more, never stretched (Matt, 26 Nov: "you're stretching the tile") */
+  #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows:not(.hcBarRows),#app.tfOverview.hcFavStrip.tfDash #homeView .tfDash-favs>.activityRows:not(.hcBarRows){justify-content:space-between}
+}
+/* in rows, each column an equal share and never under 200, as Labs */
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows.hcBarRows{grid-template-columns:repeat(var(--bar-cols,3),max-content);justify-content:space-between}
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows.hcBarRows>.activityRow{min-width:200px}
+/* a summary's words are never cut short: its tile takes what they need (the bar goes to rows before that happens) */
+#app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRow :is(.activityRowName,.activityRowMeta){overflow:visible;text-overflow:clip;white-space:nowrap}
+/* Home's Schedule, Favourites and summaries cards without their stroke, and the summaries with no background (Matt, 26
+   Nov: "remove the stroke… take [the summaries' background] down to like 0") */
+#app.tfOverview #homeView .card:is(.tfDash-bar,.tfDash-favs,.tfDash-sched){border-color:transparent!important;box-shadow:none!important}
+/* Home's summaries' icons in a chip as clear as the area cards' (Office, Laundry…): no fill, only the chip's faint sheen
+   and edge (Matt, 26 Nov: "reduced further so it matches… the areas icons") */
+#app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background-color:transparent}
+/* every popup window has a stroke, so it stands off the page on a black or a light background (Matt, 26 Nov) */
+#app :is(.tfMore,.tfMoreSide,.hcSecDialog,.hcSumsPop,.hcDrawerPanel,.wbPopupBox){outline:1px solid color-mix(in srgb,var(--text) 16%,transparent);outline-offset:-1px}
+/* Home's cards 30% more see-through (Matt, 26 Nov: "reduce the opacity of all the cards on the overview… by another 30%") */
+#app.tfOverview #homeView :is(.tfDashTiles>.tfRoomTile,.card.tfDash-bar,.card.tfDash-favs,.card.tfDash-sched,.tfDash-wx,.tfDash-energy){background-color:color-mix(in srgb,var(--card) 70%,transparent)!important}
+/* the editor's head: "This is an idea" at its right; its left a picker for each space (Matt, 26 Nov) */
+#app .hcAceDialog .hcLeHead .hcAceIdea{flex:none;margin-right:6px}
+#app .hcAceDialog .hcAceFields{gap:14px}
+#app .hcAceDialog .hcAcePreview{justify-content:flex-start}
+#app .hcAceDialog .hcAceHint+.hcAceHint{margin-top:2px}
+#app .hcAceDialog option:disabled{color:var(--muted)}
+/* a space's picker: its button, and its list dropping from it (Home Assistant's entity picker, in HomeCore's look) */
+#app .hcAceDialog .hcAceFields{overflow:visible}
+.hcAcePick{position:relative}
+#app .hcAcePickBtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;cursor:pointer}
+#app .hcAcePickBtn>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .hcAcePickBtn>svg{flex:none;width:18px;height:18px;rotate:90deg;color:var(--muted);transition:rotate .15s ease}
+#app .hcAcePickBtn[aria-expanded="true"]>svg{rotate:-90deg}
+.hcAceMenu{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;display:flex;flex-direction:column;max-height:300px;overflow:auto;padding:6px;border-radius:calc(var(--r-card) - 10px);background:var(--card);box-shadow:var(--hc-hair-all),0 10px 30px rgba(0,0,0,.25)}
+.hcAceMenu.up{top:auto;bottom:calc(100% + 6px)}
+.hcAceMenu[hidden]{display:none}
+.hcAceMenu .hcAceGroupName{margin:8px 10px 2px}
+#app .hcAceOpt{flex:none;min-height:40px;padding:0 10px;border:0;border-radius:14px!important;background:none;color:var(--text);font:400 14px/20px var(--font);text-align:left;cursor:pointer}
+#app .hcAceOpt:hover,#app .hcAceOpt:focus-visible{background:var(--tile)}
+#app .hcAceOpt[aria-selected="true"]{background:color-mix(in srgb,var(--primary) 14%,transparent);font-weight:500}
+#app .hcAceOpt[aria-disabled="true"]{color:var(--muted);opacity:.5;cursor:default;background:none}
