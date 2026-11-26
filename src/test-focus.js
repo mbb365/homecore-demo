@@ -10,6 +10,7 @@
 import { createHouse, isMadeUp, solarHistory, PLANT_RANGE } from './house.js';
 import { ICONS as HC_ICONS, svg as hcSvg } from './hc-icons.js';
 import { mountWeatherBento } from './weather-bento.js';
+import { ROOM_ART } from './room-art.js';
 import { createCoverArt, coverKind } from './cover-art.js';
 import { M, EASE, smoothD, gridLines, drawLine, stretchTo, closeDialog, toastBody, toastIn, toaster, springStep, squash, reduced } from './motion.js';
 // HomeCore's icon for a Material Design one, by name (19 Nov); the demo's own inline icons use it too (demo-icons.js)
@@ -724,7 +725,14 @@ export function mountTestFocus(root, { config, getHass }) {
   };
   let hcN = 0; // each drawn icon's cuts need their own mask id
   // Entity icons come from Home Assistant (ha-state-icon), so they match the rest of the dashboard
+  /* an area card's summaries say as much as fits (Marcin, 25 Nov: "progressive information"): each with its words, or, when
+     they don't all fit along the well, the icons alone. Measured whenever the well's size changes, and once the font is in */
+  const fitWell = (w) => { w.classList.remove('isCompact'); if (w.scrollWidth > w.clientWidth + 1) w.classList.add('isCompact'); };
+  const wellSizes = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => es.forEach((e) => fitWell(e.target))) : null;
+  const fitWells = (scope) => scope.querySelectorAll('.tfRoomSums').forEach((w) => { wellSizes?.observe(w); fitWell(w); });
+  document.fonts?.ready.then(() => fitWells(root));
   function fillIcons(scope) {
+    fitWells(scope);
     const hass = getHass();
     scope.querySelectorAll('[data-icon-for]').forEach((slot) => {
       const st = states[slot.dataset.iconFor];
@@ -778,8 +786,19 @@ export function mountTestFocus(root, { config, getHass }) {
     const key = room + '|' + shapes.map((x) => x.getAttribute('d') || x.localName).join('|');
     if (el.dataset.fitted === key) return true;
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    // a shape's box where it's drawn: getBBox leaves out its own transform (and its groups'), so a rotated shape (the
+    // fan's blades) would measure where it was before it turned
+    const drawnBox = (x) => {
+      const b = x.getBBox();
+      let m = null;
+      for (let n = x; n && n !== svg; n = n.parentNode) { const t = n.transform?.baseVal?.consolidate?.(); if (t) m = m ? t.matrix.multiply(m) : t.matrix; }
+      if (!m) return b;
+      const pts = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([px, py]) => new DOMPoint(px, py).matrixTransform(m));
+      const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+      return { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+    };
     for (const x of shapes) {
-      const b = x.getBBox(), cs = getComputedStyle(x), pad = cs.stroke !== 'none' ? (parseFloat(cs.strokeWidth) || 0) / 2 : 0;
+      const b = drawnBox(x), cs = getComputedStyle(x), pad = cs.stroke !== 'none' ? (parseFloat(cs.strokeWidth) || 0) / 2 : 0;
       if (!b.width && !b.height) continue;
       x1 = Math.min(x1, b.x - pad); y1 = Math.min(y1, b.y - pad); x2 = Math.max(x2, b.x + b.width + pad); y2 = Math.max(y2, b.y + b.height + pad);
     }
@@ -1264,6 +1283,9 @@ export function mountTestFocus(root, { config, getHass }) {
   function roomTile(r, key, attrs = '') {
     const keys = roomKeys(r), main = mainOf(r), h = main && headline(main), sub = main ? mainSub(r, main, keys) : '';
     const big = h ? h.text + (h.unit ? ' ' + h.unit : '') : '';
+    // the small card's line under the name (Matt, 24 Nov: "a secondary line that shows the status of that area. So,
+    // temperature, humidity"); a room with neither shows its main
+    const status = keys.filter((k) => k.key === 'temp' || k.key === 'hum').map((k) => k.value).join(' · ') || big;
     const opens = (k) => { const ids = groupIds(r, k.key); return ids.length === 1 ? ids[0] : 'group:' + r.id + ':' + k.key; };
     const controls = keys.filter((k) => k.kind === 'control').slice(0, 4), lit = (k) => (k.on && k.light ? ' data-light style="' + k.light + '"' : '');
     /* the rule (Matt, 20 Nov: "If it is just an icon, it opens the panel or more info that controls that. if it is a tile
@@ -1282,13 +1304,28 @@ export function mountTestFocus(root, { config, getHass }) {
     // the room, which "just shouldn't happen"
     const glyph = '<span class="tfAreaGlyph"' + iconSlot('area:' + r.id, r.icon || 'mdi:texture-box', r.name) + '></span>';
     const roomIcon = '<button class="tfIcon tfIconOpen tfRoomIcon" type="button" data-go="' + esc(r.id) + '" aria-label="Open ' + esc(r.name) + '">' + glyph + '</button>';
-    return '<div class="tfAction tfRoomTile"' + (key ? ' data-k="' + esc(key) + '"' : '') + attrs + ' data-go="' + esc(r.id) + '">' +
+    /* the room's summaries as icons (Marcin, 25 Nov: "I want just the icons from that room that is applicable to be visible
+       in this surface"), in a well a shade darker than the card, nested in its corners; each opens the room's summary */
+    /* only the ones with something going on (Marcin, 25 Nov: "I don't want to display all domains for all rooms where,
+       for instance, lights might be turned off"): lights on, media playing, a problem, a lock open… All of them, quiet
+       or not, are in the bar on the room's page. Never Climate: its temperature is the status line already */
+    const sums = summaryData(false, r).filter((s) => s.live && s.key !== 'climate');
+    // nothing going on, no well at all (Marcin, 25 Nov: "just hide it"): the card is its name, status and icon, centred
+    const well = !sums.length ? '' : '<div class="tfRoomSums">' + sums.map((s) => '<button class="tfSum tfRoomSum" type="button" data-summary="' + esc(s.key) + '"' + sumRoomAttr(s) + sumStyle(s) +
+      ' aria-label="' + esc(r.name + ' ' + s.name.toLowerCase() + (s.value ? ', ' + s.value : '') + '. Open') + '" title="' + esc(s.name + (s.value ? ': ' + s.value : '')) + '"><span class="tfIcon" aria-hidden="true"' + iconSlot('', s.icon, s.name) + '></span>' +
+      // what's going on over how many (Marcin, 25 Nov: "the state at the top and the number below"; "Playing" over "1"), in the
+      // summaries bar's two text styles, where the card has room
+      '<span class="tfRoomSumText" aria-hidden="true"><span class="activityRowName tfRoomSumName">' + esc(s.short ? s.short[0] : s.name) + '</span>' + (s.short ? '<span class="activityRowMeta tfRoomSumValue">' + esc(String(s.short[1])) + '</span>' : s.value ? '<span class="activityRowMeta tfRoomSumValue">' + esc(s.value) + '</span>' : '') + '</span></button>').join('') + '</div>';
+    const art = areaArt() === 'images' ? ROOM_ART[r.id] : null;
+    return '<div class="tfAction tfRoomTile' + (art ? ' hasArt' : '') + (sums.length ? '' : ' isQuiet') + '"' + (key ? ' data-k="' + esc(key) + '"' : '') + attrs + ' data-go="' + esc(r.id) + '">' +
+      (art ? '<span class="tfRoomArt">' + art + '</span>' : '') +
       '<div class="tfActionHead">' + roomIcon +
       '<button class="tfName" type="button" data-go="' + esc(r.id) + '" aria-label="Open ' + esc(r.name) + '"><span class="activityRowName">' + esc(r.name) + '</span>' +
-      (big || sub ? '<span class="activityRowMeta">' + (big ? '<span class="tfRoomInline">' + esc(big) + (sub ? ' · ' : '') + '</span>' : '') + esc(sub) + '</span>' : '') + '</button></div>' +
+      (big || sub ? '<span class="activityRowMeta">' + (big ? '<span class="tfRoomInline">' + esc(big) + (sub ? ' · ' : '') + '</span>' : '') + esc(sub) + '</span>' : '') +
+      (status ? '<span class="activityRowMeta tfRoomStatus">' + esc(status) + '</span>' : '') + '</button></div>' +
       // the reading opens its more-info (the thermometer's, say)
       (big ? '<button class="tfRoomReading" type="button" data-more="' + esc(main) + '" aria-label="' + esc(nameOf(main) + ', ' + valueOf(main) + '. More info') + '"><span class="tfRoomBig">' + esc(big) + '</span>' + (sub ? '<span class="tfRoomSub">' + esc(sub) + '</span>' : '') + '</button>' : '') +
-      (devices.length ? '<div class="tfRoomDevices">' + devices.join('') + '</div><div class="tfRoomHeads">' + heads.join('') + '</div>' : '') + '</div>';
+      (devices.length ? '<div class="tfRoomDevices">' + devices.join('') + '</div><div class="tfRoomHeads">' + heads.join('') + '</div>' : '') + well + '</div>';
   }
 
   /* sections: Home and each room, with their devices as Home Assistant has them (Security is a summary's popup, Matt
@@ -1390,10 +1427,11 @@ export function mountTestFocus(root, { config, getHass }) {
   // battery and problem sensors that are on, any of them unavailable), plus plants that need care and a vacuum that's
   // low and away from its dock. What needs attention comes first, then everything else by room, the room order the
   // dashboard's; a vacuum is just its battery there
-  function maintenanceData() {
-    const ents = getHass()?.entities || {}, dc = (id) => attr(id).device_class;
-    const sensors = Object.keys(states).filter((id) => (id.startsWith('sensor.') && dc(id) === 'battery') || (id.startsWith('binary_sensor.') && ['battery', 'problem'].includes(dc(id))));
-    const plants = model.rooms.flatMap((r) => r.plants.map((p) => p.id));
+  function maintenanceData(room = null) {
+    const ents = getHass()?.entities || {}, dc = (id) => attr(id).device_class, here = (id) => !room || model.areaOf?.(id) === room.id;
+    const sensors = Object.keys(states).filter((id) => here(id) && ((id.startsWith('sensor.') && dc(id) === 'battery') || (id.startsWith('binary_sensor.') && ['battery', 'problem'].includes(dc(id)))));
+    const plants = (room ? [room] : model.rooms).flatMap((r) => r.plants.map((p) => p.id));
+    const vacuums = model.vacuums.filter(here);
     if (!sensors.length && !plants.length) return null;
     const charging = (id) => {
       const dev = ents[id]?.device_id;
@@ -1402,19 +1440,21 @@ export function mountTestFocus(root, { config, getHass }) {
     const isLow = (id) => (id.startsWith('vacuum.') ? attr(id).battery_level <= 20 && states[id].state !== 'docked'
       : id.startsWith('binary_sensor.') ? dc(id) === 'battery' && states[id].state === 'on'
         : parseFloat(states[id].state) <= 20 && !charging(id));
-    const low = [...sensors, ...model.vacuums].filter((id) => states[id] && isLow(id));
+    const low = [...sensors, ...vacuums].filter((id) => states[id] && isLow(id));
     const problems = [...sensors.filter((id) => dc(id) === 'problem' && states[id].state === 'on'), ...plants.filter((id) => states[id]?.state === 'problem')];
     const gone = sensors.filter((id) => states[id].state === 'unavailable');
     const attention = [...new Set([...low, ...problems, ...gone])];
     // the rest: plants, the vacuum, batteries lowest first, then problem sensors
     const level = (id) => { const n = parseFloat(states[id].state); return dc(id) === 'battery' && Number.isFinite(n) ? n : 101; };
-    const rest = [...plants, ...model.vacuums, ...[...sensors].sort((a, b) => level(a) - level(b))].filter((id) => states[id] && !attention.includes(id));
+    const rest = [...plants, ...vacuums, ...[...sensors].sort((a, b) => level(a) - level(b))].filter((id) => states[id] && !attention.includes(id));
     const byRoom = new Map();
     rest.forEach((id) => { const a = model.areaOf?.(id) || ''; byRoom.set(a, [...(byRoom.get(a) || []), id]); });
     const rank = (a) => { const i = model.rooms.findIndex((r) => r.id === a); return a === '' ? Infinity : i < 0 ? model.rooms.length : i; };
     const rooms = [...byRoom.keys()].sort((a, b) => rank(a) - rank(b));
     const roomName = (a) => model.rooms.find((r) => r.id === a)?.name || getHass()?.areas?.[a]?.name || a;
     return {
+      short: [low, problems, gone].filter((x) => x.length).length > 1 ? ['Needs attention', attention.length]
+        : low.length ? [low.length === 1 ? 'Low battery' : 'Low batteries', low.length] : problems.length ? [problems.length === 1 ? 'Problem' : 'Problems', problems.length] : ['Unavailable', gone.length],
       value: [low.length && count(low.length, 'low battery', 'low batteries'), problems.length && count(problems.length, 'problem', 'problems'), gone.length && count(gone.length, 'unavailable device', 'unavailable devices')].filter(Boolean).join(', ') || 'All good',
       plain: true,
       groups: [{ name: 'Needs attention', ids: attention, alert: true }, ...rooms.map((a) => ({ name: a ? roomName(a) : rooms.length > 1 ? 'Other devices' : 'Devices', ids: byRoom.get(a) }))].filter((g) => g.ids.length),
@@ -1426,53 +1466,60 @@ export function mountTestFocus(root, { config, getHass }) {
   // page; Dashboards keeps the ones chosen in its edit tray
   const sumPrefs = () => (overview ? prefs.home || {} : prefs);
   const sumOn = (k) => (EXTRA_SUMS.includes(k) ? (sumPrefs().shownSums || []).includes(k) : !(sumPrefs().hiddenSums || []).includes(k));
-  function extraSums(rooms, groups, of) {
+  function extraSums(rooms, groups, of, sec, here, room) {
     const covers = rooms.flatMap((r) => of(r, /^cover\./)), open = covers.filter((id) => ['open', 'opening'].includes(states[id]?.state)).length;
-    const people = Object.keys(states).filter((id) => id.startsWith('person.')), home = people.filter((id) => states[id]?.state === 'home').length;
-    const openings = model.security.openings.filter((id) => states[id]), opened = openings.filter((id) => states[id].state === 'on').length;
-    const leaks = Object.keys(states).filter((id) => id.startsWith('binary_sensor.') && attr(id).device_class === 'moisture'), wet = leaks.filter((id) => states[id].state === 'on').length;
-    const vac = model.vacuums.filter((id) => states[id]);
+    const people = room ? [] : Object.keys(states).filter((id) => id.startsWith('person.')), home = people.filter((id) => states[id]?.state === 'home').length; // people aren't in a room
+    const openings = sec.openings.filter((id) => states[id]), opened = openings.filter((id) => states[id].state === 'on').length;
+    const leaks = Object.keys(states).filter((id) => here(id) && id.startsWith('binary_sensor.') && attr(id).device_class === 'moisture'), wet = leaks.filter((id) => states[id].state === 'on').length;
+    const vac = model.vacuums.filter((id) => states[id] && here(id));
     return {
-      covers: covers.length && { value: open ? open + ' open' : 'All closed', groups: groups((r) => of(r, /^cover\./)) },
-      people: people.length && { value: home ? home + ' home' : 'Nobody home', groups: [{ name: 'People', ids: people }] },
-      openings: openings.length && { value: opened ? opened + ' open' : 'All closed', groups: [{ name: 'Doors and windows', ids: openings }] },
-      leaks: leaks.length && { value: wet ? count(wet, 'leak', 'leaks') : 'All dry', groups: [{ name: 'Leak sensors', ids: leaks }] },
-      vacuum: vac.length && { value: cap(states[vac[0]].state), groups: [{ name: 'Vacuum', ids: vac }] },
+      covers: covers.length && { live: open > 0, short: ['Open', open], value: open ? open + ' open' : 'All closed', groups: groups((r) => of(r, /^cover\./)) },
+      people: people.length && { live: home > 0, value: home ? home + ' home' : 'Nobody home', groups: [{ name: 'People', ids: people }] },
+      openings: openings.length && { live: opened > 0, short: ['Open', opened], value: opened ? opened + ' open' : 'All closed', groups: [{ name: 'Doors and windows', ids: openings }] },
+      leaks: leaks.length && { live: wet > 0, short: [wet === 1 ? 'Leak' : 'Leaks', wet], value: wet ? count(wet, 'leak', 'leaks') : 'All dry', groups: [{ name: 'Leak sensors', ids: leaks }] },
+      vacuum: vac.length && { live: !['docked', 'idle', 'off'].includes(states[vac[0]].state), short: [cap(states[vac[0]].state), attr(vac[0]).battery_level != null ? attr(vac[0]).battery_level + '%' : ''], value: cap(states[vac[0]].state), groups: [{ name: 'Vacuum', ids: vac }] },
     };
   }
-  function summaryData(every = false) {
-    const rooms = model.rooms, sec = model.security, of = (r, re) => r.actions.filter((id) => re.test(id));
+  /* one room's summaries (Marcin, 25 Nov: "implement the same summary widget to the area view"): the same summaries,
+     counted over that room's things only; the ones it has nothing for drop out. Its rows carry the room, so their popup
+     is the room's too */
+  function summaryData(every = false, room = null) {
+    const here = (id) => !room || model.areaOf?.(id) === room.id, all0 = model.security;
+    const rooms = room ? [room] : model.rooms, of = (r, re) => r.actions.filter((id) => re.test(id));
+    const sec = room ? { alarms: all0.alarms.filter(here), locks: all0.locks.filter(here), openings: all0.openings.filter(here) } : all0;
     const groups = (pick) => rooms.map((r) => ({ name: r.name, ids: pick(r) })).filter((g) => g.ids.length);
     const lights = rooms.flatMap((r) => r.lights), lit = lights.filter((id) => states[id]?.state === 'on').length;
     const temps = rooms.map((r) => r.readings.find((id) => attr(id).device_class === 'temperature')).filter(Boolean).map((id) => Number(states[id].state)).filter(Number.isFinite);
     const [lo, hi] = [num(Math.min(...temps)), num(Math.max(...temps))];
     const players = rooms.flatMap((r) => of(r, /^media_player\./)), playing = players.filter((id) => states[id]?.state === 'playing').length;
-    const alerts = alertList(), warnings = alerts.filter((x) => x.severity === 'warning' && x.on).length;
+    const alerts = alertList().filter((x) => here(x.entity)), warnings = alerts.filter((x) => x.severity === 'warning' && x.on).length;
     const unlocked = sec.locks.filter((id) => ['unlocked', 'jammed', 'open'].includes(states[id]?.state)).length;
     const disarmed = sec.alarms.filter((id) => states[id]?.state === 'disarmed').length;
     const warnText = warnings ? count(warnings, 'warning', 'warnings') : null;
     const secText = unlocked ? unlocked + ' unlocked' : disarmed ? disarmed + ' disarmed' : warnText ? null : 'All secure';
-    const maint = maintenanceData();
+    const maint = maintenanceData(room);
     const solar = rooms.flatMap((r) => r.solar), solarNow = solar.find((id) => id.endsWith('_power'));
     const all = {
-      light: lights.length && { value: lit ? lit + ' on' : 'All off', groups: groups((r) => r.lights) },
+      light: lights.length && { live: lit > 0, short: ['On', lit], value: lit ? lit + ' on' : 'All off', groups: groups((r) => r.lights) },
       climate: temps.length && { value: lo === hi ? lo + '°' : lo + ' - ' + hi + '°', groups: groups((r) => [...r.readings.filter((id) => ['temperature', 'humidity'].includes(attr(id).device_class)), ...of(r, /^(climate|humidifier)\./)]) },
-      security: (sec.alarms.length || sec.locks.length) && { value: [warnText, secText].filter(Boolean).join(', '), groups: [{ name: 'Alarm and locks', ids: [...sec.alarms, ...sec.locks] }, { name: 'Doors and windows', ids: sec.openings }].filter((g) => g.ids.length) },
-      media_players: players.length && { value: playing ? playing + ' playing' : 'No media playing', groups: groups((r) => of(r, /^media_player\./)) },
-      maintenance: maint,
-      energy: model.grid && { value: watts(Number(states[solarNow]?.state || 0) * 1000 + Number(states[model.grid].state)) + ' now', groups: [{ name: 'Energy', ids: [...solar, model.grid] }] },
-      ...extraSums(rooms, groups, of),
+      security: (sec.alarms.length || sec.locks.length) && { live: Boolean(unlocked || disarmed || warnings), short: unlocked ? ['Unlocked', unlocked] : disarmed ? ['Disarmed', disarmed] : [warnings === 1 ? 'Warning' : 'Warnings', warnings], value: [warnText, secText].filter(Boolean).join(', '), groups: [{ name: 'Alarm and locks', ids: [...sec.alarms, ...sec.locks] }, { name: 'Doors and windows', ids: sec.openings }].filter((g) => g.ids.length) },
+      media_players: players.length && { live: playing > 0, short: ['Playing', playing], value: playing ? playing + ' playing' : 'No media playing', groups: groups((r) => of(r, /^media_player\./)) },
+      maintenance: maint && { ...maint, live: maint.value !== 'All good' },
+      energy: room ? solar.length && { live: Number(states[solarNow]?.state || 0) > 0, short: ['Producing', watts(Number(states[solarNow]?.state || 0) * 1000)], value: watts(Number(states[solarNow]?.state || 0) * 1000) + ' now', groups: [{ name: 'Energy', ids: solar }] } : model.grid && { value: watts(Number(states[solarNow]?.state || 0) * 1000 + Number(states[model.grid].state)) + ' now', groups: [{ name: 'Energy', ids: [...solar, model.grid] }] },
+      ...extraSums(rooms, groups, of, sec, here, room),
     };
     const out = [];
     const active = alerts.filter((x) => x.severity !== 'warning' && x.on);
-    if (active.length) out.push({ key: 'alerts', name: 'Alerts', icon: 'mdi:alarm-plus', colour: '#f44336', value: count(active.length, 'active alert', 'active alerts'), groups: [{ name: 'Active', ids: active.map((x) => x.entity) }] });
+    if (active.length) out.push({ room: room?.id, live: true, short: [active.length === 1 ? 'Alert' : 'Alerts', active.length], key: 'alerts', name: 'Alerts', icon: 'mdi:alarm-plus', colour: '#f44336', value: count(active.length, 'active alert', 'active alerts'), groups: [{ name: 'Active', ids: active.map((x) => x.entity) }] });
     shortcutItems().forEach((it) => {
-      if (it.type !== 'summary') out.push({ key: 'path:' + it.path, name: it.label || it.path, icon: it.icon || 'mdi:link-variant', colour: '', value: '' });
-      else if (!it.hidden && all[it.key] && (every || sumOn(it.key))) out.push({ key: it.key, ...SUMMARIES[it.key], ...all[it.key] });
+      if (it.type !== 'summary') { if (!room) out.push({ key: 'path:' + it.path, name: it.label || it.path, icon: it.icon || 'mdi:link-variant', colour: '', value: '' }); }
+      else if (!it.hidden && all[it.key] && (every || sumOn(it.key))) out.push({ key: it.key, room: room?.id, ...SUMMARIES[it.key], ...all[it.key] });
     });
     return out;
   }
-  const summaryRow = (s) => '<div class="activityRow tap tfSum" role="button" tabindex="0" data-summary="' + esc(s.key) + '" data-k="sum:' + esc(s.key) + '" aria-label="' + esc(s.name + (s.value ? ', ' + s.value : '')) + '"' + (s.key === 'alerts' ? ' style="--sum:' + s.colour + ';--sum-ink:#ffffff"' : s.key === 'climate' ? ' style="' + climateVars() + '"' : s.colour && sumInk(s.colour) ? ' style="' + sumInk(s.colour).slice(1) + '"' : '') + '>' +
+  const sumStyle = (s) => (s.key === 'alerts' ? ' style="--sum:' + s.colour + ';--sum-ink:#ffffff"' : s.key === 'climate' ? ' style="' + climateVars() + '"' : s.colour && sumInk(s.colour) ? ' style="' + sumInk(s.colour).slice(1) + '"' : '');
+  const sumRoomAttr = (s) => (s.room ? ' data-sum-room="' + esc(s.room) + '"' : '');
+  const summaryRow = (s) => '<div class="activityRow tap tfSum" role="button" tabindex="0" data-summary="' + esc(s.key) + '"' + sumRoomAttr(s) + ' data-k="sum:' + esc(s.key) + '" aria-label="' + esc(s.name + (s.value ? ', ' + s.value : '')) + '"' + sumStyle(s) + '>' +
     (s.key === 'climate' ? CLIMATE_DEFS : '') + '<div class="tfIcon" aria-hidden="true"' + iconSlot(s.id || '', s.icon, s.name) + '></div>' +
     '<div><div class="activityRowName">' + esc(s.name) + '</div>' + (s.value ? '<div class="activityRowMeta">' + esc(s.value) + '</div>' : '') + '</div></div>';
   function toggleStar(id) {
@@ -1489,7 +1536,7 @@ export function mountTestFocus(root, { config, getHass }) {
   }
   function openSummary(key, opener) {
     if (key.startsWith('path:')) { go(key.slice(5)); return; }
-    openMore('summary:' + key, opener);
+    openMore('summary:' + key + (opener?.dataset?.sumRoom ? '@' + opener.dataset.sumRoom : ''), opener);
   }
   // saved favourites, Home Assistant's home view and security settings, and its suggested devices
   async function loadPrefs() {
@@ -2136,6 +2183,9 @@ export function mountTestFocus(root, { config, getHass }) {
   const AREA_SIZES = { s: { w: 252, h: 136, rows: 2 }, m: { w: 252, h: 212, rows: 3 }, l: { w: 252, h: 288, rows: 4 } };
   // the size picked in Edit Home page, Small until one is; it's the desktop's (a phone lays them out Large, layoutHome)
   const areaSize = () => (AREA_SIZES[prefs.home?.areaSize] ? prefs.home.areaSize : 's');
+  // every area card with its icon, or every one with its room's picture (Marcin, 25 Nov: "a toggle where I would see either
+  // all rooms with icons or all rooms with an image"), set in Edit Home page; pictures to start
+  const areaArt = () => (prefs.home?.areaArt === 'icons' ? 'icons' : 'images');
   const areaLayout = () => (['rows', 'columns', 'bento'].includes(prefs.home?.areaLayout) ? prefs.home.areaLayout : 'rows');
   // the cards that aren't areas: Stacked down the left beside the areas, or in Rows across the top over them (Matt, 12 Nov)
   const cardsAs = () => (prefs.home?.cardsAs === 'rows' ? 'rows' : 'stacked');
@@ -2248,6 +2298,14 @@ export function mountTestFocus(root, { config, getHass }) {
        (overview)": the weather under Favourites, the areas beside them), the page as tall as the taller side; or Rows,
        across the top a row at a time, the areas under them. On a phone everything runs down the page */
     const side = cardsAs() === 'stacked' && !phone && tops.length > 0;
+    /* one grid down both sides (Marcin, 25 Nov: "align the height to be creating a synchronized grid"): with the cards
+       stacked down the left, every card there is a whole number of area rows tall, so its edges meet the areas'. A row is
+       the area card's height, or Favourites' when it's only a little taller (so Favourites is one row, not one and a bit) */
+    const sizeNow = phone || window.matchMedia('(max-width:620px)').matches ? 'l' : areaSize();
+    let areaH = AREA_SIZES[sizeNow].h;
+    const favsTop = side && tops.find((it) => it.key === 'favs');
+    if (favsTop) { Object.assign(favsTop.el.style, { width: tw + 'px', height: '' }); const fh = favsTop.el.offsetHeight; if (fh > areaH && fh <= areaH * 1.5) areaH = fh; }
+    const snapRows = (h) => Math.max(1, Math.ceil((h + gap) / (areaH + gap))) * (areaH + gap) - gap;
     let x = 0, rowH = 0, colB = top;
     tops.forEach((it) => {
       it.el.classList.add('tfBoardItem');
@@ -2258,7 +2316,7 @@ export function mountTestFocus(root, { config, getHass }) {
       // The others 337 as drawn; on a phone each as tall as it needs
       let h = th;
       if (phone || it.key === 'favs') { Object.assign(it.el.style, { width: tw + 'px', height: '' }); h = it.el.offsetHeight; }
-      if (side) { put(it, { x: 0, y: colB, w: tw, h }); colB += h + gap; return; }
+      if (side) { h = snapRows(h); put(it, { x: 0, y: colB, w: tw, h }); colB += h + gap; return; }
       put(it, { x, y: top, w: tw, h });
       x += tw + gap; rowH = Math.max(rowH, h);
     });
@@ -2271,7 +2329,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // a phone (620 or narrower) always shows them Large, whatever's picked; the pick is the desktop's (Matt, 17 Nov: "bigger
     // on mobile, but still maintain their chosen size on desktop")
     const size = phone || window.matchMedia('(max-width:620px)').matches ? 'l' : areaSize(), dims = AREA_SIZES[size], lay = areaLayout(), byFloor = prefs.home?.byFloor !== false;
-    const cw = cols.w, ch = dims.h; // a column wide, the dashboard's height for the size
+    const cw = cols.w, ch = side ? areaH : dims.h; // a column wide, the dashboard's height for the size (a row of the grid both sides share)
     const n = phone ? 2 : Math.max(1, Math.floor((aW + gap) / (cw + gap)));
     const roomEls = new Map(shown.filter((it) => isRoomKey(it.key)).map((it) => [it.key, it]));
     const groupsAll = byFloor ? floorGroups() : [{ id: '', name: '', icon: '', rooms: overviewRooms() }];
@@ -2284,6 +2342,8 @@ export function mountTestFocus(root, { config, getHass }) {
        smaller"): the first three in the order set, across the whole home, are large (two wide, as the Balcony was); the rest
        are the half size, and never grow to fill a gap */
     const RANKED = 3, rankIds = overviewRooms().map((r) => 'room:' + r.id);
+    // (a picture made a card large while only three rooms had one, Marcin, 25 Nov; with every room pictured, or none, the
+    // sizes stay by rank in both looks so they can be compared)
     const ranked = (it) => mixed && rankIds.indexOf(it.key) > -1 && rankIds.indexOf(it.key) < RANKED;
     const bigs = (f) => f.cards.filter(ranked).length;
     // a group's cards in its own columns (c), each in the first free cell from the top left; a big one two by two (on a
@@ -2889,6 +2949,7 @@ export function mountTestFocus(root, { config, getHass }) {
         (areaLayout() === 'bento' ? '<div class="hcHeLine"><span class="activityRowName">Floors as boxes</span>' + sw(prefs.home?.bentoBoxes !== false, 'Floors as boxes', 'data-he-flag="bentoBoxes"') + '</div>' +
           '<div class="hcHeLine"><span class="activityRowName">Mixed sizes</span>' + sw(prefs.home?.bentoMixed !== false, 'Mixed sizes', 'data-he-flag="bentoMixed"') + '</div>' : '') +
         homeSeg('Area cards', 'data-he-area-size', areaSize(), [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]) +
+        homeSeg('Area look', 'data-he-area-art', areaArt(), [['icons', 'Icons'], ['images', 'Images']]) +
         // Fit together (Matt, 17 Nov): the areas as a neat block, not spread over every column that fits
         '<div class="hcHeLine"><span class="activityRowName">Fit together</span>' + sw(!!prefs.home?.fitTogether, 'Fit together', 'data-he-fit') + '</div>',
       // Favourites on Home at all (Matt, 12 Nov: "a show favourites toggle")
@@ -2998,6 +3059,7 @@ export function mountTestFocus(root, { config, getHass }) {
     const fa = t.closest('[data-he-favs-as]'); if (fa) { homePrefs({ favsAs: fa.dataset.heFavsAs }); return; }
     const sw2 = t.closest('[data-he-sums-width]'); if (sw2) { homePrefs({ sumsWidth: sw2.dataset.heSumsWidth }); return; }
     const as = t.closest('[data-he-area-size]'); if (as) { homePrefs({ areaSize: as.dataset.heAreaSize }); return; }
+    const aa = t.closest('[data-he-area-art]'); if (aa) { homePrefs({ areaArt: aa.dataset.heAreaArt }); return; }
     const ca = t.closest('[data-he-cards-as]'); if (ca) { homePrefs({ cardsAs: ca.dataset.heCardsAs }); return; }
     const al = t.closest('[data-he-area-layout]'); if (al) { homePrefs({ areaLayout: al.dataset.heAreaLayout }); return; }
     if (t.closest('[data-he-fit]')) { homePrefs({ fitTogether: !prefs.home?.fitTogether }); return; }
@@ -3468,6 +3530,10 @@ export function mountTestFocus(root, { config, getHass }) {
     model.rooms.forEach((r) => [...r.actions, ...r.plugs, ...r.readings, ...r.openings, ...r.solar, ...r.plants.flatMap((p) => [p.id, ...p.readings])].forEach((id) => whereIs.set(id, r.name)));
     if (!page) return dashboard(out, summaryData());
     out.push({ key: 'areahead', html: areaHead(page, ++order) });
+    // the room's summaries under its header, as Home's are under its name (Marcin, 25 Nov)
+    const roomSums = page.room ? summaryData(false, page.room) : [];
+    if (roomSums.length) out.push({ key: 'areasums', order: ++order, tiles: roomSums.map((s) => ({ key: 'sum:' + s.key, html: summaryRow(s) })),
+      wrap: (inner, n) => '<div class="tfDashBarRow tfAreaSums" data-tf data-k="areasums" style="order:' + n.order + '">' + dashWrap('tfDash-bar', 'sums-bar', 'Summaries', false)(inner).replace(' data-tf', '') + '</div>' });
     // an area's page isn't designed yet: it says so under its header (Matt, 16 Nov: "this is not designed", "below the
     // header")
     if (page.room) out.push({ key: 'areanote', html: '<p class="hcNotDesigned" data-tf data-k="areanote" style="order:' + (++order) + '">This is not designed</p>' });
@@ -3818,11 +3884,13 @@ export function mountTestFocus(root, { config, getHass }) {
     // a summary (Matt, 27 Oct: room to breathe, and more control than opening tiles): its line, with all on or off for
     // the lights, then its devices by room. A group named as the popup is (Energy's) goes without its name
     if (id.startsWith('summary:')) {
-      const s = summaryData().find((x) => x.key === id.slice(8));
+      const [key, roomId] = id.slice(8).split('@'), room = roomId ? model.rooms.find((x) => x.id === roomId) : null;
+      if (roomId && !room) return null;
+      const s = summaryData(false, room).find((x) => x.key === key);
       if (!s) return null;
       const lights = s.key === 'light' ? (s.groups || []).flatMap((g) => g.ids) : [], anyOn = lights.some((x) => states[x]?.state === 'on');
       const all = lights.length ? '<button class="primary" type="button" data-acts="' + acts(lights.map((x) => ['light', anyOn ? 'turn_off' : 'turn_on', x])) + '">' + (anyOn ? 'Turn all off' : 'Turn all on') + '</button>' : '';
-      return [head(s.name), '<div class="tfMoreNowRow">' + now(s.value) + all + '</div>', ...(s.groups || []).map((g) => groupGrid(g.ids, { name: g.name === s.name ? '' : g.name, alert: g.alert, plain: s.plain }))];
+      return [head(room ? room.name + ' ' + s.name.toLowerCase() : s.name), '<div class="tfMoreNowRow">' + now(s.value) + all + '</div>', ...(s.groups || []).map((g) => groupGrid(g.ids, { name: g.name === s.name || g.name === room?.name ? '' : g.name, alert: g.alert, plain: s.plain }))];
     }
     // a room's lights, covers or plugs, opened from its area card's tile (Matt, 27 Oct): laid out as a summary, all on or
     // off beside its line
@@ -4288,7 +4356,7 @@ export function mountTestFocus(root, { config, getHass }) {
     // focus goes back to what opened it, without moving the page
     if (opener?.isConnected) opener.focus(quiet);
     else if (opener?.dataset?.more) grid.querySelector('[data-more="' + CSS.escape(opener.dataset.more) + '"]')?.focus(quiet);
-    else if (opener?.dataset?.summary) grid.querySelector('[data-summary="' + CSS.escape(opener.dataset.summary) + '"]')?.focus(quiet);
+    else if (opener?.dataset?.summary) grid.querySelector('[data-summary="' + CSS.escape(opener.dataset.summary) + '"]' + (opener.dataset.sumRoom ? '[data-sum-room="' + CSS.escape(opener.dataset.sumRoom) + '"]' : ':not([data-sum-room])'))?.focus(quiet);
     else if (opener?.hasAttribute?.('data-favs-edit')) grid.querySelector('[data-favs-edit]')?.focus(quiet);
   }
 

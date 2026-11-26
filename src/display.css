@@ -23,6 +23,9 @@
 #homeView .activityRowIcon{width:var(--chip-size);height:var(--chip-size);border-radius:var(--r-inner);background:var(--primary);color:var(--hc-on-accent)}
 #homeView .activityRowName{font:600 14px/20px var(--font-tile)}
 #homeView .activityRowMeta{font:400 16px/1.15 var(--font);margin:0}
+/* the summaries' two lines a breath apart, the bar's and an area card's (Marcin, 25 Nov: "a bit more spacing between the
+   summary widget two texts"), set alike in both (Marcin, 25 Nov: "the same text format and spacing/gap") */
+#homeView :is(.tfDash-bar,.tfRoomSums) .activityRowMeta{margin-top:4px}
 /* hover: tile fill and a hairline (0.2, 0.4 along the bottom), on a tile that's tapped whole and on a device's tile,
    whose icon and name are its buttons (Favourites, Activity, an open area's tiles) */
 #homeView .card .activityRow.tap{cursor:pointer}
@@ -709,12 +712,77 @@ button.tfAreaIcon{cursor:pointer}
 #app .tfRoomTile .tfIcon.tfIconOpen{border:0;padding:0;background-color:transparent!important;color:var(--hc-icon-ink);cursor:pointer}
 /* a small card: the callout big with what it is under it, small (Matt, 18 Nov: "a small subtitle under"), and not in the
    head as well */
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]{gap:8px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfActionHead .activityRowMeta{display:none}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomReading{gap:2px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomBig{font-size:32px;line-height:32px;letter-spacing:-.64px}
-#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"] .tfRoomSub{display:block;font-size:14px;line-height:18px}
-.tfRoomDevName{display:flex;flex-direction:column;min-width:0}
+/* Home's area cards, every size alike (Matt, 24 and 25 Nov: "redesign all of them to have a similar thought"), and a
+   Dashboards card at S: the first row the room's name with its status (temperature · humidity) under it, and its icon,
+   48, on the right; under it a see-through well, half --sunken,, nested in its corners (the card's 28 less
+   the 8 it sits in), holding the room's summaries. No big reading and no device tiles. The well says more as the card
+   grows: one column at Small, the icons alone; else each icon with its name over its line, in the summaries bar's
+   text styles: two columns at Small in one row, Medium and Large one or two to a row. The head is let go (display:contents) so the card lays its parts on a
+   grid */
+#app .tfRoomTile .tfRoomStatus,.tfRoomSums,.tfRoomSumText{display:none}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]){isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) 50px;grid-template-rows:auto minmax(0,1fr);gap:8px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"])>.tfActionHead{display:contents}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) :is(.tfActionHead .activityRowMeta:not(.tfRoomStatus),.tfRoomReading,.tfRoomDevices,.tfRoomHeads){display:none}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfName{grid-area:1/1;align-self:start;min-width:0}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfName>.activityRowName{font-size:18px;font-weight:600;line-height:24px} /* the label, semi-bold, 18 (Marcin, 25 Nov) */
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfActionHead .tfRoomStatus{margin-top:4px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfActionHead .tfRoomStatus{display:block}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfRoomIcon{grid-area:1/2;align-self:center;width:56px;height:56px;margin:-4px -6px -4px 0;--mdc-icon-size:52px}
+/* quieter (Marcin, 25 Nov: "less prominent… a bit faded"): the muted ink, a touch see-through */
+#app .tfRoomTile .tfIcon.tfIconOpen.tfRoomIcon{color:var(--muted);opacity:.7} /* reaches into the card's corner so the first row stays 48 and the well keeps its height (Marcin, 25 Nov: "it feels more cramped") */
+/* the room's picture in place of its icon (Marcin, 25 Nov): its corner of the card, faded out to the left and down so the
+   name and the well sit over the card, not the picture; darker in the dark so it doesn't glare */
+.tfRoomArt{display:none}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).hasArt .tfRoomArt{position:absolute;z-index:-1;top:8px;right:8px;display:block;width:min(70%,300px);height:102px;border-radius:20px;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to left,#000 30%,transparent),linear-gradient(to bottom,#000 30%,transparent 68%);-webkit-mask-composite:source-in;mask-image:linear-gradient(to left,#000 30%,transparent),linear-gradient(to bottom,#000 30%,transparent 68%);mask-composite:intersect}
+.tfRoomArt>svg{display:block;width:100%;height:100%}
+/* a one-column card: the picture keeps to the icon's side, clear of the name */
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"])[data-cols="1"].hasArt .tfRoomArt{width:52%}
+#app:not(.light) .tfRoomArt{filter:brightness(.62) saturate(.85)}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).hasArt .tfRoomIcon{visibility:hidden}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfRoomSums{grid-area:2/1/3/3;align-self:end;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;align-content:center;gap:4px;min-height:68px;max-height:calc(100% + 6px);margin:0 -6px -6px;padding:6px;overflow:hidden;border-radius:16px;background:var(--hover)}
+/* the well (Marcin, 25 Nov: "split the card size into two… keep it just one row and stick it at the bottom"): as tall as
+   what it holds, one row (68: 56 chips in 6) to start, 12 in from the card's sides and foot, its corners the card's 28
+   less those 12 (Marcin, 25 Nov: "more padding… similarly spaced"), at the card's foot; on a taller card with more to show, it grows up as far as
+   it needs, never past the first row. Its fill is the see-through state tint (--hover), so it's a shade of whatever
+   is under it, never a grey slab ("semi-transparent") */
+.tfRoomSum{display:flex;align-items:center;gap:12px;flex:none;box-sizing:border-box;min-width:0;min-height:56px;padding:6px 8px;border:0;border-radius:10px;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer}
+/* each summary a tile's head (Marcin, 25 Nov: "the icons and the backgrounds of a regular tile card"): the 40 chip in its
+   plain fill, the glyph in the summary's colour; the whole chip 56 tall to tap, 8 round it */
+#app .tfRoomSums .tfRoomSum .tfIcon{width:40px;height:40px;border-radius:12px;background:var(--hc-icon);color:var(--sum-ink,var(--hc-icon-ink));cursor:pointer}
+#app .tfRoomSums .tfRoomSum[data-summary="alerts"] .tfIcon{background:var(--sum);color:#fff}
+.tfRoomSumText{flex-direction:column;min-width:0}
+.tfRoomSumText>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* Small, one column or two: each icon with its words, in one row, as long as they all fit; when they don't, the icons
+   alone (.isCompact, from fitWell) */
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"])[data-rows="2"] .tfRoomSums{flex-wrap:nowrap}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"])[data-rows="2"] .tfRoomSum{padding-right:14px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"])[data-rows="2"] .tfRoomSumText{display:flex}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfRoomSums.isCompact .tfRoomSum{padding-right:8px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfRoomSums.isCompact .tfRoomSumText{display:none}
+/* Medium and Large: each with its name and line, a row each, two to a row on a two-column card, from the top */
+#app.tfOverview.tfBoard .tfRoomTile:is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomSums{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:56px;align-content:start;gap:4px}
+#app.tfOverview.tfBoard .tfRoomTile:not([data-cols="1"]):is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomSums{grid-template-columns:repeat(2,minmax(0,1fr))}
+#app.tfOverview.tfBoard .tfRoomTile:is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomSumText{display:flex}
+@media (hover:hover){.tfRoomSum:hover{background:var(--hover)}}
+/* one thing on its own takes the whole well (Marcin, 25 Nov: "make the interactable item full width") */
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfRoomSums>.tfRoomSum:only-child{flex:1 1 auto;grid-column:1/-1}
+/* a quiet room (nothing going on, so no well; Marcin, 25 Nov: "still aligned to the top and somehow fill the bottom"): its
+   name at the top as ever, and in the well's place its reading big at the foot ("18.1°", "Locked"), its second reading
+   small under it; the status line goes, as the big reading says it */
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).isQuiet .tfActionHead .tfRoomStatus{display:none}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).isQuiet.isQuiet>.tfRoomReading.tfRoomReading{grid-area:2/1/3/3;align-self:end;display:flex;gap:2px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).isQuiet.isQuiet .tfRoomBig.tfRoomBig{font-size:44px;line-height:44px;letter-spacing:-1.2px}
+:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]).isQuiet.isQuiet .tfRoomSub.tfRoomSub{display:block}
+/* the room's big icon has no hover (Marcin, 25 Nov): no grow, no tint */
+@media (hover:hover){#app button.tfIcon.tfRoomIcon:hover>:is(svg,ha-icon,ha-state-icon,span){scale:none}}
+#app button.tfIcon.tfRoomIcon::before{display:none}
+#app.house .tfIcon.tfRoomIcon{background:none!important;background-image:none!important;box-shadow:none}
+/* the card itself takes the hover instead (Marcin, 25 Nov: "just the card to have the standard hover effect"): the tile
+   fill, as a tapped-whole tile has it */
+#app .tfRoomTile{transition:background-color .15s ease}
+@media (hover:hover){:is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]):hover{background:var(--tile)}}
+#app.tfOverview.tfBoard .tfRoomTile:is([data-rows="3"],[data-rows="4"],[data-rows="5"]) .tfRoomDevName{display:flex;flex-direction:column;min-width:0}
 .tfRoomDevName>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #app.tfBoard .tfRoomTile[data-rows="1"]:not([data-cols="1"]){flex-direction:row;align-items:center;gap:12px}
 #app.tfBoard .tfRoomTile[data-rows="1"]:not([data-cols="1"])>.tfActionHead{flex:1;margin-bottom:0}
@@ -970,6 +1038,11 @@ button.tfAreaIcon{cursor:pointer}
   #app.hcDemo .hcTopRight{top:20px;right:var(--home-side,44px)}
 }
 #app.tfOverview.tfDash #homeView .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
+/* a room's own summaries, on its page under its header (Marcin, 25 Nov): a row of their own, as wide as their tiles */
+#app.tfAreaOpen #homeView .grid>.tfAreaSums{grid-column:1/-1;display:flex;min-width:0}
+#app.tfAreaOpen #homeView .tfAreaSums .card.tfDash-bar{max-width:100%;container-type:normal}
+#app.tfAreaOpen #homeView .tfAreaSums .card.tfDash-bar .activityRows{display:flex;flex-wrap:wrap}
+#app.tfAreaOpen #homeView .tfAreaSums .tfSum:not([data-summary="alerts"]) .tfIcon{background:none}
 #app.tfOverview.tfDash #homeView .card.tfDash-bar{width:100%;max-width:none}
 #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRows{display:flex;justify-content:space-between}
 #app.tfOverview.tfDash #homeView .card.tfDash-bar .activityRow{flex:none}
@@ -1098,6 +1171,9 @@ button.tfAreaIcon{cursor:pointer}
 #app.light{--title:#55504a}
 #app.light :is(.activityTitle,.hcCardTitle,.wbTitle,.activityRowName,.hcRowName,.wbName){color:var(--title)}
 #app.light .tfRoomTile .tfActionHead .activityRowName{color:var(--text)}
+/* Home's area card: its name the titles' and names' colour, its status the values' (Marcin, 25 Nov: "adhere to the
+   contrasts of text in the summary cards or in the tile cards") */
+#app.light :is(#app.tfOverview.tfBoard .tfRoomTile:not([data-rows="1"]),#app.tfBoard .tfRoomTile[data-cols="1"][data-rows="2"]) .tfActionHead .tfName>.activityRowName{color:var(--title)}
 /* an area card's big reading in #55504A too, as Matt has it in Figma (17 Nov) */
 #app.light .tfRoomBig{color:var(--title)}
 /* a tray's Add… button: a plus before its words, in Home Assistant's blue (#03a9f4, its primary colour), no underline, with
