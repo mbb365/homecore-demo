@@ -106,6 +106,14 @@ export function mountDemoShell(root, { getHass, homecore }) {
   rail.addEventListener('focusin', (ev) => { const el = ev.target.closest('[data-tip]'); if (el?.matches(':focus-visible')) showTip(el); });
   rail.addEventListener('focusout', hideTip);
   rail.addEventListener('click', hideTip);
+  /* the rail magnifies like the Mac's Dock, as HomeCore Labs' does (Matt, 26 Nov: "add the growing of the menu items as in
+     the labs… keep them exposed as they are now"): each icon grows as the pointer nears it, the one under it most */
+  const railBtns = () => [...rail.querySelectorAll('.hcRailBtn,.hcAvatar')];
+  rail.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType === 'touch' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    railBtns().forEach((b) => { const r = b.getBoundingClientRect(), d = Math.abs(ev.clientY - (r.top + r.height / 2)); b.style.scale = (1 + 0.38 * Math.max(0, 1 - d / 110)).toFixed(3); });
+  });
+  rail.addEventListener('pointerleave', () => railBtns().forEach((b) => { b.style.scale = ''; }));
   // Home's menu: after a short hover on Home (or Home focused from the keyboard) it shows beside it, Edit overview dashboard
   // in it; it stays while the pointer is on Home or the menu, and goes a moment after it leaves both
   const homeBtn = rail.querySelector('.hcLogo'), homeMenu = rail.querySelector('.hcHomeMenu');

@@ -854,3 +854,5 @@
 @media (min-width:621px){#app .hcTopRight>#dashEditNav{display:none!important}}
 /* an area's things sit in under it, clearly its own (Matt, 26 Nov: the area dropdowns) */
 #app .hcSecTreeKids{padding-left:66px}
+/* the rail's Dock magnifying, as Labs (Matt, 26 Nov): each icon grows smoothly */
+#app .hcRail :is(.hcRailBtn,.hcAvatar){transition:scale .14s ease-out,color .15s ease}

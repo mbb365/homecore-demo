@@ -1029,10 +1029,15 @@ export function mountTestFocus(root, { config, getHass }) {
       if (on) noteBright(id, brightnessOf(st));
       const k = held('ct', id, on && a.color_mode === 'color_temp' ? a.color_temp_kelvin : null);
       const hue = held('hue', id, on && COLOUR_MODES.includes(a.color_mode) && a.hs_color ? a.hs_color[0] : null);
+      // its warmth and colour while it was last on are remembered too, so an off light shows where each was (Matt, 26 Nov:
+      // "the dashed lines on the sliders for the lights when they're turned off")
+      if (on && k != null) noteBright(id + '|ct', Math.max(1, Math.round(((k - kMin) / (kMax - kMin)) * 100)));
+      if (on && hue != null) noteBright(id + '|hue', Math.max(1, Math.round((hue / 360) * 100)));
+      const wasOf = (key) => (on ? null : lastBright[key] ?? null);
       return { on, button: toggle('light', 'Turn ' + nameOf(id) + (on ? ' off' : ' on')), parts: ['bright', 'ct', 'hue'], sections: [
-        dimmable(id) && bar('bright', id, b / 100, nameOf(id) + ' brightness', b + '%', false, on ? null : lastBright[id] ?? null),
-        modes.includes('color_temp') && bar('ct', id, k == null ? null : (k - kMin) / (kMax - kMin), nameOf(id) + ' warm to cool', k == null ? '' : Math.round(k) + ' kelvin', true),
-        modes.some((m) => COLOUR_MODES.includes(m)) && bar('hue', id, hue == null ? null : hue / 360, nameOf(id) + ' colour', '', true),
+        dimmable(id) && bar('bright', id, b / 100, nameOf(id) + ' brightness', b + '%', false, wasOf(id)),
+        modes.includes('color_temp') && bar('ct', id, k == null ? null : (k - kMin) / (kMax - kMin), nameOf(id) + ' warm to cool', k == null ? '' : Math.round(k) + ' kelvin', true, wasOf(id + '|ct')),
+        modes.some((m) => COLOUR_MODES.includes(m)) && bar('hue', id, hue == null ? null : hue / 360, nameOf(id) + ' colour', '', true, wasOf(id + '|hue')),
       ] };
     }
     if (d === 'climate') {
