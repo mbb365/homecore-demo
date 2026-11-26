@@ -607,7 +607,10 @@ export function renderSections(page, ctx) {
 
   /* ---- what you do ---- */
   const at = (v) => v.split(':').map(Number);
+  const openMenus = () => page.querySelectorAll('.hcSecMenu:not([hidden])');
   function onClick(ev) {
+    // an open ⋮ menu closes on a click anywhere outside it and its button (not only on another button)
+    if (!ev.target.closest('.hcSecMenu,[data-sec-card-menu],[data-sec-bar-menu]')) openMenus().forEach((m) => { m.hidden = true; });
     const t = ev.target.closest('button,[data-sec-pick],[data-sec-pick-wx],[data-sec-suggest],[data-sec-more],[data-sec-area],[data-sec-scrim]');
     if (!t) return;
     if (t.hasAttribute('data-sec-scrim')) { if (ev.target === t) closeDialog(); return; }
@@ -633,8 +636,18 @@ export function renderSections(page, ctx) {
     else if (d.secBack != null) { edit = null; drawAdd(); }
     else if (d.secTab) { adding.tab = d.secTab; drawAdd(); }
     else if (d.secBrowse != null) { adding.tab = 'card'; drawAdd(); }
-    else if (d.secFold) { const o = adding.open; if (o.has(d.secFold)) o.delete(d.secFold); else o.add(d.secFold); dialog.querySelector('.hcSecTreeList').innerHTML = treeHtml(); paint(dialog.querySelector('.hcSecTreeList')); }
-    else if (d.secChoose) { adding.entity = d.secChoose; drawAdd(); }
+    else if (d.secFold) {
+      const o = adding.open, list = dialog.querySelector('.hcSecTreeList'), keep = list.scrollTop;
+      if (o.has(d.secFold)) o.delete(d.secFold); else o.add(d.secFold);
+      list.innerHTML = treeHtml(); paint(list); list.scrollTop = keep;
+      list.querySelector('[data-sec-fold="' + CSS.escape(d.secFold) + '"]')?.focus({ preventScroll: true });
+    }
+    else if (d.secChoose) {
+      adding.entity = d.secChoose;
+      dialog.querySelectorAll('[data-sec-choose]').forEach((b) => b.classList.toggle('active', b.dataset.secChoose === d.secChoose));
+      const main = dialog.querySelector('.hcSecMain');
+      main.innerHTML = mainHtml(); paint(main); drawGraphs(main);
+    }
     else if (d.secPick) openEditor(adding.si, null, fresh(d.secPick), 'add');
     else if (d.secPickWx) openEditor(adding.si, null, { type: 'hc-weather', widget: d.secPickWx }, 'add');
     else if (d.secSuggest != null) openEditor(adding.si, null, suggestions(adding.entity)[Number(d.secSuggest)], 'add');
@@ -685,6 +698,7 @@ export function renderSections(page, ctx) {
     // a card in Add to dashboard is picked with Return or Space too
     if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('[data-sec-pick],[data-sec-pick-wx],[data-sec-suggest]')) { ev.preventDefault(); ev.target.click(); return; }
     if (ev.key !== 'Escape') return;
+    if (openMenus().length) { ev.preventDefault(); ev.stopPropagation(); openMenus().forEach((m) => { m.hidden = true; m.previousElementSibling?.focus?.(); }); return; }
     if (dialog) { ev.preventDefault(); ev.stopPropagation(); closeDialog(); edit = null; adding = null; }
     else if (editing) { editing = false; draw(); }
   }

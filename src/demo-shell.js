@@ -53,7 +53,9 @@ export function mountDemoShell(root, { getHass, homecore }) {
   const railBtn = ([k, name, ic]) => '<button class="hcRailBtn" type="button" data-hc-go="' + k + '" data-tip="' + name + '" aria-label="' + name + '">' + icon(ic) + '</button>';
   shell.insertAdjacentHTML('afterbegin',
     '<nav class="hcRail" aria-label="Main">' +
-      '<button class="hcRailBtn hcLogo" type="button" data-hc-go="home" data-tip="Home" aria-label="Home">' + HA_LOGO + '</button>' +
+      '<button class="hcRailBtn hcLogo" type="button" data-hc-go="home" data-tip="Home" aria-label="Home" aria-haspopup="menu" aria-expanded="false">' + HA_LOGO + '</button>' +
+      // a short hover on Home offers to edit the overview (Matt, 26 Nov: "accessed from the home icon, after a short hover")
+      '<div class="card hcHomeMenu" role="menu" aria-label="Home" hidden><button class="hcRow hcNavRow" type="button" role="menuitem" data-hc-edit-home><span class="hcNavIcon">' + icon('mdi:pencil') + '</span><span class="hcRowText"><span class="hcRowName">Edit overview dashboard</span></span></button></div>' +
       '<button class="hcRailBtn" type="button" data-hc-search data-tip="Search" aria-label="Search">' + icon('mdi:magnify') + '</button>' +
       '<div class="hcRailMain">' + RAIL.map(railBtn).join('') +
         '<button class="hcRailBtn" type="button" data-hc-more data-tip="More" aria-label="More" aria-haspopup="menu" aria-expanded="false">' + icon('mdi:dots-horizontal') + '</button>' +
@@ -104,6 +106,28 @@ export function mountDemoShell(root, { getHass, homecore }) {
   rail.addEventListener('focusin', (ev) => { const el = ev.target.closest('[data-tip]'); if (el?.matches(':focus-visible')) showTip(el); });
   rail.addEventListener('focusout', hideTip);
   rail.addEventListener('click', hideTip);
+  // Home's menu: after a short hover on Home (or Home focused from the keyboard) it shows beside it, Edit overview dashboard
+  // in it; it stays while the pointer is on Home or the menu, and goes a moment after it leaves both
+  const homeBtn = rail.querySelector('.hcLogo'), homeMenu = rail.querySelector('.hcHomeMenu');
+  let homeIn = 0, homeOut = 0;
+  const placeHomeMenu = () => { const r = homeBtn.getBoundingClientRect(); homeMenu.style.left = r.right + 8 + 'px'; homeMenu.style.top = r.top + 'px'; };
+  const openHomeMenu = () => { clearTimeout(homeOut); hideTip(); placeHomeMenu(); homeMenu.hidden = false; homeBtn.setAttribute('aria-expanded', 'true'); };
+  const closeHomeMenu = () => { clearTimeout(homeIn); homeMenu.hidden = true; homeBtn.setAttribute('aria-expanded', 'false'); };
+  const leaveHome = () => { clearTimeout(homeIn); clearTimeout(homeOut); homeOut = setTimeout(closeHomeMenu, 250); };
+  homeBtn.addEventListener('pointerenter', (ev) => { if (ev.pointerType === 'touch') return; clearTimeout(homeOut); clearTimeout(homeIn); homeIn = setTimeout(openHomeMenu, 450); });
+  homeBtn.addEventListener('pointerleave', leaveHome);
+  homeMenu.addEventListener('pointerenter', () => clearTimeout(homeOut));
+  homeMenu.addEventListener('pointerleave', leaveHome);
+  homeBtn.addEventListener('focus', () => { if (homeBtn.matches(':focus-visible')) openHomeMenu(); });
+  rail.addEventListener('focusout', (ev) => { if (!homeMenu.hidden && !(ev.relatedTarget === homeBtn || homeMenu.contains(ev.relatedTarget))) leaveHome(); });
+  homeMenu.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); closeHomeMenu(); homeBtn.focus(); } });
+  homeMenu.querySelector('[data-hc-edit-home]').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    closeHomeMenu();
+    // on Home first (from anywhere), then its editing, as the pencil did
+    const edit = () => { const pen = $('dashEditNav'); if (pen && !app.classList.contains('tfEditing')) pen.click(); };
+    if (where() !== 'home') { homeBtn.click(); setTimeout(edit, 80); } else edit();
+  });
 
   // a page of the demo's own sits in Home's view, so HomeCore's card and tile styles apply to it; HomeCore's board hides
   homeView.insertAdjacentHTML('beforeend', '<div class="hcPage" hidden></div>');

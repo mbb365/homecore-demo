@@ -847,3 +847,10 @@
 /* Go to Labs: the Oops popup without its picture; its link a pill button */
 #app .hcLabsPop .hcOopsActions a.primary{display:inline-flex;align-items:center;min-height:41.6px;padding:0 18px;border-radius:999px!important;text-decoration:none}
 #app .hcLabsPop .hcOopsCard{gap:18px}
+/* Home's menu beside the rail's Home (Matt, 26 Nov); with it, the top-right pencil goes on the larger screens (a phone,
+   with no hover, keeps it). While editing, the pencil is the tray's Done, as before */
+.hcHomeMenu{position:fixed;z-index:400;display:grid;min-width:240px;box-shadow:var(--hc-hair-all),0 10px 30px rgba(0,0,0,.35)}
+.hcHomeMenu[hidden]{display:none}
+@media (min-width:621px){#app .hcTopRight>#dashEditNav{display:none!important}}
+/* an area's things sit in under it, clearly its own (Matt, 26 Nov: the area dropdowns) */
+#app .hcSecTreeKids{padding-left:66px}

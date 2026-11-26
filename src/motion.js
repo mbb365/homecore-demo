@@ -34,9 +34,9 @@ export function motionVars() {
 }
 
 /* ---------- 1 · pivot: buttons and tappable tiles lean toward the pointer, with a shine; they lift, and press in ---------- */
-// (a tile doesn't lean or lift: it shows its background and hairline in place, as every tile does; Matt, 26 Nov: the
-// summaries "should just follow the same rules")
-const PIVOT = ':is(button.primary,button.pill,.hcBtn,.wbRangeBtn,.hcRow,a.hcRow)';
+// the summaries' tiles and an area card's tiles lean toward the pointer and lift; other tiles stay still (Matt, 26 Nov:
+// "only the summary tiles, and the ones on the areas")
+const PIVOT = ':is(button.primary,button.pill,.hcBtn,.wbRangeBtn,.hcRow,a.hcRow,.activityRow.tfSum,.tfRoomDev:not(.hcSlotEmpty):not(.hcAceCard *))';
 /* ---------- 3 · icon buttons are CSS (motion.css); 11 · the outline light: the area cards only (Matt, 10 Nov) ---------- */
 // and every area card on its own (Matt, 17 Nov: one area card, one behaviour); the Areas card's lights as a whole panel
 const OUTLINE = '#homeView :is(.tfAreaPanel,.tfRoomTile.tfBoardItem)';

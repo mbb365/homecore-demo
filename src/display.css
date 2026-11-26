@@ -1642,3 +1642,8 @@ button.tfAreaIcon{cursor:pointer}
 #app .hcAceOpt:hover,#app .hcAceOpt:focus-visible{background:var(--tile)}
 #app .hcAceOpt[aria-selected="true"]{background:color-mix(in srgb,var(--primary) 14%,transparent);font-weight:500}
 #app .hcAceOpt[aria-disabled="true"]{color:var(--muted);opacity:.5;cursor:default;background:none}
+/* the summaries' row scrolls sideways, which clipped the end tiles as they lean and lift (Matt, 26 Nov: "the end tiles
+   have their ends chopped off"): 8 of room inside it, given back outside, so nothing moves */
+@media (min-width:621px){
+  #app.tfOverview.tfDash #homeView .card.tfDash-bar>.activityRows{padding:8px;margin:-8px}
+}
