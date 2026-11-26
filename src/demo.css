@@ -844,3 +844,5 @@
 /* Home's weather icon comes in with the other icons: it fades as the summaries do, when they do (Matt, 26 Nov) */
 #app.hcIntro:not(.hcIntroGo) .tfDashTitle .hcHomeWxIcon{opacity:0}
 #app.hcIntroGo .tfDashTitle .hcHomeWxIcon{animation:hcIntroFade var(--intro-card-dur,.5s) var(--intro-card-ease,ease) var(--intro-icons-d,250ms) both}
+/* Go to Labs: the Oops popup without its picture; its link a pill button */
+#app .hcLabsPop .hcOopsActions a.primary{display:inline-flex;align-items:center;min-height:41.6px;padding:0 18px;border-radius:999px!important;text-decoration:none}

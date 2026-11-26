@@ -338,6 +338,22 @@ export function mountDemoShell(root, { getHass, homecore }) {
     pop.querySelector('[data-oops-add]').focus();
   }
   ctx.oops = oops;
+  /* Home's weather icon (Matt, 26 Nov): a popup that says to go to Labs, with the link to Labs' weather page, where the
+     weather page of its own is being made; Close or Open Labs weather (in a new tab) */
+  const LABS_WEATHER = 'https://mbb365.github.io/homecore-labs/#/weather';
+  function labsWeather() {
+    app.querySelector('.hcLabsPop')?.remove();
+    app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcOops hcLabsPop"><div class="tfMore hcOopsCard" role="dialog" aria-modal="true" aria-labelledby="hcLabsTitle">' +
+      '<div class="hcOopsTitle" id="hcLabsTitle">Go to Labs</div><p class="hcOopsLine">We\'re making a weather page of its own in HomeCore Labs. Have a look at how it\'s coming along.</p>' +
+      '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><a class="primary" href="' + LABS_WEATHER + '" target="_blank" rel="noopener" data-labs-go>Open Labs weather</a></div></div></div>');
+    const pop = app.querySelector('.hcLabsPop'), was = root.activeElement;
+    const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
+    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); } };
+    root.addEventListener('keydown', onKey, true);
+    pop.addEventListener('click', (ev) => { if (ev.target === pop || ev.target.closest('[data-oops-close]') || ev.target.closest('[data-labs-go]')) close(); });
+    pop.querySelector('[data-labs-go]').focus();
+  }
+  root.addEventListener('click', (ev) => { if (ev.target.closest('[data-labs-weather]')) { ev.preventDefault(); ev.stopPropagation(); labsWeather(); } }, true);
   /* what isn't designed yet says so (data-oops). A popup's own tiles (Maintenance's Monstera, a summary's devices) now
      open the device over the popup, with Back to it, as Move Assistant v0.79 (Matt, 12 Nov: "open over it"; was one
      level down only, 10 Nov) */

@@ -4185,7 +4185,8 @@ export function mountTestFocus(root, { config, getHass }) {
     if (!st) return '';
     const t = st.attributes?.temperature, unit = st.attributes?.temperature_unit || '';
     const art = wbSmoothIcon(st.state, false, st.state === 'clear-night', 'homewx'), kind = 'wb' + art.k[0].toUpperCase() + art.k.slice(1) + (art.night ? ' wbNight' : '');
-    return '<span class="hcHomeWx"><button class="hcHomeWxIcon" type="button" data-more="' + esc(id) + '" aria-label="' + esc(nameOf(id)) + ', more info" title="Weather">' +
+    // its icon opens Go to Labs, where the weather page of its own is being built (Matt, 26 Nov)
+    return '<span class="hcHomeWx"><button class="hcHomeWxIcon" type="button" data-labs-weather aria-label="Weather: see it in HomeCore Labs" title="Weather">' +
       '<span class="wbWx ' + kind + '" aria-hidden="true">' + art.svg + '</span></button>' +
       '<span class="hcHomeWxWords">' + esc(WX_WORDS[st.state] || cap(st.state)) + '</span>' + (t != null ? '<span class="hcHomeWxTemp">' + esc(Math.round(t) + unit) + '</span>' : '') + '</span>';
   }
