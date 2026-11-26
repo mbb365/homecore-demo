@@ -344,7 +344,7 @@ export function mountDemoShell(root, { getHass, homecore }) {
   function labsWeather() {
     app.querySelector('.hcLabsPop')?.remove();
     app.insertAdjacentHTML('beforeend', '<div class="tfMoreBackdrop hcOops hcLabsPop"><div class="tfMore hcOopsCard" role="dialog" aria-modal="true" aria-labelledby="hcLabsTitle">' +
-      '<div class="hcOopsTitle" id="hcLabsTitle">Go to Labs</div><p class="hcOopsLine">We\'re making a weather page of its own in HomeCore Labs. Have a look at how it\'s coming along.</p>' +
+      '<div class="hcOopsTitle" id="hcLabsTitle">Go to Labs</div><p class="hcOopsLine">We\'re making a weather page of its own in HomeCore Labs. Have a look at how it\'s coming along.</p><p class="hcOopsLine">There\'s a lot going on, so we\'re working on it.</p>' +
       '<div class="hcOopsActions"><button class="pill" type="button" data-oops-close>Close</button><a class="primary" href="' + LABS_WEATHER + '" target="_blank" rel="noopener" data-labs-go>Open Labs weather</a></div></div></div>');
     const pop = app.querySelector('.hcLabsPop'), was = root.activeElement;
     const close = () => { root.removeEventListener('keydown', onKey, true); closeDialog(pop, () => pop.remove()); was?.focus?.({ preventScroll: true }); };
