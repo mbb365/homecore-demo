@@ -107,7 +107,20 @@ export function renderActivity(page, { getHass, esc, device, paint, head, icon, 
   page.querySelector('[data-area]').addEventListener('change', (ev) => { prefs.area = ev.target.value; save(); draw(); });
   page.querySelector('[data-type]').addEventListener('change', (ev) => { prefs.type = ev.target.value; save(); draw(); });
   page.querySelector('[data-source]').addEventListener('change', (ev) => { prefs.source = ev.target.value; save(); draw(); });
-  box.addEventListener('click', (ev) => { const row = ev.target.closest('[data-history]'); if (row) homecore.moreHistory?.(row.dataset.history, row); });
+  // a row opens its entry; on a desktop beside the list, the row marked while its entry is open (Matt, 27 Nov)
+  const app = page.closest('#app');
+  const mark = (row) => box.querySelectorAll('.hcActivityRow').forEach((r) => { r.classList.toggle('hcPicked', r === row); if (r === row) r.setAttribute('aria-current', 'true'); else r.removeAttribute('aria-current'); });
+  box.addEventListener('click', (ev) => {
+    const row = ev.target.closest('[data-history]');
+    if (!row) return;
+    const wide = matchMedia('(min-width: 1000px)').matches;
+    homecore.moreHistory?.(row.dataset.history, row, { dock: wide ? box : null });
+    mark(app?.classList.contains('hcDocked') ? row : null);
+  });
+  const watch = new MutationObserver(() => { if (!app.classList.contains('hcDocked')) mark(null); });
+  if (app) watch.observe(app, { attributes: true, attributeFilter: ['class'] });
   page.querySelector('.hcSearch input').addEventListener('input', (ev) => { q = ev.target.value; draw(); });
   load();
+  // leaving Activity takes its docked entry with it
+  return () => { watch.disconnect(); homecore.undock?.(); };
 }

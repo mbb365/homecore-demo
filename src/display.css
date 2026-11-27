@@ -1655,3 +1655,20 @@ button.tfAreaIcon{cursor:pointer}
 #app:not(.light) #homeView .tfIcon.on[data-light]{opacity:.4;transition:opacity .2s ease}
 #app:not(.light) #homeView :is(.tfRoomDev,.activityRow,.tfActionHead,.tfIcon):is(:hover,:active,:focus-visible) .tfIcon.on[data-light],
 #app:not(.light) #homeView .tfIcon.on[data-light]:is(:hover,:active,:focus-visible){opacity:1}
+/* an Activity entry docked beside the list on a desktop (Matt, 27 Nov): no dim or blur behind, the page still in reach;
+   the popup at the list's right, as tall as the window leaves it */
+#app .tfMoreBackdrop.hcDock{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;pointer-events:none;display:block;padding:0}
+#app .tfMoreBackdrop.hcDock .tfMorePair{position:fixed;left:var(--dock-left);top:var(--dock-top);pointer-events:auto}
+#app .tfMoreBackdrop.hcDock .tfMore{width:var(--dock-w)!important;max-width:none;height:auto!important;max-height:var(--dock-h);overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+/* the row whose entry is open */
+#app .hcActivityRow.hcPicked{background:var(--tile);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 55%,transparent)}
+/* ---------- a page's title pinned as it scrolls (Matt, 27 Nov, "Floating title"): it stays at the top and floats there with
+   no background, shrinking to half its size into its top-left corner over the first 64 of scroll, the page passing behind
+   it. Where the title shares a row with the page's buttons (Devices) the row is what stays, its buttons fading away. On the
+   demo's pages, an area's page and Settings ---------- */
+#app :is(.hcPage .hcTitle:not(.hcHead .hcTitle),.hcPage .hcHead,#homeView .grid>.tfAreaHead,#settingsView>.settingsHeader){position:sticky;top:0;z-index:60;padding-top:12px;padding-bottom:12px;margin-top:-12px;pointer-events:none}
+#app :is(.hcPage .hcTitle:not(.hcHead .hcTitle),.hcPage .hcHead,#homeView .grid>.tfAreaHead,#settingsView>.settingsHeader) :is(button,a,select,input){pointer-events:auto}
+#app :is(.hcPage .hcTitle,#homeView .grid>.tfAreaHead,#settingsView>.settingsHeader) .settingsTitle{transform-origin:0 0;scale:calc(1 - .5 * var(--hc-scroll,0));translate:0 calc(14px * var(--hc-scroll,0))} /* pinned, its middle on the line of the rail's Home logo (40 down) (Matt, 27 Nov) */
+#app .hcPage .hcHead>.hcHeadActions{opacity:calc(1 - var(--hc-scroll,0))}
+#app.hcScrolled .hcPage .hcHead>.hcHeadActions{pointer-events:none}
+#app.hcScrolled .hcPage .hcHead>.hcHeadActions *{pointer-events:none}

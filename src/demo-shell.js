@@ -106,6 +106,18 @@ export function mountDemoShell(root, { getHass, homecore }) {
   rail.addEventListener('focusin', (ev) => { const el = ev.target.closest('[data-tip]'); if (el?.matches(':focus-visible')) showTip(el); });
   rail.addEventListener('focusout', hideTip);
   rail.addEventListener('click', hideTip);
+  /* a page's title stays put as the page scrolls under it (Matt, 27 Nov: "instead of the whole screen going up, I want the My
+     Account to just shrink into the corner… and then to have that fade come… the same way… on the cards"): over the first 64
+     of scroll it shrinks into its corner and the page's colour fades in behind it, with a fade under it that what scrolls up
+     disappears into. --hc-scroll runs 0 to 1 */
+  const onScroll = () => {
+    const p = Math.max(0, Math.min(1, (window.scrollY || document.scrollingElement?.scrollTop || 0) / 64));
+    app.style.setProperty('--hc-scroll', p.toFixed(3));
+    app.classList.toggle('hcScrolled', p > 0);
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('hashchange', () => setTimeout(onScroll, 60));
+  onScroll();
   /* the rail magnifies like the Mac's Dock, as HomeCore Labs' does (Matt, 26 Nov: "add the growing of the menu items as in
      the labs… keep them exposed as they are now"): each icon grows as the pointer nears it, the one under it most */
   const railBtns = () => [...rail.querySelectorAll('.hcRailBtn,.hcAvatar')];

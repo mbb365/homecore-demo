@@ -5046,7 +5046,7 @@ export function mountTestFocus(root, { config, getHass }) {
       // starts at its top, and Back returns to where that page was left
       const keep = turning ? more.scroll || 0 : !sheet.hidden && box ? box.scrollTop : 0;
       // the dialog and, beside it, its details: one dialog for screen readers. Already open, it doesn't rise in again
-      sheet.innerHTML = '<div class="tfMorePair' + (sheet.hidden ? '' : ' still') + '" role="dialog" aria-modal="true" aria-labelledby="tfMoreTitle"><section class="tfMore' + (wide ? ' wide' : '') + '"' + (more.frame ? ' style="height:' + more.frame.h + 'px"' : '') + ' tabindex="-1">' + parts.join('') + '</section>' +
+      sheet.innerHTML = '<div class="tfMorePair' + (sheet.hidden ? '' : ' still') + '" role="dialog" aria-modal="' + (more.dock ? 'false' : 'true') + '" aria-labelledby="tfMoreTitle"><section class="tfMore' + (wide ? ' wide' : '') + '"' + (more.frame ? ' style="height:' + more.frame.h + 'px"' : '') + ' tabindex="-1">' + parts.join('') + '</section>' +
         (side ? '<aside class="tfMoreSide" id="tfMoreSide" aria-label="Details"><div class="tfMoreSideInner"><div class="tfMoreHead"><button class="tfBack" type="button" data-details-close aria-label="Back">' + ARROW + '</button>' +
           '<div class="activityTitle">Details</div></div><div class="tfMoreSideBody">' + side + '</div></div></aside>' : '') + '</div>';
       moreSide = side;
@@ -5215,6 +5215,19 @@ export function mountTestFocus(root, { config, getHass }) {
     more = { id, opener: inside ? more.opener : opener, back: inside ? more : null, frame: inside ? more.frame || { wide: box.classList.contains('wide'), h: box.offsetHeight } : null, under: inside ? more.under : null, at: Number(opener?.dataset?.at) || null };
     showMore();
   }
+  /* docked (an Activity row's entry on a desktop): the popup stands beside the list instead of over the page, no dim behind
+     it, the list still in reach; its top keeps with the list's until it reaches the window's, and where there isn't room
+     for it (under 360 across) it's the popup again */
+  function dockSheet() {
+    const box = more?.dock, on = Boolean(box?.isConnected);
+    sheet.classList.toggle('hcDock', on); app.classList.toggle('hcDocked', on);
+    if (!on) return;
+    const r = box.getBoundingClientRect(), left = Math.round(r.right + 24), top = Math.max(16, Math.round(r.top)), w = Math.min(480, innerWidth - left - 24);
+    if (w < 360) { more.dock = null; sheet.classList.remove('hcDock'); app.classList.remove('hcDocked'); return; }
+    [['--dock-left', left], ['--dock-top', top], ['--dock-w', w], ['--dock-h', innerHeight - top - 16]].forEach(([k, v]) => sheet.style.setProperty(k, v + 'px'));
+  }
+  addEventListener('resize', () => { if (more?.dock) dockSheet(); });
+  addEventListener('scroll', () => { if (more?.dock) dockSheet(); }, { capture: true, passive: true });
   let turning = false; // a new page in the open popup (a device, or Back)
   function showMore() {
     moreParts = [];
@@ -5231,6 +5244,7 @@ export function mountTestFocus(root, { config, getHass }) {
     closeDialog(sheet, () => { if (more === was) closeMoreNow(); });
   }
   function closeMoreNow() {
+    sheet.classList.remove('hcDock'); app.classList.remove('hcDocked');
     const opener = more?.opener, parked = more?.under;
     more = null;
     arts.forEach((art, k) => { if (sheet.contains(art.el)) { art.destroy(); arts.delete(k); } });
@@ -5774,7 +5788,10 @@ export function mountTestFocus(root, { config, getHass }) {
     more(id, opener) { openMore(id, opener); },
     // a device's more info open on its History (its graph and what happened): the Activity page's rows
     barGlyph,
-    moreHistory(id, opener) { openMore(id, opener); if (more?.id === id) { more.view = 'log'; more.trail = []; renderMore(); } },
+    // an Activity row's entry; on a desktop it docks beside the list it came from (Matt, 27 Nov: "Activity can open up next
+    // to the list")
+    moreHistory(id, opener, opts = {}) { openMore(id, opener); if (more?.id === id) { more.view = 'log'; more.trail = []; more.dock = opts.dock || null; dockSheet(); renderMore(); } },
+    undock() { if (more?.dock) closeMore(); },
     setOverview(on) {
       if (overview === on) return;
       if (editing) setEditing(false);
